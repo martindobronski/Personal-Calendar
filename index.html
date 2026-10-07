@@ -325,23 +325,28 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 <!-- ======================= TODOS ======================= -->
 <section class="view" id="view-tasks">
   <h2>✅ Aufgaben</h2>
-  <div class="flex">
-    <input id="taskInput" placeholder="Neue Aufgabe">
+  <div class="flex gap">
+    <input id="taskInput" class="input" placeholder="Neue Aufgabe hinzufügen">
+    <select id="taskCat" class="select"></select>
     <button class="btn primary" id="addTask">Hinzufügen</button>
   </div>
-  <div class="list" id="tasksList"></div>
+  <div class="flex gap">
+    <input id="taskSearch" class="input" placeholder="Aufgaben suchen...">
+    <select id="taskFilter" class="select"><option value="all">Alle</option><option value="open">Offen</option><option value="done">Erledigt</option></select>
+  </div>
+  <div class="card"><div class="list" id="tasksList"></div></div>
 </section>
 
 <!-- ======================= MAHLZEITEN ======================= -->
 <section class="view" id="view-routines">
   <h2>🗓️ Routinen</h2>
-  <div class="flex">
-    <input id="routineName" placeholder="Neue Routine (z. B. Zähne putzen, Spazieren)">
-    <select id="routineFreq"><option value="daily">täglich</option><option value="weekly">wöchentlich</option><option value="monthly">monatlich</option></select>
+  <div class="flex gap">
+    <input id="routineName" class="input" placeholder="Neue Routine">
+    <select id="routineFreq" class="select"><option value="daily">Täglich</option><option value="weekly">Wöchentlich</option><option value="monthly">Monatlich</option></select>
+    <select id="routineTime" class="select"><option value="any">Beliebige Zeit</option><option value="morning">Morgen</option><option value="noon">Mittag</option><option value="evening">Abend</option></select>
     <button class="btn primary" id="addRoutine">Hinzufügen</button>
   </div>
-  <div class="list" id="routinesList"></div>
-  <div class="hint">Routinen sind wiederkehrende Aufgaben. Sie werden getrennt von Aufgaben verwaltet.</div>
+  <div class="card"><div class="list" id="routinesList"></div></div>
 </section>
 <section class="view" id="view-meals">
   <div class="card">
@@ -1550,7 +1555,32 @@ render();
 </body>
 </html>
 
-function renderTasks(){ try{ if(typeof S==="undefined")window.S={tasks:[]}; var list=document.getElementById("tasksList"); if(!list)return; var t=S.tasks||[]; if(!t.length){ list.innerHTML='<div class="empty">Keine Aufgaben.</div>'; return;} list.innerHTML=t.map(function(it,i){return '<div class="item"><div>'+esc(it.text||'')+'</div><div class="it-actions"><button class="btn small" data-task-del="'+i+'">Löschen</button></div></div>'}).join(""); }catch(e){} }
-function renderRoutines(){ try{ if(typeof S==="undefined")window.S={routines:[]}; var list=document.getElementById("routinesList"); if(!list)return; var r=S.routines||[]; if(!r.length){ list.innerHTML='<div class="empty">Keine Routinen.</div>'; return;} list.innerHTML=r.map(function(it,i){return '<div class="item"><div>'+esc(it.name||'')+'</div><div class="it-actions"><button class="btn small" data-routine-del="'+i+'">Löschen</button></div></div>'}).join(""); }catch(e){} }
+
+;
+  if(!S.tasks) S.tasks=[];
+  var list=document.getElementById('tasksList');
+  if(!list) return;
+  if(!S.tasks.length){ list.innerHTML='<div class="empty"><span class="big">🗒️</span>Keine Aufgaben vorhanden.</div>'; return; }
+  list.innerHTML=S.tasks.map(function(t,i){ return '<div class="item"><div><div class="it-title">'+esc(t.text||'')+'</div></div><div class="it-actions"><button class="btn small" data-task-del="'+i+'">Löschen</button></div></div>'; }).join('');
+}
+; var list=document.getElementById("tasksList"); if(!list)return; var t=S.tasks||[]; if(!t.length){ list.innerHTML='<div class="empty">Keine Aufgaben.</div>'; return;} list.innerHTML=t.map(function(it,i){return '<div class="item"><div>'+esc(it.text||'')+'</div><div class="it-actions"><button class="btn small" data-task-del="'+i+'">Löschen</button></div></div>'}).join(""); }catch(e){} }
+xxx try{ if(typeof S==="undefined")window.S={routines:[]}; var list=document.getElementById("routinesList"); if(!list)return; var r=S.routines||[]; if(!r.length){ list.innerHTML='<div class="empty">Keine Routinen.</div>'; return;} list.innerHTML=r.map(function(it,i){return '<div class="item"><div>'+esc(it.name||'')+'</div><div class="it-actions"><button class="btn small" data-routine-del="'+i+'">Löschen</button></div></div>'}).join(""); }catch(e){} }
 
 document.addEventListener('click',function(e){var t=e.target;if(t.id==="addTask"){var v=document.getElementById("taskInput");if(v&&v.value){if(!S.tasks)S.tasks=[];S.tasks.push({text:v.value});v.value="";try{save();renderTasks();}catch(ex){}}return;}if(t.matches('[data-task-del]')){var i=parseInt(t.getAttribute('data-task-del'));if(S.tasks&&S.tasks[i]){S.tasks.splice(i,1);try{save();renderTasks();}catch(ex){}}return;}if(t.id==="addRoutine"){var n=document.getElementById("routineName"),f=document.getElementById("routineFreq");if(n&&n.value){if(!S.routines)S.routines=[];S.routines.push({name:n.value,freq:f?f.value:"daily"});n.value="";try{save();renderRoutines();}catch(ex){}}return;}if(t.matches('[data-routine-del]')){var i2=parseInt(t.getAttribute('data-routine-del'));if(S.routines&&S.routines[i2]){S.routines.splice(i2,1);try{save();renderRoutines();}catch(ex){}}return;}});
+
+function renderTasks(){
+  if(typeof S==='undefined')window.S={tasks:[],routines:[],categories:[],todos:[]};
+  if(!S.tasks) S.tasks=[];
+  var list=document.getElementById('tasksList');
+  if(!list) return;
+  if(!S.tasks.length){ list.innerHTML='<div class="empty"><span class="big">🗒️</span>Keine Aufgaben vorhanden.</div>'; return; }
+  list.innerHTML=S.tasks.map(function(t,i){ return '<div class="item"><div><div class="it-title">'+esc(t.text||'')+'</div></div><div class="it-actions"><button class="btn small" data-task-del="'+i+'">Löschen</button></div></div>'; }).join('');
+}
+function renderRoutines(){
+  if(typeof S==='undefined')window.S={routines:[],tasks:[]};
+  if(!S.routines) S.routines=[];
+  var list=document.getElementById('routinesList');
+  if(!list) return;
+  if(!S.routines.length){ list.innerHTML='<div class="empty"><span class="big">🗓️</span>Keine Routinen vorhanden.</div>'; return; }
+  list.innerHTML=S.routines.map(function(r,i){ return '<div class="item"><div><div class="it-title">'+esc(r.name||'')+'</div><div class="it-sub">'+(r.freq||'daily')+'</div></div><div class="it-actions"><button class="btn small" data-routine-del="'+i+'">Löschen</button></div></div>'; }).join('');
+}
