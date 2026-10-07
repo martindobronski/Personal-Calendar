@@ -279,11 +279,12 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
   </div>
   <nav class="tabs" id="tabs">
     <button class="tab active" data-view="cal">🗓️ Kalender</button>
-    <button class="tab" data-view="todos">✅ To-Dos &amp; Routinen <span class="badge" id="todoBadge">0</span></button>
+    <button class="tab" data-view="tasks">✅ Aufgaben <span class="badge" id="todoBadge">0</span></button>
+    <button class="tab" data-view="routines">🗓️ Routinen</button>
     <button class="tab" data-view="meals">🍽️ Mahlzeiten</button>
     <button class="tab" data-view="lists">🛒 Listen</button>
     <button class="tab" data-view="points">⭐ Punkte</button>
-        <button class="tab" style="color:#0f1420;background:#e8edf7;border:1px solid #cbd5e1" data-view="work">⏱️ Arbeitzeit</button>
+    <button class="tab" style="color:#0f1420;background:#e8edf7;border:1px solid #cbd5e1" data-view="work">⏱️ Arbeitzeit</button>
     <button class="tab" data-view="settings">⚙️ Einstellungen</button>
 </nav>
 </header>
@@ -322,37 +323,26 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 </section>
 
 <!-- ======================= TODOS ======================= -->
-<section class="view" id="view-todos">
-  <div class="row" style="justify-content:space-between;margin-bottom:14px">
-    <div class="row">
-      <button class="btn sm active" data-tfilter="todo" id="fTodo">To-Dos</button>
-      <button class="btn sm" data-tfilter="routine" id="fRoutine">Routinen</button>
-      <button class="btn sm" data-tfilter="all" id="fAll">Alle</button>
-    </div>
-    <button class="btn primary sm" id="btnNewTodo">+ Eintrag</button>
+<section class="view" id="view-tasks">
+  <h2>✅ Aufgaben</h2>
+  <div class="flex">
+    <input id="taskInput" placeholder="Neue Aufgabe">
+    <button class="btn primary" id="addTask">Hinzufügen</button>
   </div>
-  <div class="grid2">
-    <div class="card">
-      <h2 class="sec" id="todoListTitle">Offene To-Dos</h2>
-      <div id="todoList"></div>
-    </div>
-    <div class="card">
-      <h2 class="sec">Info</h2>
-      <p class="note">
-        <b>Routinen</b> wiederholen sich täglich oder wöchentlich. Ein Häkchen erledigt die
-        Routine für den heutigen Tag (bzw. für diese Woche) und vergibt automatisch Punkte.<br><br>
-        <b>To-Dos</b> sind Einzelaufgaben. Sie verschwinden nach dem Abhaken aus der offenen Liste
-        und können über <span class="kbd">Erledigte anzeigen</span> zurückgeholt werden.
-      </p>
-      <div class="flex-end">
-        <button class="btn ghost sm" id="btnToggleDone">Erledigte anzeigen</button>
-      </div>
-      <div id="doneList" style="margin-top:14px"></div>
-    </div>
-  </div>
+  <div class="list" id="tasksList"></div>
 </section>
 
 <!-- ======================= MAHLZEITEN ======================= -->
+<section class="view" id="view-routines">
+  <h2>🗓️ Routinen</h2>
+  <div class="flex">
+    <input id="routineName" placeholder="Neue Routine (z. B. Zähne putzen, Spazieren)">
+    <select id="routineFreq"><option value="daily">täglich</option><option value="weekly">wöchentlich</option><option value="monthly">monatlich</option></select>
+    <button class="btn primary" id="addRoutine">Hinzufügen</button>
+  </div>
+  <div class="list" id="routinesList"></div>
+  <div class="hint">Routinen sind wiederkehrende Aufgaben. Sie werden getrennt von Aufgaben verwaltet.</div>
+</section>
 <section class="view" id="view-meals">
   <div class="card">
     <div class="cal-head">
@@ -677,7 +667,7 @@ function defaults(){
       {id:uid(), name:"Kids",  color:"#22c55e"},
       {id:uid(), name:"Familie", color:"#f5a524"}
     ],
-    events:[], todos:[], meals:{}, lists:null, rewards:[], points:0, history:[],
+    events:[], todos:[],tasks:[],routines:[], meals:{}, lists:null, rewards:[], points:0, history:[],
     settings:{ weekStart:1, showDone:false }
   };
 }
@@ -1559,3 +1549,8 @@ render();
 </script>
 </body>
 </html>
+
+function renderTasks(){ try{ if(typeof S==="undefined")window.S={tasks:[]}; var list=document.getElementById("tasksList"); if(!list)return; var t=S.tasks||[]; if(!t.length){ list.innerHTML='<div class="empty">Keine Aufgaben.</div>'; return;} list.innerHTML=t.map(function(it,i){return '<div class="item"><div>'+esc(it.text||'')+'</div><div class="it-actions"><button class="btn small" data-task-del="'+i+'">Löschen</button></div></div>'}).join(""); }catch(e){} }
+function renderRoutines(){ try{ if(typeof S==="undefined")window.S={routines:[]}; var list=document.getElementById("routinesList"); if(!list)return; var r=S.routines||[]; if(!r.length){ list.innerHTML='<div class="empty">Keine Routinen.</div>'; return;} list.innerHTML=r.map(function(it,i){return '<div class="item"><div>'+esc(it.name||'')+'</div><div class="it-actions"><button class="btn small" data-routine-del="'+i+'">Löschen</button></div></div>'}).join(""); }catch(e){} }
+
+document.addEventListener('click',function(e){var t=e.target;if(t.id==="addTask"){var v=document.getElementById("taskInput");if(v&&v.value){if(!S.tasks)S.tasks=[];S.tasks.push({text:v.value});v.value="";try{save();renderTasks();}catch(ex){}}return;}if(t.matches('[data-task-del]')){var i=parseInt(t.getAttribute('data-task-del'));if(S.tasks&&S.tasks[i]){S.tasks.splice(i,1);try{save();renderTasks();}catch(ex){}}return;}if(t.id==="addRoutine"){var n=document.getElementById("routineName"),f=document.getElementById("routineFreq");if(n&&n.value){if(!S.routines)S.routines=[];S.routines.push({name:n.value,freq:f?f.value:"daily"});n.value="";try{save();renderRoutines();}catch(ex){}}return;}if(t.matches('[data-routine-del]')){var i2=parseInt(t.getAttribute('data-routine-del'));if(S.routines&&S.routines[i2]){S.routines.splice(i2,1);try{save();renderRoutines();}catch(ex){}}return;}});
