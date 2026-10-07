@@ -1584,4 +1584,4 @@ function renderRoutines(){
   if(!S.routines.length){ list.innerHTML='<div class="empty"><span class="big">🗓️</span>Keine Routinen vorhanden.</div>'; return; }
   list.innerHTML=S.routines.map(function(r,i){ return '<div class="item"><div><div class="it-title">'+esc(r.name||'')+'</div><div class="it-sub">'+(r.freq||'daily')+'</div></div><div class="it-actions"><button class="btn small" data-routine-del="'+i+'">Löschen</button></div></div>'; }).join('');
 }
-function updateTaskBadge(){ try{ if(typeof S==='undefined')window.S={tasks:[]}; var b=document.getElementById('todoBadge'); if(b){ var c=(S.tasks||[]).filter(function(x){return !x.done;}).length; b.textContent=c; } }catch(e){} }
+function updateTaskBadge(){ try{ if(!window.S) window.S={tasks:[],routines:[]}; var b=document.getElementById('todoBadge'); if(b){ b.textContent=(window.S.tasks||[]).length.toString(); } }catch(e){} }; var b=document.getElementById('todoBadge'); if(b){ var c=(S.tasks||[]).length; b.textContent=c; } }catch(e){} }
