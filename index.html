@@ -283,8 +283,9 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
     <button class="tab" data-view="meals">🍽️ Mahlzeiten</button>
     <button class="tab" data-view="lists">🛒 Listen</button>
     <button class="tab" data-view="points">⭐ Punkte</button>
+        <button class="tab" style="color:#0f1420;background:#e8edf7;border:1px solid #cbd5e1" data-view="work">⏱️ Arbeitzeit</button>
     <button class="tab" data-view="settings">⚙️ Einstellungen</button>
-  </nav>
+</nav>
 </header>
 
 <main>
@@ -484,6 +485,27 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
   </div>
 </section>
 
+
+<section class="view" id="view-work">
+  <h2>⏱️ Arbeitzeit</h2>
+  <div class="work-top">
+    <div class="work-now" id="workNow">0:00:00</div>
+    <div class="work-state" id="workState">Nicht gestartet</div>
+    <div class="work-actions">
+      <button class="btn primary" id="workToggle">Start</button>
+      <button class="btn" id="workClearDay">Tag leeren</button>
+    </div>
+    <div class="work-chip" id="workChip" title="Arbeitszeit heute">⏱️ 0:00</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Heute</div>
+    <div class="list" id="workTodayList"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Verlauf</div>
+    <div class="list" id="workHistory"></div>
+  </div>
+</section>
 </main>
 
 <!-- ======================= MODAL: TERMIN ======================= -->
@@ -789,7 +811,7 @@ function zodiacInfo(d){
    Views / Navigation
    ========================================================= */
 let curView = "cal";
-function setView(v){
+function setView(v){ try{if(v==="work"&&typeof renderWork==="function")renderWork();}catch(e){}
   curView = v;
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active", b.dataset.view===v));
   document.querySelectorAll(".view").forEach(s=>s.classList.toggle("active", s.id==="view-"+v));
@@ -854,7 +876,7 @@ function renderCalendar(){
   }
   grid.innerHTML = html;
   renderLegend();
-  renderAgenda();
+  renderAgenda(); try{if(typeof updateWorkLive==="function") updateWorkLive();}catch(e){}
 }
 function evEndKey(ev){
   return (ev.endDate && ev.endDate > ev.date) ? ev.endDate : ev.date;
@@ -1488,6 +1510,24 @@ document.addEventListener("keydown", e=>{
 /* =========================================================
    Uhr, Mond, Sternzeichen
    ========================================================= */
+/* WORK */
+function wkPad(n){return String(n).padStart(2,"0");}
+function wkIsoKey(d){return d.getFullYear()+"-"+wkPad(d.getMonth()+1)+"-"+wkPad(d.getDate());}
+function wkTodayKey(){return wkIsoKey(new Date());}
+function workArr(k){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};if(!S.work[k])S.work[k]=[];return S.work[k];}
+function workOpenInterval(k){var a=workArr(k);for(var i=a.length-1;i>=0;i--){if(a[i]&&!a[i].e)return a[i];}return null;}
+function workRunningToday(){return !!workOpenInterval(wkTodayKey());}
+function hmToMin(hm){if(!hm)return 0;var p=hm.split(":");return parseInt(p[0])*60+parseInt(p[1]);}
+function minToHM(min){var s=min<0?"-":"";var m=Math.abs(min);var h=Math.floor(m/60),mm=m%60;return s+h+":"+String(mm).padStart(2,"0");}
+function minToDec(min){return (Math.round((min/60)*100)/100).toFixed(2);}
+function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var a=S.work[k]||[];var now=ref||new Date();var nk=wkTodayKey();var anwes=0;for(var i=0;i<a.length;i++){var it=a[i];if(!it||!it.s)continue;var sm=hmToMin(it.s),em;if(it.e)em=hmToMin(it.e);else em=(k===nk)?(now.getHours()*60+now.getMinutes()):(23*60+59);if(em>sm)anwes+=em-sm;}var pairs=[];for(var i=0;i<a.length;i++){var it=a[i];if(!it||!it.s)continue;var sm=hmToMin(it.s),em;if(it.e)em=hmToMin(it.e);else em=(k===nk)?(now.getHours()*60+now.getMinutes()):(23*60+59);if(em>=sm)pairs.push({s:sm,e:em});}pairs.sort(function(x,y){return x.s-y.s});var pause=0;for(var i=1;i<pairs.length;i++){var g=pairs[i].s-pairs[i-1].e;if(g>0)pause+=g;}var arb=anwes-pause;if(arb<0)arb=0;return {anwesMin:anwes,pauseMinBooked:pause,arbeitsMin:arb,sollMin:456,saldoMin:arb-456};}
+function fmtSecHMS(sec){var s=Math.max(0,Math.floor(sec||0));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return wkPad(h)+":"+wkPad(m)+":"+wkPad(ss);}
+function fmtHHMM(h,m){return wkPad(h)+":"+wkPad(m);}
+function workToggle(){var nk=wkTodayKey();var a=workArr(nk);var o=workOpenInterval(nk);var now=new Date();var ts=wkPad(now.getHours())+":"+wkPad(now.getMinutes());if(o){o.e=ts;}else{a.push({s:ts,e:null});}try{save();renderWork();updateWorkLive();render();}catch(e){}}
+function updateWorkLive(){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var el=document.getElementById("workChip");var nk=wkTodayKey();var c=workCalcDay(nk);if(el){el.innerHTML="⏱️ <b>"+minToHM(c.arbeitsMin)+"</b>";el.title="Arbeitszeit heute – netto "+minToHM(c.arbeitsMin)+(workRunningToday()?" (laufend)":"");}var v=document.getElementById("view-work");if(v&&v.classList.contains("active")){var wn=document.getElementById("workNow"),ws=document.getElementById("workState"),wt=document.getElementById("workToggle");if(wt){wt.onclick=workToggle;wt.textContent=workRunningToday()?"Stopp":"Start";}if(wn)wn.textContent=fmtSecHMS(c.arbeitsMin*60);if(ws){var o=workOpenInterval(nk);ws.textContent=(o?"läuft seit "+o.s+" – ":"")+"Anw. "+minToHM(c.anwesMin)+" · Pause "+minToHM(c.pauseMinBooked)+" · Arb. "+minToHM(c.arbeitsMin)+" · Soll 7:36";}}}
+function renderWork(){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var nk=wkTodayKey();if(!S.work[nk])S.work[nk]=[];var c=workCalcDay(nk);var wn=document.getElementById("workNow"),ws=document.getElementById("workState"),wt=document.getElementById("workToggle");if(wn)wn.textContent=fmtSecHMS(c.arbeitsMin*60);if(ws){var o=workOpenInterval(nk);ws.textContent=(o?"läuft seit "+o.s+" – ":"")+"Anw. "+minToHM(c.anwesMin)+" · Pause "+minToHM(c.pauseMinBooked)+" · Arb. "+minToHM(c.arbeitsMin)+" · Soll 7:36";}if(wt){wt.textContent=workRunningToday()?"Stopp":"Start";wt.onclick=workToggle;}var box=document.getElementById("workTodayList");var arr=S.work[nk];if(!arr.length){if(box)box.innerHTML='<div class="empty"><span class="big">⏱️</span>Keine Einträge heute.</div>';}else{var rev=arr.map(function(it,idx){return{it:it,idx:idx}}).reverse();if(box)box.innerHTML=rev.map(function(x){var d=x.it.e?('Dauer '+minToHM(hmToMin(x.it.e)-hmToMin(x.it.s))+', Ind. '+minToDec(hmToMin(x.it.e)-hmToMin(x.it.s))):'';return '<div class="item"><div><div class="it-title">Komm '+esc(x.it.s)+(x.it.e?" · Geht "+esc(x.it.e):" · offen")+'</div><div class="it-sub">'+d+'</div></div><div class="it-actions"><button class="linkbtn del" data-wk-del="'+x.idx+'">Löschen</button></div></div>';}).join("");}var hist=document.getElementById("workHistory");if(hist){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var keys=Object.keys(S.work).sort().reverse();if(!keys.length){hist.innerHTML='<div class="empty">Keine Einträge.</div>';}else{hist.innerHTML=keys.map(function(k){var c2=workCalcDay(k,new Date(k+"T23:59:59"));return '<div class="item"><div><div class="it-title">'+esc(k.split("-").reverse().join("."))+'</div><div class="it-sub">Anw. '+minToHM(c2.anwesMin)+' · Pause '+minToHM(c2.pauseMinBooked)+' · Arb. '+minToHM(c2.arbeitsMin)+' · Ind. '+minToDec(c2.arbeitsMin)+' · Saldo '+minToHM(c2.saldoMin)+'</div></div><div class="it-actions"><button class="linkbtn delall" data-wk-delall="'+esc(k)+'">Tag leeren</button></div></div>';}).join("");}}try{updateWorkLive();}catch(e){}}
+/* WORK-END */
+
 function tick(){
   const now = new Date();
   document.getElementById("clockChip").innerHTML =
@@ -1504,6 +1544,18 @@ setInterval(tick, 1000); tick();
 
 /* Init */
 render();
+
+(function(){
+  document.addEventListener('click', function(e){
+    var t=e.target;
+    if(t.matches('#workClearDay')){ if(confirm('Tag wirklich leeren?')){ var k=wkTodayKey(); if(typeof S!=="undefined") delete S.work[k]; try{save();if(typeof renderWork==="function")renderWork();if(typeof updateWorkLive==="function")updateWorkLive();}catch(ex){} return; }
+    }
+    if(t.matches('[data-wk-del]')){ var idx=parseInt(t.getAttribute('data-wk-del')); var k=wkTodayKey(); var a=workArr(k); if(!isNaN(idx)&&a[idx]){ a.splice(idx,1); try{save();if(typeof renderWork==="function")renderWork();}catch(ex){} return; }
+    }
+    if(t.matches('[data-wk-delall]')){ var kk=t.getAttribute('data-wk-delall'); if(typeof S!=="undefined"&&S.work&&S.work[kk]){ if(confirm('Tag '+kk.split('-').reverse().join('.')+' wirklich leeren?')){ delete S.work[kk]; try{save();if(typeof renderWork==="function")renderWork();}catch(ex){} return; }}
+    }
+  });
+})();
 </script>
 </body>
 </html>
