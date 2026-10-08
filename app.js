@@ -973,7 +973,14 @@ function workRunningToday(){return !!workOpenInterval(wkTodayKey());}
 function hmToMin(hm){if(!hm)return 0;var p=hm.split(":");return parseInt(p[0])*60+parseInt(p[1]);}
 function minToHM(min){var s=min<0?"-":"";var m=Math.abs(min);var h=Math.floor(m/60),mm=m%60;return s+h+":"+String(mm).padStart(2,"0");}
 function minToDec(min){return (Math.round((min/60)*100)/100).toFixed(2);}
-function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var a=S.work[k]||[];var now=ref||new Date();var nk=wkTodayKey();var anwes=0;for(var i=0;i<a.length;i++){var it=a[i];if(!it||!it.s)continue;var sm=hmToMin(it.s),em;if(it.e)em=hmToMin(it.e);else em=(k===nk)?(now.getHours()*60+now.getMinutes()):(23*60+59);if(em>sm)anwes+=em-sm;}var pairs=[];for(var i=0;i<a.length;i++){var it=a[i];if(!it||!it.s)continue;var sm=hmToMin(it.s),em;if(it.e)em=hmToMin(it.e);else em=(k===nk)?(now.getHours()*60+now.getMinutes()):(23*60+59);if(em>=sm)pairs.push({s:sm,e:em});}pairs.sort(function(x,y){return x.s-y.s});var pause=0;for(var i=1;i<pairs.length;i++){var g=pairs[i].s-pairs[i-1].e;if(g>0)pause+=g;}var arb=anwes-pause;if(arb<0)arb=0;return {anwesMin:anwes,pauseMinBooked:pause,arbeitsMin:arb,sollMin:456,saldoMin:arb-456};}
+function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var a=S.work[k]||[];var now=ref||new Date();var nk=wkTodayKey();var anwes=0;for(var i=0;i<a.length;i++){var it=a[i];if(!it||!it.s)continue;var sm=hmToMin(it.s),em;if(it.e)em=hmToMin(it.e);else em=(k===nk)?(now.getHours()*60+now.getMinutes()):(23*60+59);if(em>sm)anwes+=em-sm;}var pairs=[];for(var i=0;i<a.length;i++){var it=a[i];if(!it||!it.s)continue;var sm=hmToMin(it.s),em;if(it.e)em=hmToMin(it.e);else em=(k===nk)?(now.getHours()*60+now.getMinutes()):(23*60+59);if(em>=sm)pairs.push({s:sm,e:em});}pairs.sort(function(x,y){return x.s-y.s});var pause=0;for(var i=1;i<pairs.length;i++){var g=pairs[i].s-pairs[i-1].e;if(g>0)pause+=g;}var arb=anwes-pause;if(arb<0)arb=0;
+  // Mindestpausen nach ArbZG: >6h -> 30min, >9h -> 45min
+  var reqPause=0;
+  if(arb>360){reqPause=30;}
+  if(arb>540){reqPause=45;}
+  var pauseEff=Math.max(pause,reqPause);
+  var arbEff=anwes-pauseEff;if(arbEff<0)arbEff=0;
+  return {anwesMin:anwes,pauseMinBooked:pauseEff,arbeitsMin:arbEff,sollMin:456,saldoMin:arbEff-456};}
 function fmtSecHMS(sec){var s=Math.max(0,Math.floor(sec||0));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return wkPad(h)+":"+wkPad(m)+":"+wkPad(ss);}
 function fmtHHMM(h,m){return wkPad(h)+":"+wkPad(m);}
 function workToggle(){var nk=wkTodayKey();var a=workArr(nk);var o=workOpenInterval(nk);var now=new Date();var ts=wkPad(now.getHours())+":"+wkPad(now.getMinutes());if(o){o.e=ts;}else{a.push({s:ts,e:null});}try{save();renderWork();updateWorkLive();render();}catch(e){}}
