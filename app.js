@@ -1209,7 +1209,7 @@ function renderTasks(){
           + '<div><div class="it-title">'+esc(t.title||t.text||"")+'</div>'
           + '<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
           + (rep?'<span>↻ '+esc(rep)+'</span>':'')
-          + (t.due?'<span>📅 '+esc(t.due)+'</span>':'')
+          + (t.due?'<span>📅 '+esc((t.due||'').split('-').reverse().join('.'))+'</span>':'')
           + (t.completedAt?(function(){var d=new Date(t.completedAt);return '<span>✓ '+esc(d.getDate().toString().padStart(2,'0')+'.'+(d.getMonth()+1).toString().padStart(2,'0')+'.'+d.getFullYear().toString().slice(-2)+' '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'))+'</span>';}()):'')
           + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
           + '<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
@@ -1345,7 +1345,7 @@ function renderCalSide(){
             +'<div><div class="it-title">'+esc(t.title||t.text||'')+'</div>'
             +'<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
             +(t.repeat&&t.repeat!=='none'?'<span>↻ '+esc(repLabel(t.repeat))+'</span>':'')
-            +(t.due?'<span>📅 '+esc(t.due)+'</span>':'')+'</div></div>'
+            +(t.due?'<span>📅 '+esc((t.due||'').split('-').reverse().join('.'))+'</span>':'')+'</div></div>'
             +'<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
             +'<button class="btn sm del" data-task-del="'+idx+'" title="Löschen">🗑</button></div>'
             +'</div>';
