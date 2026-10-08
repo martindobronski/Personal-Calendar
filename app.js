@@ -1155,7 +1155,8 @@ function renderCalSide(){
             +'<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
             +(t.repeat&&t.repeat!=='none'?'<span>↻ '+esc(repLabel(t.repeat))+'</span>':'')
             +(t.due?'<span>📅 '+esc(t.due)+'</span>':'')+'</div></div>'
-            +'<div class="it-actions"><button class="btn sm" data-task-del="'+idx+'">Löschen</button></div>'
+            +'<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
+            +'<button class="btn sm" data-task-del="'+idx+'">Löschen</button></div>'
             +'</div>';
         }).join('');
       }
@@ -1175,7 +1176,8 @@ function renderCalSide(){
           var i=S.routines.indexOf(r);
           return '<div class="item"><div><div class="it-title">'+esc(r.name||'')+'</div>'
             +'<div class="it-sub"><span>↻ '+esc(repLabel(r.freq))+'</span>'+(r.note?' · '+esc(r.note):'')+'</div></div>'
-            +'<div class="it-actions"><button class="btn sm" data-routine-del="'+i+'">Löschen</button></div></div>';
+            +'<div class="it-actions"><button class="btn sm" data-routine-edit="'+i+'" title="Bearbeiten">✎</button>'
+            +'<button class="btn sm" data-routine-del="'+i+'">Löschen</button></div></div>';
         }).join('');
       }
       var rcnt=document.getElementById('calRoutineCount');
