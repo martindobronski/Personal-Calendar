@@ -138,7 +138,7 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .field{margin-bottom:14px}
 .field2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .time-wrap{display:flex;gap:6px;align-items:center}
-.time-wrap input[type=time]{flex:1;min-width:0}
+.time-wrap input[type=time]{flex:1;min-width:0;height:38px}
 .time-pick{
   flex:none;width:44px;background:#121a2b;border:1px solid var(--line);border-radius:11px;
   display:grid;place-items:center;font-size:16px;cursor:pointer;transition:.14s;color:var(--muted);padding:0;
@@ -408,8 +408,8 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 }
 .wk-row .field{margin-bottom:0}
 .wk-rowdel{
-  align-self:center;font-size:19px;line-height:1;color:var(--muted);
-  width:32px;height:32px;border:1px solid var(--line);border-radius:9px;
+  align-self:center;font-size:16px;line-height:1;color:var(--muted);
+  width:38px;height:38px;border:1px solid var(--line);border-radius:9px;
   display:grid;place-items:center;padding:0;flex:none;
 }
 .wk-rowdel:hover{border-color:#7f1d1d;color:#fca5a5;background:#2a1520}

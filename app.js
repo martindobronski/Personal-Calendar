@@ -1091,7 +1091,7 @@ function renderWkRows(){
       +'<div class="field"><label class="fl">Geht</label><div class="time-wrap">'
       +'<input type="time" class="wk-e" id="wkE'+i+'" value="'+esc(r.e||"")+'">'
       +'<button type="button" class="time-pick" data-timefor="wkE'+i+'" title="Uhrzeit wählen">🕒</button></div></div>'
-      +'<button class="linkbtn del wk-rowdel" data-wk-rowdel="'+i+'" title="Zeitraum entfernen">×</button>'
+      +'<button class="btn sm del wk-rowdel" data-wk-rowdel="'+i+'" title="Zeitraum entfernen">🗑</button>'
       +'</div>';
   }).join("");
 }
