@@ -44,6 +44,9 @@
       <div class="cal-head">
         <div class="cal-title" id="calTitle">–<span id="calSub"></span></div>
         <div class="cal-nav">
+          <button class="work-live" id="calWorkLive" title="Arbeitszeit läuft – zur Arbeitszeit" style="display:none">
+            <span class="wl-dot"></span>⏱ <b id="calWorkLiveTime">0:00</b>
+          </button>
           <button class="btn sm" id="btnToday">Heute</button>
           <button class="btn icon" id="btnPrev" aria-label="Vorheriger Monat">‹</button>
           <button class="btn icon" id="btnNext" aria-label="Nächster Monat">›</button>
@@ -245,23 +248,36 @@
 
 
 <section class="view" id="view-work">
-  <h2>⏱️ Arbeitzeit</h2>
-  <div class="work-top">
-    <div class="work-now" id="workNow">0:00:00</div>
-    <div class="work-state" id="workState">Nicht gestartet</div>
-    <div class="work-actions">
-      <button class="btn primary" id="workToggle">Start</button>
-      <button class="btn" id="workClearDay">Tag leeren</button>
+  <h2 class="sec">⏱️ Arbeitszeit</h2>
+
+  <div class="work-hero">
+    <div class="work-hero-main">
+      <div class="work-now" id="workNow">00:00:00</div>
+      <div class="work-state" id="workState">Nicht gestartet</div>
+      <div class="work-actions">
+        <button class="btn primary" id="workToggle">Start</button>
+        <button class="btn" id="workClearDay">Tag leeren</button>
+      </div>
     </div>
-    <div class="work-chip" id="workChip" title="Arbeitszeit heute">⏱️ 0:00</div>
+    <div class="work-stats">
+      <div class="work-stat"><span class="ws-lbl">Anwesend</span><span class="ws-val" id="workStatAnw">0:00</span></div>
+      <div class="work-stat"><span class="ws-lbl">Pause</span><span class="ws-val" id="workStatPause">0:00</span></div>
+      <div class="work-stat hl"><span class="ws-lbl">Arbeitszeit</span><span class="ws-val" id="workStatArb">0:00</span></div>
+      <div class="work-stat"><span class="ws-lbl">Soll</span><span class="ws-val" id="workStatSoll">7:36</span></div>
+      <div class="work-stat"><span class="ws-lbl">Saldo</span><span class="ws-val" id="workStatSaldo">-7:36</span></div>
+      <div class="work-chip" id="workChip" title="Arbeitszeit heute">⏱️ 0:00</div>
+    </div>
   </div>
-  <div class="card">
-    <div class="card-title">Heute</div>
-    <div class="list" id="workTodayList"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Verlauf</div>
-    <div class="list" id="workHistory"></div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Heute</div>
+      <div class="list" id="workTodayList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Verlauf</div>
+      <div class="list" id="workHistory"></div>
+    </div>
   </div>
 </section>
 </main>
@@ -368,6 +384,22 @@
       <button class="btn danger left" id="tdDelete">Löschen</button>
       <button class="btn" data-close>Abbrechen</button>
       <button class="btn primary" id="tdSave">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= MODAL: ARBEITSZEIT ======================= -->
+<div class="overlay" id="wkModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="wkModalTitle">Arbeitstag bearbeiten</h3>
+    <div class="list" id="wkRows"></div>
+    <div class="flex-end" style="margin-top:4px">
+      <button class="btn sm" id="wkAdd">+ Zeitraum hinzufügen</button>
+    </div>
+    <p class="note" style="margin-top:12px">„Geht“ leer lassen, wenn die Zeit noch läuft. Nach dem Speichern wird die Arbeitszeit neu berechnet.</p>
+    <div class="modal-actions">
+      <button class="btn" data-close>Abbrechen</button>
+      <button class="btn primary" id="wkSave">Speichern</button>
     </div>
   </div>
 </div>

@@ -977,8 +977,151 @@ function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.w
 function fmtSecHMS(sec){var s=Math.max(0,Math.floor(sec||0));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return wkPad(h)+":"+wkPad(m)+":"+wkPad(ss);}
 function fmtHHMM(h,m){return wkPad(h)+":"+wkPad(m);}
 function workToggle(){var nk=wkTodayKey();var a=workArr(nk);var o=workOpenInterval(nk);var now=new Date();var ts=wkPad(now.getHours())+":"+wkPad(now.getMinutes());if(o){o.e=ts;}else{a.push({s:ts,e:null});}try{save();renderWork();updateWorkLive();render();}catch(e){}}
-function updateWorkLive(){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var el=document.getElementById("workChip");var nk=wkTodayKey();var c=workCalcDay(nk);if(el){el.innerHTML="⏱️ <b>"+minToHM(c.arbeitsMin)+"</b>";el.title="Arbeitszeit heute – netto "+minToHM(c.arbeitsMin)+(workRunningToday()?" (laufend)":"");}var v=document.getElementById("view-work");if(v&&v.classList.contains("active")){var wn=document.getElementById("workNow"),ws=document.getElementById("workState"),wt=document.getElementById("workToggle");if(wt){wt.onclick=workToggle;wt.textContent=workRunningToday()?"Stopp":"Start";}if(wn)wn.textContent=fmtSecHMS(c.arbeitsMin*60);if(ws){var o=workOpenInterval(nk);ws.textContent=(o?"läuft seit "+o.s+" – ":"")+"Anw. "+minToHM(c.anwesMin)+" · Pause "+minToHM(c.pauseMinBooked)+" · Arb. "+minToHM(c.arbeitsMin)+" · Soll 7:36";}}}
-function renderWork(){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var nk=wkTodayKey();if(!S.work[nk])S.work[nk]=[];var c=workCalcDay(nk);var wn=document.getElementById("workNow"),ws=document.getElementById("workState"),wt=document.getElementById("workToggle");if(wn)wn.textContent=fmtSecHMS(c.arbeitsMin*60);if(ws){var o=workOpenInterval(nk);ws.textContent=(o?"läuft seit "+o.s+" – ":"")+"Anw. "+minToHM(c.anwesMin)+" · Pause "+minToHM(c.pauseMinBooked)+" · Arb. "+minToHM(c.arbeitsMin)+" · Soll 7:36";}if(wt){wt.textContent=workRunningToday()?"Stopp":"Start";wt.onclick=workToggle;}var box=document.getElementById("workTodayList");var arr=S.work[nk];if(!arr.length){if(box)box.innerHTML='<div class="empty"><span class="big">⏱️</span>Keine Einträge heute.</div>';}else{var rev=arr.map(function(it,idx){return{it:it,idx:idx}}).reverse();if(box)box.innerHTML=rev.map(function(x){var d=x.it.e?('Dauer '+minToHM(hmToMin(x.it.e)-hmToMin(x.it.s))+', Ind. '+minToDec(hmToMin(x.it.e)-hmToMin(x.it.s))):'';return '<div class="item"><div><div class="it-title">Komm '+esc(x.it.s)+(x.it.e?" · Geht "+esc(x.it.e):" · offen")+'</div><div class="it-sub">'+d+'</div></div><div class="it-actions"><button class="linkbtn del" data-wk-del="'+x.idx+'">Löschen</button></div></div>';}).join("");}var hist=document.getElementById("workHistory");if(hist){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var keys=Object.keys(S.work).sort().reverse();if(!keys.length){hist.innerHTML='<div class="empty">Keine Einträge.</div>';}else{hist.innerHTML=keys.map(function(k){var c2=workCalcDay(k,new Date(k+"T23:59:59"));return '<div class="item"><div><div class="it-title">'+esc(k.split("-").reverse().join("."))+'</div><div class="it-sub">Anw. '+minToHM(c2.anwesMin)+' · Pause '+minToHM(c2.pauseMinBooked)+' · Arb. '+minToHM(c2.arbeitsMin)+' · Ind. '+minToDec(c2.arbeitsMin)+' · Saldo '+minToHM(c2.saldoMin)+'</div></div><div class="it-actions"><button class="linkbtn delall" data-wk-delall="'+esc(k)+'">Tag leeren</button></div></div>';}).join("");}}try{updateWorkLive();}catch(e){}}
+function workSet(id,val){var el=document.getElementById(id); if(el) el.textContent=val;}
+function workRunningSec(){
+  var c=workCalcDay(wkTodayKey()), o=workOpenInterval(wkTodayKey());
+  return c.arbeitsMin*60 + (o ? new Date().getSeconds() : 0);
+}
+function renderWorkHead(){
+  if(typeof S==="undefined") window.S={work:{}};
+  if(!S.work) S.work={};
+  var nk=wkTodayKey(), c=workCalcDay(nk), o=workOpenInterval(nk);
+  workSet("workNow", fmtSecHMS(o ? workRunningSec() : c.arbeitsMin*60));
+  workSet("workState", o ? "Läuft seit "+o.s : "Nicht gestartet");
+  var wsEl=document.getElementById("workState");
+  if(wsEl) wsEl.classList.toggle("live", !!o);
+  var wt=document.getElementById("workToggle");
+  if(wt){ wt.textContent = o ? "Stopp" : "Start"; wt.onclick = workToggle; }
+  workSet("workStatAnw", minToHM(c.anwesMin));
+  workSet("workStatPause", minToHM(c.pauseMinBooked));
+  workSet("workStatArb", minToHM(c.arbeitsMin));
+  workSet("workStatSoll", minToHM(c.sollMin));
+  workSet("workStatSaldo", (c.saldoMin>0?"+":"")+minToHM(c.saldoMin));
+  var sd=document.getElementById("workStatSaldo");
+  if(sd){ sd.classList.toggle("pos", c.saldoMin>0); sd.classList.toggle("neg", c.saldoMin<0); }
+  var chip=document.getElementById("workChip");
+  if(chip){
+    chip.innerHTML = "⏱️ <b>"+minToHM(c.arbeitsMin)+"</b>";
+    chip.title = "Arbeitszeit heute – netto "+minToHM(c.arbeitsMin)+(o?" (laufend)":"");
+  }
+  var wl=document.getElementById("calWorkLive");
+  if(wl){
+    wl.style.display = o ? "inline-flex" : "none";
+    if(o){
+      workSet("calWorkLiveTime", fmtSecHMS(workRunningSec()));
+      wl.title = "Arbeitszeit läuft seit "+o.s+" – öffnen";
+    }
+  }
+}
+var __wlBtn=document.getElementById("calWorkLive");
+if(__wlBtn) __wlBtn.onclick=function(){ setView("work"); };
+function updateWorkLive(){ renderWorkHead(); }
+function renderWork(){
+  if(typeof S==="undefined") window.S={work:{}};
+  if(!S.work) S.work={};
+  var nk=wkTodayKey();
+  if(!S.work[nk]) S.work[nk]=[];
+  renderWorkHead();
+  var box=document.getElementById("workTodayList");
+  if(box){
+    var arr=S.work[nk];
+    if(!arr.length){
+      box.innerHTML='<div class="empty"><span class="big">⏱️</span>Keine Einträge heute.</div>';
+    }else{
+      var rev=arr.map(function(it,idx){return {it:it,idx:idx};}).reverse();
+      box.innerHTML=rev.map(function(x){
+        var dur=x.it.e ? 'Dauer '+minToHM(hmToMin(x.it.e)-hmToMin(x.it.s))+' · Ind. '+minToDec(hmToMin(x.it.e)-hmToMin(x.it.s)) : 'Läuft …';
+        return '<div class="item">'
+          +'<div><div class="it-title">Komm '+esc(x.it.s)+(x.it.e?' · Geht '+esc(x.it.e):' · offen')+'</div>'
+          +'<div class="it-sub">'+dur+'</div></div>'
+          +'<div class="it-actions">'
+          +'<button class="btn sm" data-wk-edit="'+x.idx+'" title="Bearbeiten">✎</button>'
+          +'<button class="btn sm" data-wk-del="'+x.idx+'">Löschen</button></div>'
+          +'</div>';
+      }).join('');
+    }
+  }
+  var hist=document.getElementById("workHistory");
+  if(hist){
+    var keys=Object.keys(S.work).sort().reverse();
+    if(!keys.length){
+      hist.innerHTML='<div class="empty">Keine Einträge.</div>';
+    }else{
+      hist.innerHTML=keys.map(function(k){
+        var c2=workCalcDay(k,new Date(k+"T23:59:59"));
+        var saldo=(c2.saldoMin>0?"+":"")+minToHM(c2.saldoMin);
+        return '<div class="item">'
+          +'<div><div class="it-title">'+esc(k.split("-").reverse().join("."))+'</div>'
+          +'<div class="it-sub">Anw. '+minToHM(c2.anwesMin)+' · Pause '+minToHM(c2.pauseMinBooked)
+          +' · Arb. '+minToHM(c2.arbeitsMin)+' · Ind. '+minToDec(c2.arbeitsMin)
+          +' · Saldo <b class="'+(c2.saldoMin<0?"neg":"pos")+'">'+saldo+'</b></div></div>'
+          +'<div class="it-actions">'
+          +'<button class="btn sm" data-wk-editday="'+esc(k)+'" title="Bearbeiten">✎</button>'
+          +'<button class="btn sm" data-wk-delall="'+esc(k)+'">Tag leeren</button></div>'
+          +'</div>';
+      }).join('');
+    }
+  }
+}
+/* ---- Arbeitstag bearbeiten (Komm/Geht) ---- */
+let wkEditKey = null;
+let wkDraft = [];
+function syncWkDraft(){
+  var rows=document.querySelectorAll("#wkRows .wk-row");
+  for(var i=0;i<rows.length && i<wkDraft.length;i++){
+    var s=rows[i].querySelector(".wk-s"), e=rows[i].querySelector(".wk-e");
+    if(s) wkDraft[i].s=s.value;
+    if(e) wkDraft[i].e=e.value;
+  }
+}
+function renderWkRows(){
+  var box=document.getElementById("wkRows"); if(!box) return;
+  box.innerHTML=wkDraft.map(function(r,i){
+    return '<div class="wk-row">'
+      +'<div class="field"><label class="fl">Komm</label><div class="time-wrap">'
+      +'<input type="time" class="wk-s" id="wkS'+i+'" value="'+esc(r.s||"")+'">'
+      +'<button type="button" class="time-pick" data-timefor="wkS'+i+'" title="Uhrzeit wählen">🕒</button></div></div>'
+      +'<div class="field"><label class="fl">Geht</label><div class="time-wrap">'
+      +'<input type="time" class="wk-e" id="wkE'+i+'" value="'+esc(r.e||"")+'">'
+      +'<button type="button" class="time-pick" data-timefor="wkE'+i+'" title="Uhrzeit wählen">🕒</button></div></div>'
+      +'<button class="linkbtn del wk-rowdel" data-wk-rowdel="'+i+'" title="Zeitraum entfernen">×</button>'
+      +'</div>';
+  }).join("");
+}
+function openWorkDay(k){
+  wkEditKey = k;
+  wkDraft = (workArr(k)||[]).map(function(x){ return {s:x.s||"", e:x.e||""}; });
+  if(!wkDraft.length) wkDraft=[{s:"",e:""}];
+  renderWkRows();
+  document.getElementById("wkModalTitle").textContent = "Arbeitstag "+k.split("-").reverse().join(".")+(k===wkTodayKey()?" (heute)":"");
+  openModal("wkModal");
+}
+document.getElementById("wkAdd").onclick = function(){
+  syncWkDraft();
+  wkDraft.push({s:"",e:""});
+  renderWkRows();
+  var rows=document.querySelectorAll("#wkRows .wk-s");
+  if(rows.length) rows[rows.length-1].focus();
+};
+document.getElementById("wkSave").onclick = function(){
+  syncWkDraft();
+  var rows=wkDraft.filter(function(r){ return r.s; });
+  if(!rows.length){ toast("Bitte eine Komm-Zeit eintragen."); return; }
+  for(var i=0;i<rows.length;i++){
+    if(rows[i].e && hmToMin(rows[i].e)<=hmToMin(rows[i].s)){
+      toast("„Geht“ muss nach „Komm“ liegen."); return;
+    }
+  }
+  var openRows=rows.filter(function(r){ return !r.e; });
+  if(openRows.length>1){ toast("Nur ein offener Zeitraum ist erlaubt."); return; }
+  if(openRows.length && wkEditKey!==wkTodayKey()){
+    toast("Ein offener Zeitraum kann nur für heute angelegt werden."); return;
+  }
+  workArr(wkEditKey).length = 0;
+  rows.forEach(function(r){ workArr(wkEditKey).push({s:r.s, e:r.e||null}); });
+  save(); closeModals(); renderWork(); render();
+  toast("Arbeitszeit neu berechnet.");
+};
 /* WORK-END */
 
 function tick(){
@@ -992,6 +1135,7 @@ function tick(){
   const z = zodiacInfo(now);
   document.getElementById("zodiacChip").innerHTML =
     '<span class="big">'+z.sym+"</span><b>"+z.name+"</b>";
+  try{ if(curView==="work" || workRunningToday()) updateWorkLive(); }catch(e){}
 }
 setInterval(tick, 1000); tick();
 
@@ -1129,6 +1273,15 @@ function renderRoutines(){
   document.addEventListener('click', function(e){
     var t=e.target;
     if(t.matches('#workClearDay')){ if(confirm('Tag wirklich leeren?')){ var k=wkTodayKey(); if(typeof S!=="undefined") delete S.work[k]; try{save();if(typeof renderWork==="function")renderWork();if(typeof updateWorkLive==="function")updateWorkLive();}catch(ex){} return; }
+    }
+    if(t.matches('[data-wk-edit]')){ openWorkDay(wkTodayKey()); return; }
+    if(t.matches('[data-wk-editday]')){ openWorkDay(t.getAttribute('data-wk-editday')); return; }
+    if(t.matches('[data-wk-rowdel]')){
+      syncWkDraft();
+      var ri=parseInt(t.getAttribute('data-wk-rowdel'));
+      if(!isNaN(ri)&&wkDraft.length>1){ wkDraft.splice(ri,1); renderWkRows(); }
+      else { wkDraft=[{s:"",e:""}]; renderWkRows(); }
+      return;
     }
     if(t.matches('[data-wk-del]')){ var idx=parseInt(t.getAttribute('data-wk-del')); var k=wkTodayKey(); var a=workArr(k); if(!isNaN(idx)&&a[idx]){ a.splice(idx,1); try{save();if(typeof renderWork==="function")renderWork();}catch(ex){} return; }
     }
