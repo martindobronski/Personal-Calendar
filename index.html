@@ -16,6 +16,7 @@
       <div>Familienkalender<small>Ordnung im Alltag – ohne Abo, ohne Konto</small></div>
     </div>
     <div class="spacer"></div>
+    <div class="profiles" id="profiles"></div>
     <div class="astro">
       <div class="chip clock" id="clockChip">–</div>
       <div class="chip" id="moonChip"><span class="big">🌑</span><b>–</b></div>
@@ -38,7 +39,7 @@
 
 <!-- ======================= KALENDER ======================= -->
 <section class="view active" id="view-cal">
-  <div class="grid2">
+  <div class="grid2 grid2-cal">
     <div class="card">
       <div class="cal-head">
         <div class="cal-title" id="calTitle">–<span id="calSub"></span></div>
@@ -54,15 +55,33 @@
       <div class="row" id="legend" style="margin-top:14px"></div>
     </div>
 
-    <div class="card">
-      <div class="cal-head" style="margin-bottom:12px">
-        <div>
-          <div style="font-size:17px;font-weight:700" id="agendaDate">–</div>
-          <div class="muted" id="agendaSub">–</div>
+    <div class="cal-side">
+      <div class="card side-top">
+        <div class="cal-head" style="margin-bottom:12px">
+          <div>
+            <div style="font-size:17px;font-weight:700" id="agendaDate">–</div>
+            <div class="muted" id="agendaSub">–</div>
+          </div>
+          <button class="btn sm" id="btnNewEvent2">+ Termin</button>
         </div>
-        <button class="btn sm" id="btnNewEvent2">+ Termin</button>
+        <div class="agenda" id="agenda"></div>
       </div>
-      <div class="agenda" id="agenda"></div>
+
+      <div class="card side-panel">
+        <div class="panel-head">
+          <div class="panel-title">✅ Aufgaben</div>
+          <span class="panel-badge" id="calTaskCount">0</span>
+        </div>
+        <div class="list" id="calTasksList"></div>
+      </div>
+
+      <div class="card side-panel">
+        <div class="panel-head">
+          <div class="panel-title">🗓️ Routinen</div>
+          <span class="panel-badge" id="calRoutineCount">0</span>
+        </div>
+        <div class="list" id="calRoutinesList"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -87,6 +106,7 @@
   <h2>🗓️ Routinen</h2>
   <div class="flex gap">
     <input id="routineName" class="input" placeholder="Neue Routine">
+    <select id="routineCat" class="select"></select>
     <select id="routineFreq" class="select"><option value="daily">Täglich</option><option value="weekly">Wöchentlich</option><option value="monthly">Monatlich</option></select>
     <select id="routineTime" class="select"><option value="any">Beliebige Zeit</option><option value="morning">Morgen</option><option value="noon">Mittag</option><option value="evening">Abend</option></select>
     <button class="btn primary" id="addRoutine">Hinzufügen</button>

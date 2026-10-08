@@ -49,6 +49,19 @@ a{color:var(--accent2)}
 }
 .brand small{display:block;font-weight:500;color:var(--muted);font-size:11px}
 .spacer{flex:1}
+.profiles{display:flex;gap:7px;align-items:center}
+.avatar{
+  width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+  font-size:13px;font-weight:800;color:#0c1220;cursor:pointer;flex:none;
+  border:2px solid transparent;transition:.15s;user-select:none;
+  padding:0;line-height:1;
+}
+.avatar:hover{transform:translateY(-1px)}
+.avatar.active{border-color:#fff;box-shadow:0 0 0 2px var(--accent)}
+.avatar.all{
+  background:var(--card2);color:var(--txt);border:1px solid var(--line);
+  font-size:15px;
+}
 .astro{display:flex;gap:8px;flex-wrap:wrap}
 .chip{
   display:flex;align-items:center;gap:8px;
@@ -86,6 +99,19 @@ h2.sec{font-size:15px;text-transform:uppercase;letter-spacing:.12em;color:var(--
 }
 .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .grid2{display:grid;grid-template-columns:1.7fr 1fr;gap:16px;align-items:start}
+.grid2-cal{align-items:stretch}
+.cal-side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.cal-side .side-top{flex:0 0 auto}
+.cal-side .side-panel{flex:1 1 0;min-height:190px;display:flex;flex-direction:column;min-width:0}
+.cal-side .panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.cal-side .panel-title{font-size:17px;font-weight:700}
+.panel-badge{
+  background:var(--card2);border:1px solid var(--line);color:var(--txt);
+  font-size:12px;font-weight:800;min-width:26px;height:22px;padding:0 7px;
+  border-radius:999px;display:grid;place-items:center;
+}
+.cal-side .list{overflow:auto;flex:1 1 auto;min-height:0;padding-right:3px}
+@media(max-width:980px){.grid2-cal{align-items:start}.cal-side .side-panel{flex:0 0 auto;height:240px}}
 @media(max-width:980px){.grid2{grid-template-columns:1fr}}
 .muted{color:var(--muted);font-size:13px}
 
@@ -117,15 +143,16 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .cal-title{font-size:22px;font-weight:700}
 .cal-title span{color:var(--muted);font-weight:600;font-size:15px;display:block;letter-spacing:.05em;text-transform:uppercase}
 .cal-nav{display:flex;gap:7px}
-.dow{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:7px}
+.dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin-bottom:7px}
 .dow div{text-align:center;font-size:11.5px;letter-spacing:.1em;color:var(--muted);font-weight:700;text-transform:uppercase;padding:5px 0}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
 .day{
   background:#141c2e;border:1px solid var(--line);border-radius:13px;
-  min-height:104px;padding:7px;display:flex;flex-direction:column;gap:4px;
-  position:relative;transition:.14s;
+  min-height:104px;min-width:0;padding:7px;display:flex;flex-direction:column;gap:4px;
+  position:relative;transition:.14s;overflow:hidden;
 }
 .day:hover{border-color:#3f5180;transform:translateY(-1px)}
+.day>*{min-width:0;max-width:100%}
 .day.out{opacity:.4}
 .day.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .day-head{display:flex;align-items:center;justify-content:space-between;gap:4px}
@@ -143,9 +170,10 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .ev{
   display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
   padding:3px 6px;border-radius:7px;color:#0c1220;cursor:pointer;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:100%;
 }
-.ev .t{opacity:.75;font-variant-numeric:tabular-nums}
+.ev .t{opacity:.75;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.ev span{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ev:hover{filter:brightness(1.12)}
 .more{font-size:10.5px;color:var(--muted);padding-left:4px;font-weight:700}
 

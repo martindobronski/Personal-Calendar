@@ -22,6 +22,26 @@ function defaults(){
 }
 
 let S;
+let activeProfile = null;
+function inProfile(catId){ return !activeProfile || !catId || catId === activeProfile; }
+function renderProfiles(){
+  try{
+    const box = document.getElementById('profiles');
+    if(!box) return;
+    let html = '<button class="avatar all'+(activeProfile?'':' active')+'" data-profile="" title="Alle Profile anzeigen">★</button>';
+    html += S.categories.map(c=>{
+      const ini = (c.name||'?').trim().charAt(0).toUpperCase();
+      return '<button class="avatar'+(activeProfile===c.id?' active':'')+'" data-profile="'+c.id+'" style="background:'+c.color+'" title="'+esc(c.name)+' anzeigen">'+esc(ini)+'</button>';
+    }).join('');
+    box.innerHTML = html;
+  }catch(e){}
+}
+function refreshFiltered(){
+  try{ if(typeof renderCalendar==='function' && document.getElementById('calGrid')) renderCalendar(); }catch(e){}
+  try{ if(typeof renderTasks==='function') renderTasks(); }catch(e){}
+  try{ if(typeof renderRoutines==='function') renderRoutines(); }catch(e){}
+  try{ if(typeof updateBadges==='function') updateBadges(); }catch(e){}
+}
 function load(){
   try{
     const raw = localStorage.getItem(KEY);
@@ -138,10 +158,8 @@ const ZODIAC = [
 function zodiacInfo(d){
   const m = d.getMonth()+1, day = d.getDate();
   const starts = [20,19,21,20,21,21,23,23,23,23,22,22];
-  let idx = (day < starts[m-1]) ? (m+10)%12 : (m-1)%12;
-  // Steinbock beginnt 22./21. Dezember – Korrektur für Januar/Dezember
-  if(m===12 && day >= 22) idx = 0;
-  if(m===1 && day < 20) idx = 0;
+  // Tag vor dem Monatsbeginn -> Zeichen des Vormonats, sonst das ab diesem Monat startende
+  const idx = day < starts[m-1] ? (m+11)%12 : m%12;
   const [sym,name] = ZODIAC[idx];
   return {sym, name};
 }
@@ -161,6 +179,7 @@ var __el=document.getElementById("tabs"); if(__el)__el.addEventListener("click",
 });
 
 function render(){
+  renderProfiles();
   updateBadges();
   if(curView==="cal") renderCalendar();
   if(curView==="todos") renderTodos();
@@ -171,10 +190,18 @@ function render(){
 }
 function updateBadges(){
   let n = 0;
-  S.todos.forEach(t=>{ if(!isDone(t)) n++; });
+  S.todos.forEach(t=>{ if(inProfile(t.cat) && !isDone(t)) n++; });
   const b = document.getElementById("todoBadge");
   b.textContent = n; b.style.display = n ? "grid" : "none";
 }
+
+document.addEventListener("click", e=>{
+  const p = e.target.closest("[data-profile]");
+  if(!p) return;
+  const id = p.dataset.profile;
+  activeProfile = (!id || activeProfile === id) ? null : id;
+  renderProfiles(); refreshFiltered();
+});
 
 /* =========================================================
    Kalender
@@ -216,6 +243,7 @@ function renderCalendar(){
   grid.innerHTML = html;
   renderLegend();
   renderAgenda(); try{if(typeof updateWorkLive==="function") updateWorkLive();}catch(e){}
+  try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
 }
 function evEndKey(ev){
   return (ev.endDate && ev.endDate > ev.date) ? ev.endDate : ev.date;
@@ -228,7 +256,7 @@ function evSpanLabel(ev){
   return n===1 ? "1 Tag" : n+" Tage (bis "+evEndKey(ev).split("-").reverse().join(".")+")";
 }
 function eventsOn(key){
-  return S.events.filter(e=>key >= e.date && key <= evEndKey(e))
+  return S.events.filter(e=>inProfile(e.cat) && key >= e.date && key <= evEndKey(e))
     .sort((a,b)=>{
       if(a.date!==b.date) return a.date.localeCompare(b.date);
       if(a.allDay!==b.allDay) return a.allDay?-1:1;
@@ -246,7 +274,7 @@ function chipHTML(ev){
 }
 function renderLegend(){
   document.getElementById("legend").innerHTML = S.categories.map(c=>
-    '<span class="chip" style="background:'+hexA(c.color,.16)+';border-color:'+hexA(c.color,.45)+'">'
+    '<span class="chip" style="background:'+hexA(c.color,.16)+';border-color:'+hexA(c.color,.45)+(activeProfile&&c.id!==activeProfile?";opacity:.4":"")+'">'
     + '<span style="width:10px;height:10px;border-radius:3px;background:'+c.color+';display:inline-block"></span>'
     + esc(c.name) + "</span>").join("");
 }
@@ -392,6 +420,7 @@ function isDone(t){
   return !!t.lastDone && parseISO(t.lastDone) >= ws && parseISO(t.lastDone) <= addDays(ws,6);
 }
 function renderTodos(){
+  if(!document.getElementById("todoList")) return;
   document.getElementById("fTodo").classList.toggle("active", tFilter==="todo");
   document.getElementById("fRoutine").classList.toggle("active", tFilter==="routine");
   document.getElementById("fAll").classList.toggle("active", tFilter==="all");
@@ -443,9 +472,9 @@ if((document.getElementById("view-todos")||document.getElementById("view-tasks")
   const ed = e.target.closest("[data-td-edit]");
   if(ed){ openTodo(ed.dataset.tdEdit); }
 });
-document.getElementById("btnToggleDone").onclick = ()=>{
+(function(){ const el = document.getElementById("btnToggleDone"); if(el) el.onclick = ()=>{
   S.settings.showDone = !S.settings.showDone; save(); renderTodos();
-};
+}; })();
 function toggleTodo(id){
   const t = S.todos.find(x=>x.id===id); if(!t) return;
   if(t.repeat==="none"){
@@ -460,7 +489,7 @@ function toggleTodo(id){
   save(); render();
 }
 let editingTodo = null;
-document.getElementById("btnNewTodo").onclick = ()=>openTodo(null);
+var __btnNewTodo=document.getElementById("btnNewTodo"); if(__btnNewTodo) __btnNewTodo.onclick = ()=>openTodo(null);
 function openTodo(id){
   editingTodo = id ? S.todos.find(t=>t.id===id) : null;
   const t = editingTodo;
@@ -885,8 +914,123 @@ setInterval(tick, 1000); tick();
 render();
 
 
-function renderTasks(){ try{if(typeof updateTaskBadge==='function')updateTaskBadge();}catch(e){} if(!window.S) window.S={tasks:[],routines:[],categories:[]}; if(!S.tasks) S.tasks=[]; var list=document.getElementById('tasksList'); if(!list)return; if(!S.tasks.length){ list.innerHTML='<div class="empty"><span class="big">🗒️</span>Keine Aufgaben vorhanden.</div>'; return; } list.innerHTML=S.tasks.map(function(t,i){return '<div class="item"><div><div class="it-title">'+esc(t.text||'')+'</div></div><div class="it-actions"><button class="btn small" data-task-del="'+i+'">Löschen</button></div></div>'}).join(''); }
-function renderRoutines(){ if(!window.S) window.S={tasks:[],routines:[]}; if(!S.routines) S.routines=[]; var list=document.getElementById('routinesList'); if(!list)return; if(!S.routines.length){ list.innerHTML='<div class="empty"><span class="big">🗓️</span>Keine Routinen vorhanden.</div>'; return; } list.innerHTML=S.routines.map(function(r,i){return '<div class="item"><div><div class="it-title">'+esc(r.name||'')+'</div><div class="it-sub">'+(r.freq||'daily')+'</div></div><div class="it-actions"><button class="btn small" data-routine-del="'+i+'">Löschen</button></div></div>'}).join(''); }
+function taskIsDone(t){ return (t.repeat && t.repeat!=="none") ? !!t.lastDone : !!t.done; }
+function updateTaskBadge(){ try{ var b=document.getElementById('todoBadge'); if(!b) return; var n=0; if(typeof S!=="undefined"&&S&&Array.isArray(S.todos)) n=S.todos.filter(function(t){return inProfile(t.cat) && !taskIsDone(t)}).length; b.textContent=n; b.style.display=n?"grid":"none"; }catch(e){} }
+function renderTasks(){
+  try{
+    if(typeof S==="undefined"||!S) S=defaults();
+    if(!Array.isArray(S.todos)) S.todos=[];
+    var list=document.getElementById('tasksList'); if(!list) return;
+    var sc=document.getElementById('taskCat');
+    if(sc && !sc.options.length && typeof fillCatSelect==="function") fillCatSelect(sc,activeProfile||(S.categories[0]||{}).id);
+    if(sc && activeProfile && (S.categories||[]).some(function(c){return c.id===activeProfile;})) sc.value=activeProfile;
+    var search=((document.getElementById('taskSearch')||{}).value||"").trim().toLowerCase();
+    var filter=(document.getElementById('taskFilter')||{}).value||"all";
+    var items=S.todos.filter(function(t){
+      if(!inProfile(t.cat)) return false;
+      var done=taskIsDone(t);
+      if(filter==="open" && done) return false;
+      if(filter==="done" && !done) return false;
+      if(search && String(t.title||t.text||"").toLowerCase().indexOf(search)<0) return false;
+      return true;
+    });
+    if(!items.length){ list.innerHTML='<div class="empty"><span class="big">🗒️</span>Keine Aufgaben vorhanden.</div>'; }
+    else {
+      list.innerHTML=items.map(function(t){
+        var idx=S.todos.indexOf(t);
+        var done=taskIsDone(t);
+        var c=(typeof cat==="function")?cat(t.cat):{name:"",color:"#64748b"};
+        return '<div class="item'+(done?" done":"")+'">'
+          + '<button class="check'+(done?" on":"")+'" data-task-toggle="'+idx+'">✓</button>'
+          + '<div><div class="it-title">'+esc(t.title||t.text||"")+'</div>'
+          + '<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
+          + (t.repeat&&t.repeat!=="none"?'<span>↻ '+esc(t.repeat)+'</span>':'')
+          + (t.due?'<span>📅 '+esc(t.due)+'</span>':'')+'</div></div>'
+          + '<div class="it-actions"><button class="btn small" data-task-del="'+idx+'">Löschen</button></div>'
+          + '</div>';
+      }).join("");
+    }
+    updateTaskBadge();
+    try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+  }catch(e){}
+}
+function renderRoutines(){
+  try{
+    if(typeof S==="undefined"||!S) S=defaults();
+    if(!Array.isArray(S.routines)) S.routines=[];
+    try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+    var rc=document.getElementById('routineCat');
+    if(rc){
+      if(!rc.options.length && typeof fillCatSelect==="function") fillCatSelect(rc,activeProfile||(S.categories[0]||{}).id);
+      if(activeProfile && (S.categories||[]).some(function(c){return c.id===activeProfile;})) rc.value=activeProfile;
+    }
+    var list=document.getElementById('routinesList'); if(!list) return;
+    var items=S.routines.filter(function(r){ return inProfile(r.cat); });
+    if(!items.length){ list.innerHTML='<div class="empty"><span class="big">🗓️</span>Keine Routinen vorhanden.</div>'; }
+    else {
+      list.innerHTML=items.map(function(r){
+        var i=S.routines.indexOf(r);
+        var c=(typeof cat==="function")?cat(r.cat):null;
+        return '<div class="item"><div><div class="it-title">'+esc(r.name||'')+'</div><div class="it-sub">'
+          +(c?'<span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>':'')
+          +esc(r.freq||'')+(r.time?(' · '+esc(r.time)):'')+'</div></div><div class="it-actions"><button class="btn small" data-routine-del="'+i+'">Löschen</button></div></div>';
+      }).join('');
+    }
+  }catch(e){}
+}
+(function(){
+  document.addEventListener('click', function(e){
+    var t=e.target;
+    if(t.id==='addTask'){
+      var inp=document.getElementById('taskInput');
+      var txt=inp&&inp.value?inp.value.trim():'';
+      if(!txt) return;
+      if(!Array.isArray(S.todos)) S.todos=[];
+      var catSel=document.getElementById('taskCat');
+      S.todos.push({id:uid(), title:txt, cat:catSel?catSel.value:(S.categories[0]||{}).id, repeat:"none", done:false, lastDone:null, points:1, due:""});
+      if(inp) inp.value='';
+      save(); renderTasks(); updateBadges(); return;
+    }
+    if(t.matches&&t.matches('[data-task-del]')){
+      var idx=parseInt(t.getAttribute('data-task-del'));
+      if(!isNaN(idx)&&Array.isArray(S.todos)&&idx>=0&&idx<S.todos.length){ S.todos.splice(idx,1); save(); renderTasks(); updateBadges(); }
+      return;
+    }
+    if(t.matches&&t.matches('[data-task-toggle]')){
+      var ti=parseInt(t.getAttribute('data-task-toggle'));
+      if(!isNaN(ti)&&Array.isArray(S.todos)&&S.todos[ti]){
+        var tk=S.todos[ti];
+        if(tk.repeat&&tk.repeat!=="none"){ tk.lastDone=tk.lastDone?null:iso(today()); }
+        else { tk.done=!tk.done; }
+        save(); renderTasks(); updateBadges();
+      }
+      return;
+    }
+    if(t.id==='addRoutine'){
+      var rn=document.getElementById('routineName');
+      var rf=document.getElementById('routineFreq');
+      var rt=document.getElementById('routineTime');
+      var rc=document.getElementById('routineCat');
+      var n=rn&&rn.value?rn.value.trim():'';
+      if(!n) return;
+      if(!Array.isArray(S.routines)) S.routines=[];
+      S.routines.push({name:n,freq:rf?rf.value:'daily',time:rt?rt.value:'any',cat:rc&&rc.value?rc.value:(activeProfile||(S.categories[0]||{}).id)});
+      if(rn) rn.value='';
+      save(); renderRoutines(); return;
+    }
+    if(t.matches&&t.matches('[data-routine-del]')){
+      var ridx=parseInt(t.getAttribute('data-routine-del'));
+      if(!isNaN(ridx)&&Array.isArray(S.routines)&&ridx>=0&&ridx<S.routines.length){ S.routines.splice(ridx,1); save(); renderRoutines(); }
+      return;
+    }
+  });
+  document.addEventListener('input', function(e){
+    if(e.target&&e.target.id==='taskSearch') renderTasks();
+  });
+  document.addEventListener('change', function(e){
+    if(e.target&&e.target.id==='taskFilter') renderTasks();
+  });
+})();
 (function(){
   document.addEventListener('click', function(e){
     var t=e.target;
@@ -898,3 +1042,50 @@ function renderRoutines(){ if(!window.S) window.S={tasks:[],routines:[]}; if(!S.
     }
   });
 })();
+function renderCalSide(){
+  try{
+    if(typeof S==="undefined"||!S) return;
+    var tBox=document.getElementById('calTasksList');
+    if(tBox){
+      var todos=(Array.isArray(S.todos)?S.todos:[]).filter(function(t){ return inProfile(t.cat); });
+      if(!todos.length){
+        tBox.innerHTML='<div class="empty"><span class="big">🎉</span>Noch keine Aufgaben.</div>';
+      }else{
+        tBox.innerHTML=todos.map(function(t){
+          var idx=S.todos.indexOf(t);
+          var done=taskIsDone(t);
+          var c=(typeof cat==='function')?cat(t.cat):{name:'',color:'#64748b'};
+          return '<div class="item'+(done?' done':'')+'">'
+            +'<button class="check'+(done?' on':'')+'" data-task-toggle="'+idx+'">✓</button>'
+            +'<div><div class="it-title">'+esc(t.title||t.text||'')+'</div>'
+            +'<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
+            +(t.repeat&&t.repeat!=='none'?'<span>↻ '+esc(t.repeat)+'</span>':'')
+            +(t.due?'<span>📅 '+esc(t.due)+'</span>':'')+'</div></div>'
+            +'<div class="it-actions"><button class="btn sm" data-task-del="'+idx+'">Löschen</button></div>'
+            +'</div>';
+        }).join('');
+      }
+      var cnt=document.getElementById('calTaskCount');
+      if(cnt){
+        var open=todos.filter(function(t){return !taskIsDone(t)}).length;
+        cnt.textContent=open;
+      }
+    }
+    var rBox=document.getElementById('calRoutinesList');
+    if(rBox){
+      var routines=(Array.isArray(S.routines)?S.routines:[]).filter(function(r){ return inProfile(r.cat); });
+      if(!routines.length){
+        rBox.innerHTML='<div class="empty"><span class="big">🗓️</span>Noch keine Routinen.</div>';
+      }else{
+        rBox.innerHTML=routines.map(function(r){
+          var i=S.routines.indexOf(r);
+          return '<div class="item"><div><div class="it-title">'+esc(r.name||'')+'</div>'
+            +'<div class="it-sub">'+esc(r.freq||'')+(r.time?' · '+esc(r.time):'')+'</div></div>'
+            +'<div class="it-actions"><button class="btn sm" data-routine-del="'+i+'">Löschen</button></div></div>';
+        }).join('');
+      }
+      var rcnt=document.getElementById('calRoutineCount');
+      if(rcnt) rcnt.textContent=routines.length;
+    }
+  }catch(e){}
+}
