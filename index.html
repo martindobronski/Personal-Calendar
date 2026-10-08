@@ -50,6 +50,10 @@
           <button class="btn primary sm" id="btnNewEvent">+ Termin</button>
         </div>
       </div>
+      <div class="copybar" id="copyBar" style="display:none">
+        <span>⧉ Kopieren: <b id="copyBarTitle"></b> – Zieltag anklicken (Mehrfachauswahl)</span>
+        <button class="btn sm" id="copyBarBtn">Beenden</button>
+      </div>
       <div class="dow"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div></div>
       <div class="cal-grid" id="calGrid"></div>
       <div class="row" id="legend" style="margin-top:14px"></div>
@@ -89,10 +93,8 @@
 <!-- ======================= TODOS ======================= -->
 <section class="view" id="view-tasks">
   <h2>✅ Aufgaben</h2>
-  <div class="flex gap">
-    <input id="taskInput" class="input" placeholder="Neue Aufgabe hinzufügen">
-    <select id="taskCat" class="select"></select>
-    <button class="btn primary" id="addTask">Hinzufügen</button>
+  <div class="flex gap" style="justify-content:flex-end;margin-bottom:10px">
+    <button class="btn primary" id="btnNewTask">+ Neue Aufgabe</button>
   </div>
   <div class="flex gap">
     <input id="taskSearch" class="input" placeholder="Aufgaben suchen...">
@@ -104,12 +106,8 @@
 <!-- ======================= MAHLZEITEN ======================= -->
 <section class="view" id="view-routines">
   <h2>🗓️ Routinen</h2>
-  <div class="flex gap">
-    <input id="routineName" class="input" placeholder="Neue Routine">
-    <select id="routineCat" class="select"></select>
-    <select id="routineFreq" class="select"><option value="daily">Täglich</option><option value="weekly">Wöchentlich</option><option value="monthly">Monatlich</option></select>
-    <select id="routineTime" class="select"><option value="any">Beliebige Zeit</option><option value="morning">Morgen</option><option value="noon">Mittag</option><option value="evening">Abend</option></select>
-    <button class="btn primary" id="addRoutine">Hinzufügen</button>
+  <div class="flex gap" style="justify-content:flex-end;margin-bottom:10px">
+    <button class="btn primary" id="btnNewRoutine">+ Neue Routine</button>
   </div>
   <div class="card"><div class="list" id="routinesList"></div></div>
 </section>
@@ -302,11 +300,17 @@
     <div class="field2" id="evTimeFields">
       <div class="field">
         <label class="fl">Von</label>
-        <input type="time" id="evStart">
+        <div class="time-wrap">
+          <input type="time" id="evStart">
+          <button type="button" class="time-pick" data-timefor="evStart" title="Uhrzeit wählen">🕒</button>
+        </div>
       </div>
       <div class="field">
         <label class="fl">Bis</label>
-        <input type="time" id="evEnd">
+        <div class="time-wrap">
+          <input type="time" id="evEnd">
+          <button type="button" class="time-pick" data-timefor="evEnd" title="Uhrzeit wählen">🕒</button>
+        </div>
       </div>
     </div>
     <div class="field">
@@ -321,13 +325,13 @@
   </div>
 </div>
 
-<!-- ======================= MODAL: TODO ======================= -->
+<!-- ======================= MODAL: TASK / ROUTINE ======================= -->
 <div class="overlay" id="tdModal">
   <div class="modal" role="dialog" aria-modal="true">
     <h3 id="tdModalTitle">Neuer Eintrag</h3>
     <div class="field">
       <label class="fl">Titel</label>
-      <input type="text" id="tdTitle" placeholder="z. B. Müll rausbringen, Paket abholen">
+      <input type="text" id="tdTitle" placeholder="z. B. Müll rausbringen, Zähne putzen, Paket abholen">
     </div>
     <div class="field2">
       <div class="field">
@@ -337,9 +341,12 @@
       <div class="field">
         <label class="fl">Wiederholung</label>
         <select id="tdRepeat">
-          <option value="none">Einmalig (To-Do)</option>
-          <option value="daily">Täglich (Routine)</option>
-          <option value="weekly">Wöchentlich (Routine)</option>
+          <option value="none">Einmalig</option>
+          <option value="daily">Täglich</option>
+          <option value="weekly">Wöchentlich</option>
+          <option value="monthly">Monatlich</option>
+          <option value="quarterly">Vierteljährlich</option>
+          <option value="yearly">Jährlich</option>
         </select>
       </div>
     </div>
@@ -352,6 +359,10 @@
         <label class="fl">Fällig am (optional)</label>
         <input type="date" id="tdDue">
       </div>
+    </div>
+    <div class="field">
+      <label class="fl">Notiz</label>
+      <textarea id="tdNote" rows="3" placeholder="Details, wann genau, wer dran …"></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn danger left" id="tdDelete">Löschen</button>
