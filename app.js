@@ -201,10 +201,16 @@ function render(){
   if(curView==="settings") renderSettings();
 }
 function updateBadges(){
-  let n = 0;
-  S.todos.forEach(t=>{ if(inProfile(t.cat) && !isDone(t)) n++; });
-  const b = document.getElementById("todoBadge");
-  b.textContent = n; b.style.display = n ? "grid" : "none";
+  try{
+    let n = 0;
+    if(S && Array.isArray(S.todos)) S.todos.forEach(t=>{ if(inProfile(t.cat) && !isDone(t)) n++; });
+    const b = document.getElementById("todoBadge");
+    if(b){ b.textContent = n; b.style.display = n ? "grid" : "none"; }
+    let rn = 0;
+    if(S && Array.isArray(S.routines)) rn = S.routines.filter(r=>inProfile(r.cat)).length;
+    const rb = document.getElementById("routineBadge");
+    if(rb){ rb.textContent = rn; rb.style.display = rn ? "grid" : "none"; }
+  }catch(e){}
 }
 
 document.addEventListener("click", e=>{
@@ -1237,6 +1243,7 @@ function renderRoutines(){
       }).join('');
     }
   }catch(e){}
+  try{ updateBadges(); }catch(e){}
 }
 (function(){
   document.addEventListener('click', function(e){
@@ -1354,4 +1361,5 @@ function renderCalSide(){
       if(rcnt) rcnt.textContent=routines.length;
     }
   }catch(e){}
+  try{ updateBadges(); }catch(e){}
 }
