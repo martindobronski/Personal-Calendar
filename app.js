@@ -1210,6 +1210,7 @@ function renderTasks(){
           + '<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
           + (rep?'<span>↻ '+esc(rep)+'</span>':'')
           + (t.due?'<span>📅 '+esc(t.due)+'</span>':'')
+          + (t.completedAt?'<span>✓ '+esc(t.completedAt.replace('T',' ').slice(0,16))+'</span>':'')
           + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
           + '<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
           + '<button class="btn sm del" data-task-del="'+idx+'" title="Löschen">🗑</button></div>'
@@ -1264,12 +1265,25 @@ function renderRoutines(){
         var tk=S.todos[ti];
         if(tk.repeat&&tk.repeat!=="none"){
           var was=taskIsDone(tk);
-          tk.lastDone=was?null:iso(today());
-          if(!was) addPoints(tk.points||1, tk.title); else removePoints(tk.points||1, tk.title);
+          if(was){
+            tk.lastDone=null;
+            delete tk.completedAt;
+            removePoints(tk.points||1, tk.title);
+          } else {
+            tk.lastDone=iso(today());
+            var nowd=new Date(); tk.completedAt=nowd.toISOString();
+            addPoints(tk.points||1, tk.title);
+          }
         }
         else {
           var wasd=tk.done; tk.done=!tk.done;
-          if(!wasd) addPoints(tk.points||1, tk.title); else removePoints(tk.points||1, tk.title);
+          if(!wasd){
+            var nowd2=new Date(); tk.completedAt=nowd2.toISOString();
+            addPoints(tk.points||1, tk.title);
+          } else {
+            delete tk.completedAt;
+            removePoints(tk.points||1, tk.title);
+          }
         }
         save(); renderTasks(); updateBadges();
       }
