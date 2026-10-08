@@ -520,7 +520,7 @@ function todoHTML(t){
   const c = cat(t.cat);
   const rep = t.repeat==="daily" ? "täglich" : t.repeat==="weekly" ? "wöchentlich" : "";
   const due = t.due ? (parseISO(t.due) < today() && !isDone(t)
-      ? '<span style="color:#f87171">überfällig '+esc(t.due)+"</span>" : esc(t.due)) : "";
+      ? '<span style="color:#f87171">überfällig '+esc((t.due||"").split("-").reverse().join("."))+"</span>" : esc((t.due||"").split("-").reverse().join("."))) : "";
   return '<div class="item'+(isDone(t)?" done":"")+'">'
     + '<button class="check'+(isDone(t)?" on":"")+'" data-td-toggle="'+t.id+'">✓</button>'
     + '<div><div class="it-title">'+esc(t.title)+"</div>"
@@ -1210,7 +1210,7 @@ function renderTasks(){
           + '<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
           + (rep?'<span>↻ '+esc(rep)+'</span>':'')
           + (t.due?'<span>📅 '+esc(t.due)+'</span>':'')
-          + (t.completedAt?'<span>✓ '+esc(t.completedAt.replace('T',' ').slice(0,16))+'</span>':'')
+          + (t.completedAt?(function(){var d=new Date(t.completedAt);return '<span>✓ '+esc(d.getDate().toString().padStart(2,'0')+'.'+(d.getMonth()+1).toString().padStart(2,'0')+'.'+d.getFullYear().toString().slice(-2)+' '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'))+'</span>';}()):'')
           + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
           + '<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
           + '<button class="btn sm del" data-task-del="'+idx+'" title="Löschen">🗑</button></div>'
