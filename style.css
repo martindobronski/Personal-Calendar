@@ -257,7 +257,7 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .empty .big{font-size:30px;display:block;margin-bottom:8px}
 
 /* ---------- Meals ---------- */
-.meals-table{width:100%;border-collapse:separate;border-spacing:6px}
+.meals-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:6px;min-width:800px}
 .meals-table th{font-size:12px;color:var(--muted);text-align:left;padding:4px 6px;font-weight:700}
 .meals-table th.wkend{color:#fca5a5}
 .meals-table td{padding:0}
