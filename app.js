@@ -1211,8 +1211,8 @@ function renderTasks(){
           + (rep?'<span>↻ '+esc(rep)+'</span>':'')
           + (t.due?'<span>📅 '+esc(t.due)+'</span>':'')
           + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
-          + '<div class="it-actions"><button class="linkbtn" data-task-edit="'+idx+'">Bearbeiten</button>'
-          + '<button class="linkbtn del" data-task-del="'+idx+'">Löschen</button></div>'
+          + '<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
+          + '<button class="btn sm del" data-task-del="'+idx+'" title="Löschen">🗑</button></div>'
           + '</div>';
       }).join("");
     }
@@ -1238,8 +1238,8 @@ function renderRoutines(){
           +(rep?'<span>↻ '+esc(rep)+'</span>':'')
           +(r.note?'<span> '+esc(r.note)+'</span>':'')
           +'</div></div><div class="it-actions">'
-          +'<button class="linkbtn" data-routine-edit="'+i+'">Bearbeiten</button>'
-          +'<button class="linkbtn del" data-routine-del="'+i+'">Löschen</button></div></div>';
+          +'<button class="btn sm" data-routine-edit="'+i+'" title="Bearbeiten">✎</button>'
+          +'<button class="btn sm del" data-routine-del="'+i+'" title="Löschen">🗑</button></div></div>';
       }).join('');
     }
   }catch(e){}
