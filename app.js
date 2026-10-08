@@ -342,9 +342,9 @@ function renderAgenda(){
       + '<div class="sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+"</span>"
       + (evDays(ev)>1 ? " · 📅 "+esc(ev.date.split("-").reverse().join("."))+"–"+esc(evEndKey(ev).split("-").reverse().join(".")) : "")
       + (ev.note ? " · "+esc(ev.note) : "") + "</div></div>"
-      + '<div class="ag-actions"><button class="linkbtn" data-ev="'+ev.id+'">Bearbeiten</button>'
+      + '<div class="ag-actions"><button class="linkbtn" data-ev="'+ev.id+'" title="Bearbeiten">✎</button>'
       + '<button class="linkbtn" data-copy="'+ev.id+'">⧉ Kopieren</button>'
-      + '<button class="linkbtn del" data-evdel="'+ev.id+'">×</button></div>'
+      + '<button class="linkbtn del" data-evdel="'+ev.id+'" title="Löschen">🗑</button></div>'
       + "</div>";
   }).join("");
 }
@@ -1309,7 +1309,7 @@ function renderCalSide(){
             +(t.repeat&&t.repeat!=='none'?'<span>↻ '+esc(repLabel(t.repeat))+'</span>':'')
             +(t.due?'<span>📅 '+esc(t.due)+'</span>':'')+'</div></div>'
             +'<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
-            +'<button class="btn sm" data-task-del="'+idx+'">Löschen</button></div>'
+            +'<button class="btn sm del" data-task-del="'+idx+'" title="Löschen">🗑</button></div>'
             +'</div>';
         }).join('');
       }
@@ -1330,7 +1330,7 @@ function renderCalSide(){
           return '<div class="item"><div><div class="it-title">'+esc(r.name||'')+'</div>'
             +'<div class="it-sub"><span>↻ '+esc(repLabel(r.freq))+'</span>'+(r.note?' · '+esc(r.note):'')+'</div></div>'
             +'<div class="it-actions"><button class="btn sm" data-routine-edit="'+i+'" title="Bearbeiten">✎</button>'
-            +'<button class="btn sm" data-routine-del="'+i+'">Löschen</button></div></div>';
+            +'<button class="btn sm del" data-routine-del="'+i+'" title="Löschen">🗑</button></div></div>';
         }).join('');
       }
       var rcnt=document.getElementById('calRoutineCount');
