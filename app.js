@@ -17,7 +17,7 @@ function defaults(){
       {id:uid(), name:"Familie", color:"#f5a524"}
     ],
     events:[], todos:[],tasks:[],routines:[], meals:{}, lists:null, rewards:[], points:0, history:[],
-    settings:{ weekStart:1, showDone:false }
+    settings:{ weekStart:1, showDone:false, appTitle:"Familienkalender" }
   };
 }
 
@@ -58,6 +58,13 @@ function save(){
   if(el) el.textContent = "Belegt " + (new Blob([JSON.stringify(S)]).size/1024).toFixed(1) + " KB im localStorage.";
 }
 load(); save();
+try{
+  var t=(S.settings&&S.settings.appTitle)||"Familienkalender";
+  document.title = t + " – Ordnung im Alltag ohne Abo";
+  var bn=document.getElementById("brandName");
+  if(bn) bn.innerHTML = esc(t)+"<small>Ordnung im Alltag – ohne Abo, ohne Konto</small>";
+}catch(e){}
+
 
 /* =========================================================
    Datum / Helfer
@@ -862,6 +869,14 @@ function renderSettings(){
     + '<button class="btn sm danger" data-cat-del="'+c.id+'">×</button></div>'
   ).join("");
   document.getElementById("weekStart").value = String(S.settings.weekStart ?? 1);
+  var at=document.getElementById("appTitle");
+  if(at) at.value = (S.settings && S.settings.appTitle) || "Familienkalender";
+  if(S.settings && S.settings.appTitle){
+    var t=(S.settings.appTitle||"").trim();
+    document.title = t + " – Ordnung im Alltag ohne Abo";
+    var bn=document.getElementById("brandName");
+    if(bn) bn.innerHTML = esc(t)+"<small>Ordnung im Alltag – ohne Abo, ohne Konto</small>";
+  }
   save();
 }
 var __el=document.getElementById("view-settings"); if(__el)__el.addEventListener("change", e=>{
@@ -870,6 +885,7 @@ var __el=document.getElementById("view-settings"); if(__el)__el.addEventListener
   const n = e.target.dataset.catName;
   if(n){ cat(n).name = e.target.value.trim() || "Ohne Name"; save(); renderSettings(); return; }
   if(e.target.id==="weekStart"){ S.settings.weekStart = Number(e.target.value); save(); renderSettings(); }
+  if(e.target.id==="appTitle"){ if(!S.settings) S.settings={}; S.settings.appTitle = e.target.value.trim()||"Familienkalender"; save(); renderSettings(); }
 });
 var __el=document.getElementById("view-settings"); if(__el)__el.addEventListener("click", e=>{
   const del = e.target.closest("[data-cat-del]");
