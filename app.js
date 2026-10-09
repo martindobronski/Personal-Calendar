@@ -1007,15 +1007,14 @@ function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.w
   var anwesPres=0;if(pairs.length){var first=pairs[0].s,last=pairs[pairs.length-1].e;if(last<first)last+=24*60;anwesPres=last-first;}
   // Pausen = gaps between intervals
   var pauseGebucht=0;for(var i=1;i<pairs.length;i++){var g=pairs[i].s-pairs[i-1].e;if(g>0)pauseGebucht+=g;}
-  // Mindestpausen nach ArbZG: >6h Anwesenheit -> 30min, >9h Anwesenheit -> 45min (anwesPres)
-  var reqPause=0;if(arbNetto>360){reqPause=30;}if(arbNetto>600){reqPause=45;}
-  var pauseEff=Math.max(pauseGebucht,reqPause);
-  var arbEff=arbNetto; // arbeitszeit netto is sum of intervals; pauseEff is shown as booked/required info? but netto working time is arbNetto minus extra pause beyond gaps? no: gaps are the only pauses. better use arbNetto as Arbeitszeit
-  // netto Arbeitszeit is sum of intervals = anwes - pause gaps = arbNetto; req pause means if gaps < req, we should count req? but we already have gaps
-  var pauseFinal = pauseGebucht - paidB;
-  if(pauseFinal < 0) pauseFinal = 0;
-  // Arbeitszeit nach ArbZG: Anwesenheit minus die zu berücksichtigende Pause
-  var arbeitsZeit = anwesPres - pauseFinal;
+  // Mindestpause nach Anwesenheit: <=6h 0, >6h bis <=9h 30, >9h 45
+  var minPause=0;if(anwesPres>360 && anwesPres<=540){minPause=30;}if(anwesPres>540){minPause=45;}
+  // Abzug = Mindestpause - bezahlte Frühstückspause (vereinbart), nie kleiner 0
+  var pauseAbzug = minPause - paidB;
+  if(pauseAbzug < 0) pauseAbzug = 0;
+  // Nur gestempelte Pausen? aber "Abzug" ist Mindestpause minus bezahlte Pause; in diesem Modell wird nur Mindestpause-Teil abgezogen (über gestempelte hinaus wird nicht weiter abgezogen)
+  // Arbeiszeit = Anwesenheit - Abzug für Pause
+  var arbeitsZeit = anwesPres - pauseAbzug;
   if(arbeitsZeit < 0) arbeitsZeit = 0;
   // Saldo based on effective Arbeitszeit vs Soll
   return {anwesMin:anwesPres,pauseMinBooked:pauseFinal,arbeitsMin:arbeitsZeit,sollMin:456,saldoMin:arbeitsZeit-456};}
