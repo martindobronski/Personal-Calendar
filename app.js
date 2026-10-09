@@ -1007,13 +1007,9 @@ function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.w
   var anwesPres=0;if(pairs.length){var first=pairs[0].s,last=pairs[pairs.length-1].e;if(last<first)last+=24*60;anwesPres=last-first;}
   // Pausen = gaps between intervals
   var pauseGebucht=0;for(var i=1;i<pairs.length;i++){var g=pairs[i].s-pairs[i-1].e;if(g>0)pauseGebucht+=g;}
-  // Mindestpause nach Anwesenheit: <=6h 0, >6h bis <=9h 30, >9h 45
   var minPause=0;if(anwesPres>360 && anwesPres<=540){minPause=30;}if(anwesPres>540){minPause=45;}
-  // Abzug = Mindestpause - bezahlte Frühstückspause (vereinbart), nie kleiner 0
   var pauseAbzug = minPause - paidB;
   if(pauseAbzug < 0) pauseAbzug = 0;
-  // Nur gestempelte Pausen? aber "Abzug" ist Mindestpause minus bezahlte Pause; in diesem Modell wird nur Mindestpause-Teil abgezogen (über gestempelte hinaus wird nicht weiter abgezogen)
-  // Arbeiszeit = Anwesenheit - Abzug für Pause
   var arbeitsZeit = anwesPres - pauseAbzug;
   if(arbeitsZeit < 0) arbeitsZeit = 0;
   // Saldo based on effective Arbeitszeit vs Soll
