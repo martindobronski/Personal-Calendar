@@ -1008,8 +1008,8 @@ function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.w
   // Pausen = gaps between intervals
   var pauseGebucht=0;for(var i=1;i<pairs.length;i++){var g=pairs[i].s-pairs[i-1].e;if(g>0)pauseGebucht+=g;}
   var minPause=0;if(anwesPres>360 && anwesPres<=540){minPause=30;}if(anwesPres>540){minPause=45;}
-  var pauseAbzug = minPause - paidB;
-  if(pauseAbzug < 0) pauseAbzug = 0;
+  var erforderlichePause = Math.max(0, minPause - paidB);
+  var pauseAbzug = Math.max(pauseGebucht, erforderlichePause);
   var arbeitsZeit = anwesPres - pauseAbzug;
   if(arbeitsZeit < 0) arbeitsZeit = 0;
   // Saldo based on effective Arbeitszeit vs Soll
