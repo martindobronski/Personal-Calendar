@@ -1007,9 +1007,21 @@ function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.w
   var anwesPres=0;if(pairs.length){var first=pairs[0].s,last=pairs[pairs.length-1].e;if(last<first)last+=24*60;anwesPres=last-first;}
   // Pausen = gaps between intervals
   var pauseGebucht=0;for(var i=1;i<pairs.length;i++){var g=pairs[i].s-pairs[i-1].e;if(g>0)pauseGebucht+=g;}
-  var minPause=0;if(anwesPres>360 && anwesPres<=540){minPause=30;}if(anwesPres>540){minPause=45;}
-  var erforderlichePause = Math.max(0, minPause - paidB);
-  var pauseAbzug = Math.max(pauseGebucht, erforderlichePause);
+  var pauseAbzug = 0;
+  if(pairs.length==1){
+    var worked = anwesPres - pauseGebucht;
+    if(worked>360 && worked<=540){
+      pauseAbzug = 30;
+    } else if(worked>540){
+      pauseAbzug = Math.max(0, 45 - paidB);
+    } else {
+      pauseAbzug = 0;
+    }
+  } else {
+    var minPause2=0;if(anwesPres>360 && anwesPres<=540){minPause2=30;}if(anwesPres>540){minPause2=45;}
+    var erforderlichePause2 = Math.max(0, minPause2 - paidB);
+    pauseAbzug = Math.max(pauseGebucht, erforderlichePause2);
+  }
   var arbeitsZeit = anwesPres - pauseAbzug;
   if(arbeitsZeit < 0) arbeitsZeit = 0;
   // Saldo based on effective Arbeitszeit vs Soll
