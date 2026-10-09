@@ -17,7 +17,7 @@ function defaults(){
       {id:uid(), name:"Familie", color:"#f5a524"}
     ],
     events:[], todos:[],tasks:[],routines:[], meals:{}, lists:null, rewards:[], points:0, history:[],
-    settings:{ weekStart:1, showDone:false, appTitle:"Familienkalender" }
+    settings:{ weekStart:1, showDone:false, appTitle:"Familienkalender", paidBreakfastMin:0 }
   };
 }
 
@@ -870,6 +870,7 @@ function renderSettings(){
     + '<button class="btn sm danger" data-cat-del="'+c.id+'">×</button></div>'
   ).join("");
   document.getElementById("weekStart").value = String(S.settings.weekStart ?? 1);
+  var pb=document.getElementById("paidBreakfastMin"); if(pb) pb.value = (S.settings && S.settings.paidBreakfastMin) || 0;
   var at=document.getElementById("appTitle");
   if(at) at.value = (S.settings && S.settings.appTitle) || "Familienkalender";
   if(S.settings && S.settings.appTitle){
@@ -887,6 +888,7 @@ var __el=document.getElementById("view-settings"); if(__el)__el.addEventListener
   if(n){ cat(n).name = e.target.value.trim() || "Ohne Name"; save(); renderSettings(); return; }
   if(e.target.id==="weekStart"){ S.settings.weekStart = Number(e.target.value); save(); renderSettings(); }
   if(e.target.id==="appTitle"){ if(!S.settings) S.settings={}; S.settings.appTitle = e.target.value.trim()||"Familienkalender"; save(); renderSettings(); }
+  if(e.target.id==="paidBreakfastMin"){ if(!S.settings) S.settings={}; var v=parseInt(e.target.value)||0; if(v<0) v=0; S.settings.paidBreakfastMin=v; save(); renderSettings(); }
 });
 var __el=document.getElementById("view-settings"); if(__el)__el.addEventListener("click", e=>{
   const del = e.target.closest("[data-cat-del]");
@@ -996,7 +998,7 @@ function workRunningToday(){return !!workOpenInterval(wkTodayKey());}
 function hmToMin(hm){if(!hm)return 0;var p=hm.split(":");return parseInt(p[0])*60+parseInt(p[1]);}
 function minToHM(min){var s=min<0?"-":"";var m=Math.abs(min);var h=Math.floor(m/60),mm=m%60;return s+h+":"+String(mm).padStart(2,"0");}
 function minToDec(min){return (Math.round((min/60)*100)/100).toFixed(2);}
-function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var a=S.work[k]||[];var now=ref||new Date();var nk=wkTodayKey();
+function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var a=S.work[k]||[];var now=ref||new Date();var nk=wkTodayKey();var paidB=0;try{if(S.settings && S.settings.paidBreakfastMin) paidB=parseInt(S.settings.paidBreakfastMin)||0;}catch(e){}
   // build pairs
   var pairs=[];for(var i=0;i<a.length;i++){var it=a[i];if(!it||!it.s)continue;var sm=hmToMin(it.s),em;if(it.e)em=hmToMin(it.e);else em=(k===nk)?(now.getHours()*60+now.getMinutes()):(23*60+59);if(em>=sm)pairs.push({s:sm,e:em});}pairs.sort(function(x,y){return x.s-y.s});
   // Arbeitszeit netto = sum of intervals
@@ -1012,7 +1014,7 @@ function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.w
   // netto Arbeitszeit is sum of intervals = anwes - pause gaps = arbNetto; req pause means if gaps < req, we should count req? but we already have gaps
   var pauseFinal=pauseGebucht;
   // Arbeitszeit nach ArbZG: Anwesenheit minus die zu berücksichtigende Pause
-  var arbeitsZeit = anwesPres - pauseFinal;
+  var arbeitsZeit = anwesPres - pauseFinal + paidB;
   if(arbeitsZeit < 0) arbeitsZeit = 0;
   // Saldo based on effective Arbeitszeit vs Soll
   return {anwesMin:anwesPres,pauseMinBooked:pauseFinal,arbeitsMin:arbeitsZeit,sollMin:456,saldoMin:arbeitsZeit-456};}
