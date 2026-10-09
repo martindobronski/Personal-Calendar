@@ -44,9 +44,10 @@
       <div class="cal-head">
         <div class="cal-title" id="calTitle">–<span id="calSub"></span></div>
         <div class="cal-nav">
-          <button class="work-live" id="calWorkLive" title="Arbeitszeit läuft – zur Arbeitszeit" style="display:none">
+          <span class="work-live" id="calWorkLive" title="Arbeitszeit läuft – zur Arbeitszeit" style="display:none;cursor:pointer">
             <span class="wl-dot"></span>⏱ <b id="calWorkLiveTime">0:00</b>
-          </button>
+          </span>
+          <span class="chip" id="calWorkSaldo" title="Saldo heute (Arbeitszeit – Soll 7:36h)" style="display:none">Saldo <b id="calWorkSaldoVal">0:00</b></span>
           <button class="btn sm" id="btnToday">Heute</button>
           <button class="btn icon" id="btnPrev" aria-label="Vorheriger Monat">‹</button>
           <button class="btn icon" id="btnNext" aria-label="Nächster Monat">›</button>

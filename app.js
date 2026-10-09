@@ -1052,6 +1052,15 @@ function renderWorkHead(){
       wl.title = "Arbeitszeit läuft seit "+o.s+" – öffnen";
     }
   }
+  var ws=document.getElementById("calWorkSaldo");
+  var wsv=document.getElementById("calWorkSaldoVal");
+  if(ws && wsv){
+    var saldo=c.saldoMin;
+    wsv.textContent = (saldo>=0?"+":"") + minToHM(saldo);
+    ws.style.display = "inline-flex";
+    ws.classList.toggle("neg", saldo<0);
+    ws.classList.toggle("pos", saldo>0);
+  }
 }
 var __wlBtn=document.getElementById("calWorkLive");
 if(__wlBtn) __wlBtn.onclick=function(){ setView("work"); };
