@@ -1013,7 +1013,7 @@ function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.w
   var arbeitsZeit = anwesPres - pauseAbzug;
   if(arbeitsZeit < 0) arbeitsZeit = 0;
   // Saldo based on effective Arbeitszeit vs Soll
-  return {anwesMin:anwesPres,pauseMinBooked:pauseFinal,arbeitsMin:arbeitsZeit,sollMin:456,saldoMin:arbeitsZeit-456};}
+  return {anwesMin:anwesPres,pauseMinBooked:pauseAbzug,arbeitsMin:arbeitsZeit,sollMin:456,saldoMin:arbeitsZeit-456};}
 function fmtSecHMS(sec){var s=Math.max(0,Math.floor(sec||0));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return wkPad(h)+":"+wkPad(m)+":"+wkPad(ss);}
 function fmtHHMM(h,m){return wkPad(h)+":"+wkPad(m);}
 function workToggle(){var nk=wkTodayKey();var a=workArr(nk);var o=workOpenInterval(nk);var now=new Date();var ts=wkPad(now.getHours())+":"+wkPad(now.getMinutes());if(o){o.e=ts;}else{a.push({s:ts,e:null});}try{save();renderWork();updateWorkLive();render();}catch(e){}}
