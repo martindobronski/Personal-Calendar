@@ -1407,10 +1407,18 @@ function renderCalSide(){
 
 var __addWd=document.getElementById("btnAddWorkDay");
 if(__addWd) __addWd.onclick=function(){
-  var k=prompt("Tag im Format YYYY-MM-DD (leer = heute)", wkTodayKey());
+  var tk=wkTodayKey();
+  var def=tk.split("-").reverse().join(".");
+  var k=prompt("Tag im Format TT.MM.JJJJ (leer = heute)", def);
   if(k===null) return;
   k=(k||"").trim();
-  if(!/\d{4}-\d{2}-\d{2}/.test(k)) k=wkTodayKey();
+  var m=k.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if(m){
+    var dd=m[1].padStart(2,"0"), mm=m[2].padStart(2,"0"), yy=m[3];
+    k=yy+"-"+mm+"-"+dd;
+  }else{
+    if(!/\d{4}-\d{2}-\d{2}/.test(k)) k=tk;
+  }
   if(typeof S==="undefined") window.S={work:{}};
   if(!S.work) S.work={};
   if(!S.work[k]) S.work[k]=[];
