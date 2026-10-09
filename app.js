@@ -1404,3 +1404,16 @@ function renderCalSide(){
   }catch(e){}
   try{ updateBadges(); }catch(e){}
 }
+
+var __addWd=document.getElementById("btnAddWorkDay");
+if(__addWd) __addWd.onclick=function(){
+  var k=prompt("Tag im Format YYYY-MM-DD (leer = heute)", wkTodayKey());
+  if(k===null) return;
+  k=(k||"").trim();
+  if(!/\d{4}-\d{2}-\d{2}/.test(k)) k=wkTodayKey();
+  if(typeof S==="undefined") window.S={work:{}};
+  if(!S.work) S.work={};
+  if(!S.work[k]) S.work[k]=[];
+  try{save();}catch(e){}
+  openWorkDay(k);
+};
