@@ -206,6 +206,7 @@ function render(){
   if(curView==="lists") renderLists();
   if(curView==="points") renderPoints();
   if(curView==="settings") renderSettings();
+  try{ if(typeof updateWorkLive==="function" && (curView==="cal" || curView==="work" || (!!(typeof workOpenInterval==="function" && workOpenInterval(wkTodayKey()))))) updateWorkLive(); }catch(e){}
 }
 function updateBadges(){
   try{
@@ -1174,7 +1175,7 @@ function tick(){
   const z = zodiacInfo(now);
   document.getElementById("zodiacChip").innerHTML =
     '<span class="big">'+z.sym+"</span><b>"+z.name+"</b>";
-  try{ if(curView==="work" || workRunningToday()) updateWorkLive(); }catch(e){}
+  try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
 }
 setInterval(tick, 1000); tick();
 
