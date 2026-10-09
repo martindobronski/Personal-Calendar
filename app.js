@@ -1060,6 +1060,7 @@ function renderWorkHead(){
     ws.style.display = "inline-flex";
     ws.classList.toggle("neg", saldo<0);
     ws.classList.toggle("pos", saldo>0);
+    wsv.style.color = saldo<0 ? "#fca5a5" : saldo>0 ? "#86efac" : "#e2e8f0";
   }
 }
 var __wlBtn=document.getElementById("calWorkLive");
