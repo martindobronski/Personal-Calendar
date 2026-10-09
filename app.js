@@ -1006,7 +1006,7 @@ function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.w
   // Pausen = gaps between intervals
   var pauseGebucht=0;for(var i=1;i<pairs.length;i++){var g=pairs[i].s-pairs[i-1].e;if(g>0)pauseGebucht+=g;}
   // Mindestpausen nach ArbZG: >6h Anwesenheit -> 30min, >9h Anwesenheit -> 45min (anwesPres)
-  var reqPause=0;if(anwesPres>360){reqPause=30;}if(anwesPres>540){reqPause=45;}
+  var reqPause=0;if(arbNetto>360){reqPause=30;}if(arbNetto>540){reqPause=45;}
   var pauseEff=Math.max(pauseGebucht,reqPause);
   var arbEff=arbNetto; // arbeitszeit netto is sum of intervals; pauseEff is shown as booked/required info? but netto working time is arbNetto minus extra pause beyond gaps? no: gaps are the only pauses. better use arbNetto as Arbeitszeit
   // netto Arbeitszeit is sum of intervals = anwes - pause gaps = arbNetto; req pause means if gaps < req, we should count req? but we already have gaps
