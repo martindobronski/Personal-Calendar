@@ -23,6 +23,7 @@ function defaults(){
 
 let S;
 let activeProfile = null;
+let calMode = "month";
 function inProfile(catId){ return !activeProfile || !catId || catId === activeProfile; }
 function renderProfiles(){
   try{
@@ -80,6 +81,7 @@ try{
   var bt=document.getElementById("brandTitle"); if(bt) bt.textContent=t;
 }catch(e){}
 try{ applySegState(); }catch(e){}
+try{ if(S.settings && S.settings.calMode==="day") calMode="day"; }catch(e){}
 
 
 /* =========================================================
@@ -288,6 +290,8 @@ let calMonth = clone(today());
 let selDate = clone(today());
 
 function renderCalendar(){
+  updateCalModeUI();
+  if(calMode==="day"){ renderDayView(); return; }
   const y = calMonth.getFullYear(), m = calMonth.getMonth();
   document.getElementById("calTitle").innerHTML =
     MONTHS[m] + " " + y + '<span>' + (Object.keys(holidays(y)).length - 2) + " Feiertage</span>";
@@ -326,6 +330,121 @@ function renderCalendar(){
   renderLegend();
   renderAgenda(); try{if(typeof updateWorkLive==="function") updateWorkLive();}catch(e){}
   try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+}
+function setCalMode(m){
+  calMode = (m==="day") ? "day" : "month";
+  try{ if(!S.settings) S.settings={}; S.settings.calMode=calMode; save(); }catch(e){}
+  renderCalendar();
+}
+function updateCalModeUI(){
+  try{
+    const seg=document.getElementById("calModeSeg");
+    if(seg) seg.querySelectorAll(".segbtn").forEach(b=>b.classList.toggle("active", (b.dataset.calmode||"")===calMode));
+    const mw=document.getElementById("monthWrap");
+    const dv=document.getElementById("dayView");
+    if(mw) mw.hidden = calMode==="day";
+    if(dv) dv.hidden = calMode!=="day";
+    document.body.classList.toggle("cal-day", calMode==="day");
+  }catch(e){}
+}
+function dvHM(m){
+  m = Math.max(0, Math.min(1440, m));
+  return pad(Math.floor(m/60)%24)+":"+pad(m%60);
+}
+function layoutDayItems(items){
+  items.sort(function(a,b){ return (a.start-b.start) || (a.end-b.end); });
+  let i=0;
+  while(i<items.length){
+    let clusterEnd=items[i].end, j=i;
+    const cluster=[];
+    while(j<items.length && items[j].start<clusterEnd){
+      cluster.push(items[j]);
+      if(items[j].end>clusterEnd) clusterEnd=items[j].end;
+      j++;
+    }
+    const lanes=[];
+    cluster.forEach(function(it){
+      let li=-1;
+      for(let k=0;k<lanes.length;k++){ if(lanes[k]<=it.start){ li=k; break; } }
+      if(li<0){ li=lanes.length; lanes.push(it.end); }
+      else lanes[li]=it.end;
+      it.lane=li;
+    });
+    const n=lanes.length;
+    cluster.forEach(function(it){ it.lanes=n; });
+    i=j;
+  }
+  return items;
+}
+function renderDayView(){
+  const key=iso(selDate);
+  document.getElementById("calTitle").innerHTML = esc(fmtDate(selDate)) + "<span>Tagesansicht</span>";
+  const evs=eventsOn(key);
+  const banner=evs.filter(function(e){ return e.allDay || evEndKey(e)!==e.date; });
+  const timed=evs.filter(function(e){ return !e.allDay && evEndKey(e)===e.date; });
+  const tks=tasksOn(key);
+
+  const items=[];
+  timed.forEach(function(e){
+    const s=e.start?hmToMin(e.start):9*60;
+    let en=e.end?hmToMin(e.end):s+60;
+    if(en<=s) en=s+60;
+    items.push({kind:"ev", ev:e, start:s, end:en});
+  });
+  tks.forEach(function(t){
+    const s=hmToMin(t.dueTime);
+    items.push({kind:"task", task:t, start:s, end:s+30});
+  });
+  layoutDayItems(items);
+
+  const PXH=48, PXM=PXH/60, totalH=24*PXH;
+  let grid='<div class="dv-grid" data-date="'+key+'" style="height:'+totalH+'px">';
+  for(let h=0;h<24;h++) grid+='<div class="dv-hour" style="top:'+(h*PXH)+'px"><span>'+pad(h)+":00</span></div>";
+  if(sameDay(selDate,today())){
+    const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
+    grid+='<div class="dv-now" style="top:'+(nowMin*PXM)+'px" title="Jetzt"></div>';
+  }
+  items.forEach(function(it){
+    const top=it.start*PXM;
+    const hgt=Math.max((it.end-it.start)*PXM,20);
+    const w=100/(it.lanes||1);
+    const left=it.lane*w;
+    const style="top:"+top+"px;height:"+hgt+"px;left:calc("+left+"% + 4px);width:calc("+w+"% - 6px)";
+    if(it.kind==="ev"){
+      const c=cat(it.ev.cat);
+      grid+='<div class="dv-ev" data-ev="'+it.ev.id+'" style="'+style+";background:"+c.color+'" title="'+esc(it.ev.title)+'">'
+          + '<div class="dv-ev-t">'+esc(it.ev.start||"")+(it.ev.end?"–"+esc(it.ev.end):"")+"</div>"
+          + '<div class="dv-ev-n">'+esc(it.ev.title)+"</div></div>";
+    } else {
+      const c=cat(it.task.cat);
+      grid+='<div class="dv-ev dv-task" data-task-open="'+it.task.id+'" style="'+style+";--tc:"+c.color+'" title="'+esc(it.task.title)+'">'
+          + '<span class="mark">✓</span><span class="dv-ev-n">'+esc(it.task.title)+"</span></div>";
+    }
+  });
+  grid+="</div>";
+
+  const bannerHtml = banner.length ? banner.map(function(e){
+    const c=cat(e.cat);
+    return '<div class="dv-ad" data-ev="'+e.id+'" style="background:'+c.color+'" title="'+esc(e.title)+'">'
+         + (evDays(e)>1?"⇥ ":"")+esc(e.title)+"</div>";
+  }).join("") : '<span class="dv-ad-empty">—</span>';
+
+  document.getElementById("dayView").innerHTML =
+      '<div class="dv-allday"><div class="dv-allday-lbl">Ganztägig</div><div class="dv-allday-items">'+bannerHtml+"</div></div>"
+    + '<div class="dv-scroll">'+grid+"</div>";
+
+  renderLegend();
+  try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+  try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
+  const sc=document.querySelector("#dayView .dv-scroll");
+  if(sc){
+    if(sameDay(selDate,today())){
+      const now=new Date();
+      sc.scrollTop=Math.max(0,(now.getHours()*60+now.getMinutes())*PXM-120);
+    } else {
+      sc.scrollTop=7*PXH;
+    }
+  }
 }
 function evEndKey(ev){
   return (ev.endDate && ev.endDate > ev.date) ? ev.endDate : ev.date;
@@ -482,8 +601,38 @@ var __el=document.getElementById("agenda"); if(__el)__el.addEventListener("click
   const ev = e.target.closest("[data-ev]");
   if(ev){ openEvent(ev.dataset.ev); }
 });
-document.getElementById("btnPrev").onclick = ()=>{ calMonth.setMonth(calMonth.getMonth()-1); renderCalendar(); };
-document.getElementById("btnNext").onclick = ()=>{ calMonth.setMonth(calMonth.getMonth()+1); renderCalendar(); };
+var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("dblclick", e=>{
+  const day=e.target.closest(".day");
+  if(day){ selDate=parseISO(day.dataset.date); setCalMode("day"); }
+});
+var __cms=document.getElementById("calModeSeg"); if(__cms)__cms.addEventListener("click", e=>{
+  const b=e.target.closest("[data-calmode]");
+  if(b) setCalMode(b.dataset.calmode);
+});
+var __dv=document.getElementById("dayView"); if(__dv)__dv.addEventListener("click", e=>{
+  const to=e.target.closest("[data-task-open]");
+  if(to){ const tt=S.todos.find(x=>x.id===to.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
+  const ev=e.target.closest("[data-ev]");
+  if(ev){ openEvent(ev.dataset.ev); return; }
+  const grid=e.target.closest(".dv-grid");
+  if(grid){
+    const rect=grid.getBoundingClientRect();
+    let min=Math.round(((e.clientY-rect.top)/48*60)/30)*30;
+    if(isNaN(min)) return;
+    min=Math.max(0,Math.min(min,1440-30));
+    openEvent(null, grid.dataset.date, dvHM(min));
+  }
+});
+document.getElementById("btnPrev").onclick = ()=>{
+  if(calMode==="day"){ selDate=addDays(selDate,-1); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
+  else { calMonth.setMonth(calMonth.getMonth()-1); }
+  renderCalendar();
+};
+document.getElementById("btnNext").onclick = ()=>{
+  if(calMode==="day"){ selDate=addDays(selDate,1); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
+  else { calMonth.setMonth(calMonth.getMonth()+1); }
+  renderCalendar();
+};
 document.getElementById("btnToday").onclick = ()=>{ calMonth=clone(today()); selDate=clone(today()); renderCalendar(); };
 document.getElementById("btnNewEvent").onclick = ()=>openEvent(null, iso(selDate));
 document.getElementById("btnNewEvent2").onclick = ()=>openEvent(null, iso(selDate));
@@ -505,7 +654,7 @@ function fillCatSelect(sel, selected){
   sel.innerHTML = S.categories.map(c=>'<option value="'+c.id+'"'+(c.id===selected?" selected":"")+">"
     + esc(c.name) + "</option>").join("");
 }
-function openEvent(id, date){
+function openEvent(id, date, start){
   editingEvent = id ? S.events.find(e=>e.id===id) : null;
   const e = editingEvent;
   document.getElementById("evModalTitle").textContent = e ? "Termin bearbeiten" : "Neuer Termin";
@@ -517,9 +666,10 @@ function openEvent(id, date){
     ? (Math.round((parseISO(e.endDate) - parseISO(e.date)) / 86400000) + 1)
     : 1;
   fillCatSelect(document.getElementById("evCat"), e ? e.cat : (S.categories[0]||{}).id);
-  document.getElementById("evAllDay").checked = e ? !!e.allDay : true;
-  document.getElementById("evStart").value = e && e.start ? e.start : "09:00";
-  document.getElementById("evEnd").value = e && e.end ? e.end : "10:00";
+  document.getElementById("evAllDay").checked = e ? !!e.allDay : !start;
+  document.getElementById("evStart").value = e && e.start ? e.start : (start || "09:00");
+  document.getElementById("evEnd").value = e && e.end ? e.end
+    : (start ? dvHM(Math.min(hmToMin(start)+60, 1439)) : "10:00");
   document.getElementById("evNote").value = e ? (e.note||"") : "";
   document.getElementById("evDelete").style.display = e ? "" : "none";
   toggleTimeFields();
@@ -1100,8 +1250,16 @@ document.addEventListener("keydown", e=>{
   const inInput = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
   if(inInput) return;
   if(curView==="cal"){
-    if(e.key==="ArrowLeft"){ calMonth.setMonth(calMonth.getMonth()-1); renderCalendar(); }
-    if(e.key==="ArrowRight"){ calMonth.setMonth(calMonth.getMonth()+1); renderCalendar(); }
+    if(e.key==="ArrowLeft"){
+      if(calMode==="day"){ selDate=addDays(selDate,-1); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
+      else { calMonth.setMonth(calMonth.getMonth()-1); }
+      renderCalendar();
+    }
+    if(e.key==="ArrowRight"){
+      if(calMode==="day"){ selDate=addDays(selDate,1); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
+      else { calMonth.setMonth(calMonth.getMonth()+1); }
+      renderCalendar();
+    }
     if(e.key.toLowerCase()==="t"){ calMonth=clone(today()); selDate=clone(today()); renderCalendar(); }
     if(e.key.toLowerCase()==="n"){ openEvent(null, iso(selDate)); }
   }

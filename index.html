@@ -49,6 +49,10 @@
             <span class="wl-dot"></span>⏱ <b id="calWorkLiveTime">0:00</b>
           </span>
           <span class="chip" id="calWorkSaldo" title="Saldo heute (Arbeitszeit – Soll 7:36h)" style="display:none">Saldo <b id="calWorkSaldoVal">0:00</b></span>
+          <div class="seg mini" id="calModeSeg">
+            <button class="segbtn active" data-calmode="month">Monat</button>
+            <button class="segbtn" data-calmode="day">Tag</button>
+          </div>
           <button class="btn sm" id="btnToday">Heute</button>
           <button class="btn icon" id="btnPrev" aria-label="Vorheriger Monat">‹</button>
           <button class="btn icon" id="btnNext" aria-label="Nächster Monat">›</button>
@@ -59,8 +63,11 @@
         <span>⧉ Kopieren: <b id="copyBarTitle"></b> – Zieltag anklicken (Mehrfachauswahl)</span>
         <button class="btn sm" id="copyBarBtn">Beenden</button>
       </div>
-      <div class="dow"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div></div>
-      <div class="cal-grid" id="calGrid"></div>
+      <div id="monthWrap">
+        <div class="dow"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div class="dayview" id="dayView" hidden></div>
       <div class="row" id="legend" style="margin-top:14px"></div>
     </div>
 
