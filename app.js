@@ -76,6 +76,33 @@ const clone = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const addDays = (d,n) => { const c=clone(d); c.setDate(c.getDate()+n); return c; };
 const sameDay = (a,b) => iso(a)===iso(b);
 
+const ICON_EDIT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
+const ICON_TRASH = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+const ICON_MORE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>';
+
+let undoInfo=null, undoTimer=null;
+function showUndo(msg, fn){
+  let bar=document.getElementById('undoToast');
+  if(!bar){ bar=document.createElement('div'); bar.id='undoToast'; document.body.appendChild(bar); }
+  bar.innerHTML = '<span class="undo-msg">'+msg+'</span><button type="button" class="undo-btn">Rückgängig</button>';
+  clearTimeout(undoTimer);
+  bar.classList.add('show');
+  const run=fn;
+  undoInfo=run;
+  undoTimer=setTimeout(hideUndo, 6000);
+  bar.querySelector('.undo-btn').onclick=function(){
+    hideUndo();
+    const f=undoInfo; undoInfo=null;
+    if(f) f();
+  };
+}
+function hideUndo(){
+  clearTimeout(undoTimer);
+  const bar=document.getElementById('undoToast');
+  if(bar) bar.classList.remove('show');
+  undoInfo=null;
+}
+
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const DOW_FULL = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 
@@ -355,9 +382,9 @@ function renderAgenda(){
       + '<div class="sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+"</span>"
       + (evDays(ev)>1 ? " · 📅 "+esc(ev.date.split("-").reverse().join("."))+"–"+esc(evEndKey(ev).split("-").reverse().join(".")) : "")
       + (ev.note ? " · "+esc(ev.note) : "") + "</div></div>"
-      + '<div class="ag-actions"><button class="linkbtn" data-ev="'+ev.id+'" title="Bearbeiten">✎</button>'
-      + '<button class="linkbtn" data-copy="'+ev.id+'">⧉ Kopieren</button>'
-      + '<button class="linkbtn del" data-evdel="'+ev.id+'" title="Löschen">🗑</button></div>'
+      + '<div class="ag-actions"><button type="button" class="linkbtn act" data-ev="'+ev.id+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+      + '<button type="button" class="linkbtn act" data-copy="'+ev.id+'">⧉ Kopieren</button>'
+      + '<button type="button" class="linkbtn act del" data-evdel="'+ev.id+'" title="Löschen">'+ICON_TRASH+'</button></div>'
       + "</div>";
   }).join("");
 }
@@ -716,7 +743,7 @@ function renderLists(){
       + '<button class="check'+(i.done?" on":"")+'" data-li-tog="'+i.id+'">✓</button>'
       + '<div><div class="it-title">'+esc(i.name)+"</div>"
       + (i.qty ? '<div class="it-sub">'+esc(i.qty)+"</div>" : "") + "</div>"
-      + '<div class="it-actions"><button class="linkbtn del" data-li-del="'+i.id+'">×</button></div>'
+      + '<div class="it-actions"><button type="button" class="linkbtn act del" data-li-del="'+i.id+'" title="Löschen">'+ICON_TRASH+'</button></div>'
       + "</div>").join("");
   }
 }
@@ -731,8 +758,15 @@ var __el=document.getElementById("view-lists"); if(__el)__el.addEventListener("c
   const dl = e.target.closest("[data-li-del]");
   if(dl){
     const L = activeList();
+    const rem = L.items.find(x=>x.id===dl.dataset.liDel);
     L.items = L.items.filter(x=>x.id!==dl.dataset.liDel);
     save(); renderLists();
+    if(rem){
+      showUndo('Eintrag gelöscht', function(){
+        activeList().items.push(rem);
+        save(); renderLists();
+      });
+    }
   }
 });
 function addItem(){
@@ -1095,8 +1129,9 @@ function renderWork(){
           +'<div><div class="it-title">Komm '+esc(x.it.s)+(x.it.e?' · Geht '+esc(x.it.e):' · offen')+'</div>'
           +'<div class="it-sub">'+dur+'</div></div>'
           +'<div class="it-actions">'
-          +'<button class="btn sm" data-wk-edit="'+x.idx+'" title="Bearbeiten">✎</button>'
-          +'<button class="btn sm" data-wk-del="'+x.idx+'">Löschen</button></div>'
+          +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
+          +'<button type="button" class="btn sm act" data-wk-edit="'+x.idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+          +'<button type="button" class="btn sm act" data-wk-del="'+x.idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'
           +'</div>';
       }).join('');
     }
@@ -1116,8 +1151,9 @@ function renderWork(){
           +' · Arb. '+minToHM(c2.arbeitsMin)+' · Ind. '+minToDec(c2.arbeitsMin)
           +' · Saldo <b class="'+(c2.saldoMin<0?"neg":"pos")+'">'+saldo+'</b></div></div>'
           +'<div class="it-actions">'
-          +'<button class="btn sm" data-wk-editday="'+esc(k)+'" title="Bearbeiten">✎</button>'
-          +'<button class="btn sm" data-wk-delall="'+esc(k)+'">Tag leeren</button></div>'
+          +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
+          +'<button type="button" class="btn sm act" data-wk-editday="'+esc(k)+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+          +'<button type="button" class="btn sm act del" data-wk-delall="'+esc(k)+'" title="Tag leeren">'+ICON_TRASH+'</button></div>'
           +'</div>';
       }).join('');
     }
@@ -1144,7 +1180,7 @@ function renderWkRows(){
       +'<div class="field"><label class="fl">Geht</label><div class="time-wrap">'
       +'<input type="time" class="wk-e" id="wkE'+i+'" value="'+esc(r.e||"")+'">'
       +'<button type="button" class="time-pick" data-timefor="wkE'+i+'" title="Uhrzeit wählen">🕒</button></div></div>'
-      +'<button class="btn sm del wk-rowdel" data-wk-rowdel="'+i+'" title="Zeitraum entfernen">🗑</button>'
+      +'<button type="button" class="btn sm del wk-rowdel" data-wk-rowdel="'+i+'" title="Zeitraum entfernen">'+ICON_TRASH+'</button>'
       +'</div>';
   }).join("");
 }
@@ -1283,8 +1319,9 @@ function renderTasks(){
             + (t.completedAt?(function(){var d2=new Date(t.completedAt);return '<span>✓ '+esc(d2.getDate().toString().padStart(2,'0')+'.'+(d2.getMonth()+1).toString().padStart(2,'0')+'.'+d2.getFullYear().toString().slice(-2)+' '+d2.getHours().toString().padStart(2,'0')+':'+d2.getMinutes().toString().padStart(2,'0'))+'</span>';}()):'')
             + (done&&t.repeat&&t.repeat!=="none"&&nextDue(t)?'<span style="color:#7dd3fc">↻ Nächste: '+esc(fmtDate(nextDue(t)))+'</span>':'')
             + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
-            + '<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
-            + '<button class="btn sm del" data-task-del="'+idx+'" title="Löschen">🗑</button></div>'
+            + '<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
+            + '<button type="button" class="btn sm act" data-task-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+            + '<button type="button" class="btn sm act del" data-task-del="'+idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'
             + '</div>';
         }).join("");
         return out;
@@ -1318,8 +1355,9 @@ function renderRoutines(){
           +(rep?'<span>↻ '+esc(rep)+'</span>':'')
           +(r.note?'<span> '+esc(r.note)+'</span>':'')
           +'</div></div><div class="it-actions">'
-          +'<button class="btn sm" data-routine-edit="'+i+'" title="Bearbeiten">✎</button>'
-          +'<button class="btn sm del" data-routine-del="'+i+'" title="Löschen">🗑</button></div></div>';
+          +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
+          +'<button type="button" class="btn sm act" data-routine-edit="'+i+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+          +'<button type="button" class="btn sm act del" data-routine-del="'+i+'" title="Löschen">'+ICON_TRASH+'</button></div></div>';
       }).join('');
     }
   }catch(e){}
@@ -1328,6 +1366,16 @@ function renderRoutines(){
 (function(){
   document.addEventListener('click', function(e){
     var t=e.target;
+    if(t.closest&&t.closest('.menu-toggle')){
+      var item=t.closest('.item');
+      if(item){
+        var was=item.classList.contains('menuopen');
+        var all=document.querySelectorAll('.item.menuopen');
+        for(var i2=0;i2<all.length;i2++) all[i2].classList.remove('menuopen');
+        if(!was) item.classList.add('menuopen');
+      }
+      return;
+    }
     if(t.matches&&t.matches('[data-task-edit]')){
       var idx=parseInt(t.getAttribute('data-task-edit'));
       if(!isNaN(idx)&&Array.isArray(S.todos)&&S.todos[idx]) openTodo(S.todos[idx].id, "task");
@@ -1335,7 +1383,18 @@ function renderRoutines(){
     }
     if(t.matches&&t.matches('[data-task-del]')){
       var idx=parseInt(t.getAttribute('data-task-del'));
-      if(!isNaN(idx)&&Array.isArray(S.todos)&&idx>=0&&idx<S.todos.length){ S.todos.splice(idx,1); save(); renderTasks(); updateBadges(); }
+      if(!isNaN(idx)&&Array.isArray(S.todos)&&idx>=0&&idx<S.todos.length){
+        var removed=S.todos.splice(idx,1)[0];
+        save();
+        showUndo('Aufgabe gelöscht', function(){
+          var ri=Math.min(idx, S.todos.length);
+          S.todos.splice(ri,0,removed);
+          save(); renderTasks(); updateBadges();
+          try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+        });
+        renderTasks(); updateBadges();
+        try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+      }
       return;
     }
     if(t.matches&&t.matches('[data-task-toggle]')){
@@ -1375,7 +1434,18 @@ function renderRoutines(){
     }
     if(t.matches&&t.matches('[data-routine-del]')){
       var ridx=parseInt(t.getAttribute('data-routine-del'));
-      if(!isNaN(ridx)&&Array.isArray(S.routines)&&ridx>=0&&ridx<S.routines.length){ S.routines.splice(ridx,1); save(); renderRoutines(); }
+      if(!isNaN(ridx)&&Array.isArray(S.routines)&&ridx>=0&&ridx<S.routines.length){
+        var rremoved=S.routines.splice(ridx,1)[0];
+        save();
+        showUndo('Routine gelöscht', function(){
+          var ri2=Math.min(ridx, S.routines.length);
+          S.routines.splice(ri2,0,rremoved);
+          save(); renderRoutines();
+          try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+        });
+        renderRoutines();
+        try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+      }
       return;
     }
   });
@@ -1439,8 +1509,9 @@ function renderCalSide(){
             +'<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
             +(t.repeat&&t.repeat!=='none'?'<span>↻ '+esc(repLabel(t.repeat))+'</span>':'')
             +(t.due?'<span>📅 '+esc((t.due||'').split('-').reverse().join('.'))+'</span>':'')+'</div></div>'
-            +'<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
-            +'<button class="btn sm del" data-task-del="'+idx+'" title="Löschen">🗑</button></div>'
+            +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
+            +'<button type="button" class="btn sm act" data-task-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+            +'<button type="button" class="btn sm act del" data-task-del="'+idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'
             +'</div>';
         }).join('');
       }
@@ -1460,8 +1531,9 @@ function renderCalSide(){
           var i=S.routines.indexOf(r);
           return '<div class="item"><div><div class="it-title">'+esc(r.name||'')+'</div>'
             +'<div class="it-sub"><span>↻ '+esc(repLabel(r.freq))+'</span>'+(r.note?' · '+esc(r.note):'')+'</div></div>'
-            +'<div class="it-actions"><button class="btn sm" data-routine-edit="'+i+'" title="Bearbeiten">✎</button>'
-            +'<button class="btn sm del" data-routine-del="'+i+'" title="Löschen">🗑</button></div></div>';
+            +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
+            +'<button type="button" class="btn sm act" data-routine-edit="'+i+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+            +'<button type="button" class="btn sm act del" data-routine-del="'+i+'" title="Löschen">'+ICON_TRASH+'</button></div></div>';
         }).join('');
       }
       var rcnt=document.getElementById('calRoutineCount');
