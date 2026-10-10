@@ -17,7 +17,7 @@ function defaults(){
       {id:uid(), name:"Familie", color:"#f5a524"}
     ],
     events:[], todos:[],tasks:[],routines:[], meals:{}, lists:null, rewards:[], points:0, history:[],
-    settings:{ weekStart:1, showDone:false, appTitle:"Familienkalender", paidBreakfastMin:0, showMoon:false, showZodiac:false }
+    settings:{ weekStart:1, showDone:false, appTitle:"Familienkalender", paidBreakfastMin:0, showMoon:false, showZodiac:false, segTask:"open", segRoutine:"open", segCalTask:"all", segCalRoutine:"all" }
   };
 }
 
@@ -57,12 +57,29 @@ function save(){
   const el = document.getElementById("storageInfo");
   if(el) el.textContent = "Belegt " + (new Blob([JSON.stringify(S)]).size/1024).toFixed(1) + " KB im localStorage.";
 }
+function setSegActive(id,val){
+  var seg=document.getElementById(id); if(!seg) return;
+  seg.querySelectorAll('.segbtn').forEach(function(b){ b.classList.toggle('active', (b.dataset.seg||'')===val); });
+}
+function applySegState(){
+  try{
+    var st=(typeof S!=="undefined"&&S&&S.settings)||{};
+    setSegActive('taskSeg', st.segTask||'open');
+    setSegActive('routineSeg', st.segRoutine||'open');
+    setSegActive('calTaskSeg', st.segCalTask||'all');
+    setSegActive('calRoutineSeg', st.segCalRoutine||'all');
+  }catch(e){}
+}
+function rememberSeg(key,val){
+  try{ if(!S.settings) S.settings={}; S.settings[key]=val; save(); }catch(e){}
+}
 load(); save();
 try{
   var t=(S.settings&&S.settings.appTitle)||"Familienkalender";
   document.title = t + " – Ordnung im Alltag ohne Abo";
   var bt=document.getElementById("brandTitle"); if(bt) bt.textContent=t;
 }catch(e){}
+try{ applySegState(); }catch(e){}
 
 
 /* =========================================================
@@ -1708,6 +1725,7 @@ if(__addWd) __addWd.onclick=function(){
     seg.addEventListener("click", function(e){
       var b=e.target.closest(".segbtn"); if(!b) return;
       seg.querySelectorAll(".segbtn").forEach(function(x){x.classList.toggle("active", x===b);});
+      rememberSeg("segTask", b.dataset.seg||"open");
       if(typeof renderTasks==="function") renderTasks();
     });
   }
@@ -1718,22 +1736,24 @@ if(__addWd) __addWd.onclick=function(){
     seg.addEventListener("click", function(e){
       var b=e.target.closest(".segbtn"); if(!b) return;
       seg.querySelectorAll(".segbtn").forEach(function(x){x.classList.toggle("active", x===b);});
+      rememberSeg("segRoutine", b.dataset.seg||"open");
       if(typeof renderRoutines==="function") renderRoutines();
     });
   }
 })();
 (function(){
-  function segClick(id){
+  function segClick(id,key){
     var seg=document.getElementById(id);
     if(!seg) return;
     seg.addEventListener("click", function(e){
       var b=e.target.closest(".segbtn"); if(!b) return;
       seg.querySelectorAll(".segbtn").forEach(function(x){x.classList.toggle("active", x===b);});
+      rememberSeg(key, b.dataset.seg||"all");
       if(typeof renderCalSide==="function") renderCalSide();
     });
   }
-  segClick("calTaskSeg");
-  segClick("calRoutineSeg");
+  segClick("calTaskSeg","segCalTask");
+  segClick("calRoutineSeg","segCalRoutine");
   document.querySelectorAll(".panel-title[data-goto]").forEach(function(el){
     el.addEventListener("click", function(){ if(typeof setView==="function") setView(el.dataset.goto); });
     el.addEventListener("keydown", function(e){
