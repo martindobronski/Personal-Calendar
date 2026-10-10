@@ -82,6 +82,21 @@ try{
 }catch(e){}
 try{ applySegState(); }catch(e){}
 try{ if(S.settings && S.settings.calMode==="day") calMode="day"; }catch(e){}
+try{
+  if(S && Array.isArray(S.todos)){
+    var __mig=false;
+    S.todos.forEach(function(t){
+      if(t.startDate==null){ if(t.due){ t.startDate=t.due; __mig=true; } else t.startDate=""; }
+      if(t.allDay==null){ t.allDay = !(t.startTime||t.dueTime); __mig=true; }
+      if(t.startTime==null && t.dueTime && !t.allDay){ t.startTime=t.dueTime; __mig=true; }
+      if(t.endDate==null) t.endDate="";
+      if(t.endTime==null) t.endTime="";
+      if("due" in t){ delete t.due; __mig=true; }
+      if("dueTime" in t){ delete t.dueTime; __mig=true; }
+    });
+    if(__mig) save();
+  }
+}catch(e){}
 
 
 /* =========================================================
@@ -383,6 +398,8 @@ function renderDayView(){
   const banner=evs.filter(function(e){ return e.allDay || evEndKey(e)!==e.date; });
   const timed=evs.filter(function(e){ return !e.allDay && evEndKey(e)===e.date; });
   const tks=tasksOn(key);
+  const tksBanner=tks.filter(function(t){ return taskIsAllDay(t) || taskRangeEnd(t)!==taskDate(t); });
+  const tksTimed=tks.filter(function(t){ return !taskIsAllDay(t) && taskRangeEnd(t)===taskDate(t); });
 
   const items=[];
   timed.forEach(function(e){
@@ -391,7 +408,7 @@ function renderDayView(){
     if(en<=s) en=s+60;
     items.push({kind:"ev", ev:e, start:s, end:en});
   });
-  tks.forEach(function(t){
+  tksTimed.forEach(function(t){
     const s=hmToMin(taskStartTime(t));
     const en=taskEndTime(t);
     let e = en ? hmToMin(en) : s+30;
@@ -426,11 +443,18 @@ function renderDayView(){
   });
   grid+="</div>";
 
-  const bannerHtml = banner.length ? banner.map(function(e){
+  const bannerEvHtml = banner.map(function(e){
     const c=cat(e.cat);
     return '<div class="dv-ad" data-ev="'+e.id+'" style="background:'+c.color+'" title="'+esc(e.title)+'">'
          + (evDays(e)>1?"⇥ ":"")+esc(e.title)+"</div>";
-  }).join("") : '<span class="dv-ad-empty">—</span>';
+  });
+  const bannerTaskHtml = tksBanner.map(function(t){
+    const c=cat(t.cat);
+    return '<div class="dv-ad dv-ad-task" data-task-open="'+t.id+'" style="background:'+c.color+'" title="'+esc(t.title)+'">'
+         + '<span class="mark">✓</span>'+esc(t.title)+"</div>";
+  });
+  const bannerAll = bannerEvHtml.concat(bannerTaskHtml);
+  const bannerHtml = bannerAll.length ? bannerAll.join("") : '<span class="dv-ad-empty">—</span>';
 
   document.getElementById("dayView").innerHTML =
       '<div class="dv-allday"><div class="dv-allday-lbl">Ganztägig</div><div class="dv-allday-items">'+bannerHtml+"</div></div>"
@@ -505,19 +529,28 @@ function chipHTML(ev){
        + t + marker + "<span>" + esc(ev.title) + "</span></div>";
 }
 function taskDate(t){ return (t && (t.startDate || t.due)) ? (t.startDate || t.due) : ""; }
-function taskStartTime(t){ return (t && (t.startTime || t.dueTime)) ? (t.startTime || t.dueTime) : ""; }
-function taskEndTime(t){ return (t && t.endTime) ? t.endTime : ""; }
+function taskStartTime(t){ return (t && !t.allDay && (t.startTime || t.dueTime)) ? (t.startTime || t.dueTime) : ""; }
+function taskEndTime(t){ return (t && !t.allDay && t.endTime) ? t.endTime : ""; }
+function taskIsAllDay(t){ return !taskStartTime(t); }
+function taskRangeEnd(t){ var s=taskDate(t); return (t && t.endDate && t.endDate>s) ? t.endDate : s; }
 function tasksOn(key){
   return (Array.isArray(S.todos)?S.todos:[]).filter(function(t){
-    return inProfile(t.cat) && !taskIsDone(t) && taskDate(t)===key && taskStartTime(t) && (!t.repeat || t.repeat==="none");
-  }).sort(function(a,b){ return (taskStartTime(a)||"").localeCompare(taskStartTime(b)||""); });
+    if(!inProfile(t.cat) || taskIsDone(t)) return false;
+    if(t.repeat && t.repeat!=="none") return false;
+    var s=taskDate(t); if(!s) return false;
+    return key>=s && key<=taskRangeEnd(t);
+  }).sort(function(a,b){
+    var aa=taskIsAllDay(a)?0:1, bb=taskIsAllDay(b)?0:1;
+    if(aa!==bb) return aa-bb;
+    return (taskStartTime(a)||"").localeCompare(taskStartTime(b)||"");
+  });
 }
 function taskChipHTML(t){
   var c = cat(t.cat);
   var st = taskStartTime(t), en = taskEndTime(t);
-  var tip = esc(t.title) + " · " + esc(st) + (en ? "–"+esc(en) : "");
+  var tip = esc(t.title) + (st ? " · "+esc(st)+(en ? "–"+esc(en) : "") : " · ganztägig");
   return '<div class="task-chip" data-task-open="'+t.id+'" style="--tc:'+c.color+'" title="'+tip+'">'
-       + '<span class="t">'+esc(st)+'</span>'
+       + (st ? '<span class="t">'+esc(st)+'</span>' : '')
        + '<span class="mark" aria-hidden="true">✓</span>'
        + '<span>'+esc(t.title)+'</span></div>';
 }
@@ -565,7 +598,7 @@ function renderAgenda(){
     const idx = S.todos.indexOf(t);
     return '<div class="ag-item task" style="--c:'+c.color+'">'
       + '<button type="button" class="task-check" data-task-toggle="'+idx+'" title="Erledigt abhaken">✓</button>'
-      + '<div class="when">'+esc(taskStartTime(t))+(taskEndTime(t)?"–"+esc(taskEndTime(t)):"")+'</div>'
+      + '<div class="when">'+(taskIsAllDay(t)?"ganztägig":esc(taskStartTime(t))+(taskEndTime(t)?"–"+esc(taskEndTime(t)):""))+'</div>'
       + '<div class="tclick" data-task-open="'+t.id+'"><div class="ttl">'+esc(t.title)+'</div>'
       + '<div class="sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
       + (spanTxt(t) ? " · 🗓 "+esc(spanTxt(t)) : "")
@@ -850,17 +883,22 @@ function openTodo(id, mode){
   fillCatSelect(document.getElementById("tdCat"), e ? e.cat : (activeProfile || (S.categories[0]||{}).id));
   document.getElementById("tdRepeat").value = e ? (e.repeat || e.freq || "none") : (isR ? "daily" : "none");
   document.getElementById("tdPoints").value = e ? (e.points ?? 1) : 1;
-  document.getElementById("tdDue").value = (e && e.due) ? e.due : "";
-  document.getElementById("tdDueTime").value = (e && e.dueTime) ? e.dueTime : "";
   document.getElementById("tdTime").value = (e && e.time && e.time!=="any") ? e.time : "";
   document.getElementById("tdStart").value = (e && e.startDate) ? e.startDate : "";
   document.getElementById("tdEnd").value = (e && e.endDate) ? e.endDate : "";
+  const tdAllDay = e ? (e.allDay !== false) : true;
+  document.getElementById("tdAllDay").checked = tdAllDay;
   document.getElementById("tdStartTime").value = (e && e.startTime) ? e.startTime : "";
   document.getElementById("tdEndTime").value = (e && e.endTime) ? e.endTime : "";
+  document.getElementById("tdDur").value = "";
+  document.getElementById("tdDurUnit").value = "60";
+  if(!tdAllDay && e && e.startTime && e.endTime) setDurFromTimes();
   updateTdSpan();
-  document.getElementById("tdDueField").style.display = isR ? "none" : "";
   document.getElementById("tdRoutineTimeField").style.display = isR ? "" : "none";
   document.getElementById("tdSpanFields").style.display = isR ? "none" : "";
+  document.getElementById("tdAllDayField").style.display = isR ? "none" : "";
+  if(isR){ document.getElementById("tdTimeFields").style.display="none"; document.getElementById("tdDurFields").style.display="none"; }
+  else { toggleTdTimeFields(); }
   document.getElementById("tdNote").value = (e && e.note) ? e.note : "";
   document.getElementById("tdDelete").style.display = e ? "" : "none";
   openModal("tdModal");
@@ -872,8 +910,6 @@ document.getElementById("tdSave").onclick = ()=>{
   const cat = document.getElementById("tdCat").value;
   const repeat = document.getElementById("tdRepeat").value;
   const points = Math.max(0, parseInt(document.getElementById("tdPoints").value||"0",10));
-  const due = document.getElementById("tdDue").value;
-  const dueTime = due ? (document.getElementById("tdDueTime").value || "") : "";
   const note = document.getElementById("tdNote").value.trim();
   if(tdMode==="routine"){
     const time = document.getElementById("tdTime").value || "";
@@ -881,15 +917,20 @@ document.getElementById("tdSave").onclick = ()=>{
     if(editingRoutine) Object.assign(editingRoutine, data);
     else S.routines.push(Object.assign({id:uid(), done:false, lastDone:null, completedAt:null}, data));
   }else{
+    const allDay = document.getElementById("tdAllDay").checked;
     let startDate = document.getElementById("tdStart").value || "";
     let endDate = document.getElementById("tdEnd").value || "";
-    let startTime = document.getElementById("tdStartTime").value || "";
-    let endTime = document.getElementById("tdEndTime").value || "";
+    let startTime = allDay ? "" : (document.getElementById("tdStartTime").value || "");
+    let endTime = allDay ? "" : (document.getElementById("tdEndTime").value || "");
     if(endDate && !startDate){ startDate = endDate; endDate = ""; }
-    if((startTime || endTime) && !startDate) startDate = iso(today());
     if(startDate && endDate && endDate < startDate){ toast("Das Enddatum liegt vor dem Beginn."); return; }
     if(endDate === startDate) endDate = "";
-    const data = {title, cat, repeat, points, due, dueTime, note, startDate, endDate, startTime, endTime};
+    if(!allDay){
+      if(!startTime){ toast("Bitte eine Von-Zeit angeben."); return; }
+      if(!startDate) startDate = iso(today());
+      if(endTime && endTime < startTime && !endDate) endDate = iso(addDays(parseISO(startDate),1));
+    }
+    const data = {title, cat, repeat, points, note, startDate, endDate, allDay, startTime, endTime};
     if(editingTodo) Object.assign(editingTodo, data);
     else S.todos.push(Object.assign({id:uid(), done:false, lastDone:null}, data));
   }
@@ -908,11 +949,7 @@ document.getElementById("tdDelete").onclick = ()=>{
 function updateTdSpan(){
   const s=document.getElementById("tdStart").value;
   const e=document.getElementById("tdEnd");
-  if(s) e.min=s;
-  let n=1;
-  if(s && e.value && e.value > s) n=Math.round((parseISO(e.value)-parseISO(s))/86400000)+1;
-  const dEl=document.getElementById("tdDays");
-  if(dEl) dEl.value=n;
+  if(e && s) e.min=s;
 }
 document.getElementById("tdStart").onchange = ()=>{
   const s=document.getElementById("tdStart").value;
@@ -921,16 +958,44 @@ document.getElementById("tdStart").onchange = ()=>{
   updateTdSpan();
 };
 document.getElementById("tdEnd").onchange = updateTdSpan;
-document.getElementById("tdDays").onchange = ()=>{
-  const s=document.getElementById("tdStart").value;
-  if(!s) return;
-  let n=parseInt(document.getElementById("tdDays").value)||1;
-  if(n<1) n=1;
-  if(n>366) n=366;
-  document.getElementById("tdDays").value=n;
-  document.getElementById("tdEnd").value=iso(addDays(parseISO(s), n-1));
-  updateTdSpan();
+function toggleTdTimeFields(){
+  const allDay=document.getElementById("tdAllDay").checked;
+  document.getElementById("tdTimeFields").style.display = allDay ? "none" : "grid";
+  document.getElementById("tdDurFields").style.display = allDay ? "none" : "grid";
+}
+document.getElementById("tdAllDay").onchange = toggleTdTimeFields;
+function tdDurMinutes(){
+  const d=parseInt(document.getElementById("tdDur").value||"0",10)||0;
+  const u=parseInt(document.getElementById("tdDurUnit").value||"60",10)||60;
+  return d*u;
+}
+function setDurFromTimes(){
+  const s=document.getElementById("tdStartTime").value;
+  const e=document.getElementById("tdEndTime").value;
+  if(!s||!e) return;
+  let diff=hmToMin(e)-hmToMin(s);
+  if(diff<0) diff+=1440;
+  const u=parseInt(document.getElementById("tdDurUnit").value||"60",10)||60;
+  const val=diff/u;
+  document.getElementById("tdDur").value=(val%1===0)?val:(Math.round(val*100)/100);
+}
+function setEndFromDur(){
+  const s=document.getElementById("tdStartTime").value;
+  const mins=tdDurMinutes();
+  if(!s||!mins) return;
+  const total=hmToMin(s)+mins;
+  document.getElementById("tdEndTime").value=dvHM(total%1440);
+  const roll=Math.floor(total/1440);
+  const sd=document.getElementById("tdStart").value;
+  if(roll>0 && sd) document.getElementById("tdEnd").value=iso(addDays(parseISO(sd), roll));
+}
+document.getElementById("tdStartTime").onchange=()=>{
+  if(parseInt(document.getElementById("tdDur").value||"0",10)) setEndFromDur();
+  else setDurFromTimes();
 };
+document.getElementById("tdEndTime").onchange=setDurFromTimes;
+document.getElementById("tdDur").onchange=setEndFromDur;
+document.getElementById("tdDurUnit").onchange=setEndFromDur;
 
 /* =========================================================
    Mahlzeiten
@@ -1551,7 +1616,7 @@ function repLabel(r){
 }
 function nextDue(t){
   if(!t.repeat||t.repeat==="none") return null;
-  var base=t.lastDone?parseISO(t.lastDone):(t.due?parseISO(t.due):today());
+  var base=t.lastDone?parseISO(t.lastDone):(taskDate(t)?parseISO(taskDate(t)):today());
   var d=clone(base);
   if(t.repeat==="daily") d=addDays(d,1);
   else if(t.repeat==="weekly") d=addDays(d,7);
@@ -1568,10 +1633,12 @@ function fmtCompletedAt(s){
   return "✓ "+pad(d.getDate())+"."+pad(d.getMonth()+1)+"."+String(d.getFullYear()).slice(-2)+" "+pad(d.getHours())+":"+pad(d.getMinutes());
 }
 function dueDateTime(t){
-  if(!t||!t.due) return null;
-  var d=parseISO(t.due);
-  if(t.dueTime){
-    var p=String(t.dueTime).split(":");
+  var date = (t && (t.endDate || t.startDate || t.due)) ? (t.endDate || t.startDate || t.due) : "";
+  if(!date) return null;
+  var d=parseISO(date);
+  var tim = (t && !t.allDay) ? (t.endTime || t.startTime || t.dueTime || "") : "";
+  if(tim){
+    var p=String(tim).split(":");
     d.setHours(parseInt(p[0],10)||0, parseInt(p[1],10)||0, 0, 0);
   } else {
     d.setHours(23,59,59,999);
@@ -1579,7 +1646,7 @@ function dueDateTime(t){
   return d;
 }
 function isTaskOverdue(t){
-  if(!t||!t.due) return false;
+  if(!t||!(t.startDate||t.endDate||t.due)) return false;
   if(typeof taskIsDone==="function" && taskIsDone(t)) return false;
   var dt=dueDateTime(t);
   return dt ? dt < new Date() : false;
@@ -1592,20 +1659,11 @@ function spanTxt(t){
   return out;
 }
 function fmtDue(t,done){
-  var out="";
-  if(t && t.due){
-    var dd=parseISO(t.due), td=today();
-    var txt=(t.due||"").split("-").reverse().join(".");
-    if(sameDay(dd,td)) txt="Heute";
-    else if(sameDay(dd,addDays(td,-1))) txt="Gestern";
-    else if(sameDay(dd,addDays(td,1))) txt="Morgen";
-    if(t.dueTime) txt+=" "+t.dueTime;
-    var col=(!done && isTaskOverdue(t))?"#f87171":"#cbd5e1";
-    out+='<span style="color:'+col+'">📅 '+esc(txt)+"</span>";
-  }
-  var sp=spanTxt(t);
-  if(sp) out+='<span style="color:#7dd3fc">🗓 '+esc(sp)+"</span>";
-  return out;
+  if(!t || !taskDate(t)) return "";
+  var od = !done && isTaskOverdue(t);
+  var col = od ? "#f87171" : "#cbd5e1";
+  var prefix = od ? "überfällig " : "";
+  return '<span style="color:'+col+'">🗓 '+esc(prefix+spanTxt(t))+"</span>";
 }
 function updateTaskBadge(){ try{ var b=document.getElementById('todoBadge'); if(!b) return; var n=0; if(typeof S!=="undefined"&&S&&Array.isArray(S.todos)) n=S.todos.filter(function(t){return inProfile(t.cat) && !taskIsDone(t)}).length; b.textContent=n; b.style.display=n?"grid":"none"; }catch(e){} }
 function renderTasks(){
