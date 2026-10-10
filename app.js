@@ -457,6 +457,10 @@ function openEvent(id, date){
   document.getElementById("evTitle").value = e ? e.title : "";
   document.getElementById("evDate").value = e ? e.date : (date || iso(selDate));
   document.getElementById("evEndDate").value = e && e.endDate ? e.endDate : "";
+  const daysEl = document.getElementById("evDays");
+  if(daysEl) daysEl.value = e && e.endDate
+    ? (Math.round((parseISO(e.endDate) - parseISO(e.date)) / 86400000) + 1)
+    : 1;
   fillCatSelect(document.getElementById("evCat"), e ? e.cat : (S.categories[0]||{}).id);
   document.getElementById("evAllDay").checked = e ? !!e.allDay : true;
   document.getElementById("evStart").value = e && e.start ? e.start : "09:00";
@@ -475,7 +479,8 @@ function updateSpan(){
   if(s) endEl.min = s;
   let n = 1;
   if(s && e && e > s) n = Math.round((parseISO(e) - parseISO(s)) / 86400000) + 1;
-  document.getElementById("evSpan").textContent = n===1 ? "1 Tag" : n+" Tage";
+  const daysEl = document.getElementById("evDays");
+  if(daysEl) daysEl.value = n;
 }
 document.getElementById("evDate").onchange = ()=>{
   const s = document.getElementById("evDate").value;
@@ -484,6 +489,16 @@ document.getElementById("evDate").onchange = ()=>{
   updateSpan();
 };
 document.getElementById("evEndDate").onchange = updateSpan;
+document.getElementById("evDays").onchange = ()=>{
+  const s = document.getElementById("evDate").value;
+  if(!s) return;
+  let n = parseInt(document.getElementById("evDays").value) || 1;
+  if(n < 1) n = 1;
+  if(n > 366) n = 366;
+  document.getElementById("evDays").value = n;
+  document.getElementById("evEndDate").value = iso(addDays(parseISO(s), n - 1));
+  updateSpan();
+};
 function toggleTimeFields(){
   document.getElementById("evTimeFields").style.display =
     document.getElementById("evAllDay").checked ? "none" : "grid";

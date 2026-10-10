@@ -332,8 +332,9 @@
         <select id="evCat"></select>
       </div>
       <div class="field">
-        <label class="fl">Dauer</label>
-        <div class="chip" id="evSpan" style="height:41px;justify-content:center;border-radius:11px">1 Tag</div>
+        <label class="fl">Dauer in Tagen <span class="muted">(optional)</span></label>
+        <input type="number" id="evDays" min="1" max="366" step="1" value="1">
+        <p class="note">Alternativ zum Enddatum – das Ende wird aus Beginn + Dauer berechnet.</p>
       </div>
     </div>
     <div class="field">
