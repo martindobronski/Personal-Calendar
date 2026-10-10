@@ -1234,6 +1234,12 @@ function renderTasks(){
       if(search && String(t.title||t.text||"").toLowerCase().indexOf(search)<0) return false;
       return true;
     });
+    items.sort(function(a,b){
+      var da=a.due?parseISO(a.due).getTime():Number.POSITIVE_INFINITY;
+      var db=b.due?parseISO(b.due).getTime():Number.POSITIVE_INFINITY;
+      if(da!==db) return da-db;
+      var ta=a.title||""; var tb=b.title||""; if(ta<tb) return -1; if(ta>tb) return 1; return 0;
+    });
     if(!items.length){ list.innerHTML='<div class="empty"><span class="big">🗒️</span>Keine Aufgaben vorhanden.</div>'; }
     else {
       list.innerHTML=items.map(function(t){
