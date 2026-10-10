@@ -392,8 +392,11 @@ function renderDayView(){
     items.push({kind:"ev", ev:e, start:s, end:en});
   });
   tks.forEach(function(t){
-    const s=hmToMin(t.dueTime);
-    items.push({kind:"task", task:t, start:s, end:s+30});
+    const s=hmToMin(taskStartTime(t));
+    const en=taskEndTime(t);
+    let e = en ? hmToMin(en) : s+30;
+    if(e<=s) e=s+30;
+    items.push({kind:"task", task:t, start:s, end:e});
   });
   layoutDayItems(items);
 
@@ -501,16 +504,20 @@ function chipHTML(ev){
        + '<button class="ev-copy" data-copy="'+ev.id+'" title="Termin kopieren">⧉</button>'
        + t + marker + "<span>" + esc(ev.title) + "</span></div>";
 }
+function taskDate(t){ return (t && (t.startDate || t.due)) ? (t.startDate || t.due) : ""; }
+function taskStartTime(t){ return (t && (t.startTime || t.dueTime)) ? (t.startTime || t.dueTime) : ""; }
+function taskEndTime(t){ return (t && t.endTime) ? t.endTime : ""; }
 function tasksOn(key){
   return (Array.isArray(S.todos)?S.todos:[]).filter(function(t){
-    return inProfile(t.cat) && !taskIsDone(t) && t.due===key && t.dueTime && (!t.repeat || t.repeat==="none");
-  }).sort(function(a,b){ return (a.dueTime||"").localeCompare(b.dueTime||""); });
+    return inProfile(t.cat) && !taskIsDone(t) && taskDate(t)===key && taskStartTime(t) && (!t.repeat || t.repeat==="none");
+  }).sort(function(a,b){ return (taskStartTime(a)||"").localeCompare(taskStartTime(b)||""); });
 }
 function taskChipHTML(t){
   var c = cat(t.cat);
-  var tip = esc(t.title) + " · " + esc(t.dueTime);
+  var st = taskStartTime(t), en = taskEndTime(t);
+  var tip = esc(t.title) + " · " + esc(st) + (en ? "–"+esc(en) : "");
   return '<div class="task-chip" data-task-open="'+t.id+'" style="--tc:'+c.color+'" title="'+tip+'">'
-       + '<span class="t">'+esc(t.dueTime)+'</span>'
+       + '<span class="t">'+esc(st)+'</span>'
        + '<span class="mark" aria-hidden="true">✓</span>'
        + '<span>'+esc(t.title)+'</span></div>';
 }
@@ -558,7 +565,7 @@ function renderAgenda(){
     const idx = S.todos.indexOf(t);
     return '<div class="ag-item task" style="--c:'+c.color+'">'
       + '<button type="button" class="task-check" data-task-toggle="'+idx+'" title="Erledigt abhaken">✓</button>'
-      + '<div class="when">'+esc(t.dueTime)+'</div>'
+      + '<div class="when">'+esc(taskStartTime(t))+(taskEndTime(t)?"–"+esc(taskEndTime(t)):"")+'</div>'
       + '<div class="tclick" data-task-open="'+t.id+'"><div class="ttl">'+esc(t.title)+'</div>'
       + '<div class="sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
       + (spanTxt(t) ? " · 🗓 "+esc(spanTxt(t)) : "")
@@ -848,6 +855,8 @@ function openTodo(id, mode){
   document.getElementById("tdTime").value = (e && e.time && e.time!=="any") ? e.time : "";
   document.getElementById("tdStart").value = (e && e.startDate) ? e.startDate : "";
   document.getElementById("tdEnd").value = (e && e.endDate) ? e.endDate : "";
+  document.getElementById("tdStartTime").value = (e && e.startTime) ? e.startTime : "";
+  document.getElementById("tdEndTime").value = (e && e.endTime) ? e.endTime : "";
   updateTdSpan();
   document.getElementById("tdDueField").style.display = isR ? "none" : "";
   document.getElementById("tdRoutineTimeField").style.display = isR ? "" : "none";
@@ -874,10 +883,13 @@ document.getElementById("tdSave").onclick = ()=>{
   }else{
     let startDate = document.getElementById("tdStart").value || "";
     let endDate = document.getElementById("tdEnd").value || "";
+    let startTime = document.getElementById("tdStartTime").value || "";
+    let endTime = document.getElementById("tdEndTime").value || "";
     if(endDate && !startDate){ startDate = endDate; endDate = ""; }
+    if((startTime || endTime) && !startDate) startDate = iso(today());
     if(startDate && endDate && endDate < startDate){ toast("Das Enddatum liegt vor dem Beginn."); return; }
     if(endDate === startDate) endDate = "";
-    const data = {title, cat, repeat, points, due, dueTime, note, startDate, endDate};
+    const data = {title, cat, repeat, points, due, dueTime, note, startDate, endDate, startTime, endTime};
     if(editingTodo) Object.assign(editingTodo, data);
     else S.todos.push(Object.assign({id:uid(), done:false, lastDone:null}, data));
   }
@@ -1575,8 +1587,9 @@ function isTaskOverdue(t){
 function spanTxt(t){
   if(!t || !t.startDate) return "";
   var a=t.startDate.split("-").reverse().join(".");
-  if(t.endDate && t.endDate > t.startDate) return a+" – "+t.endDate.split("-").reverse().join(".");
-  return "ab "+a;
+  var out = (t.endDate && t.endDate > t.startDate) ? a+" – "+t.endDate.split("-").reverse().join(".") : a;
+  if(t.startTime || t.endTime) out += " "+(t.startTime||"")+(t.endTime?"–"+t.endTime:"");
+  return out;
 }
 function fmtDue(t,done){
   var out="";
@@ -1611,10 +1624,10 @@ function renderTasks(){
       return true;
     });
     items.sort(function(a,b){
-      var da=a.due?parseISO(a.due).getTime():Number.POSITIVE_INFINITY;
-      var db=b.due?parseISO(b.due).getTime():Number.POSITIVE_INFINITY;
+      var da=taskDate(a)?parseISO(taskDate(a)).getTime():Number.POSITIVE_INFINITY;
+      var db=taskDate(b)?parseISO(taskDate(b)).getTime():Number.POSITIVE_INFINITY;
       if(da!==db) return da-db;
-      var tma=a.dueTime||"99:99", tmb=b.dueTime||"99:99";
+      var tma=taskStartTime(a)||"99:99", tmb=taskStartTime(b)||"99:99";
       if(tma!==tmb) return tma<tmb?-1:1;
       var ta=a.title||""; var tb=b.title||""; if(ta<tb) return -1; if(ta>tb) return 1; return 0;
     });
@@ -1625,9 +1638,10 @@ function renderTasks(){
       items.forEach(function(t){
         var done=taskIsDone(t);
         if(done){ groups.erledigt.push(t); return; }
-        if(!t.due){ groups.ohne.push(t); return; }
+        var tdat=taskDate(t);
+        if(!tdat){ groups.ohne.push(t); return; }
         if(isTaskOverdue(t)){ groups.ueberfaellig.push(t); return; }
-        var d=parseISO(t.due);
+        var d=parseISO(tdat);
         if(sameDay(d,td)){ groups.heute.push(t); return; }
         groups.demnaechst.push(t);
       });
@@ -1893,12 +1907,12 @@ function renderCalSide(){
         return true;
       });
       todos.sort(function(a,b){
-        var da=a.due?parseISO(a.due).getTime():Number.POSITIVE_INFINITY;
-        var db=b.due?parseISO(b.due).getTime():Number.POSITIVE_INFINITY;
+        var da=taskDate(a)?parseISO(taskDate(a)).getTime():Number.POSITIVE_INFINITY;
+        var db=taskDate(b)?parseISO(taskDate(b)).getTime():Number.POSITIVE_INFINITY;
         var da2=isNaN(da)?Number.POSITIVE_INFINITY:da;
         var db2=isNaN(db)?Number.POSITIVE_INFINITY:db;
         if(da2!==db2) return da2-db2;
-        var tma=a.dueTime||"99:99", tmb=b.dueTime||"99:99";
+        var tma=taskStartTime(a)||"99:99", tmb=taskStartTime(b)||"99:99";
         if(tma!==tmb) return tma<tmb?-1:1;
         var ta=a.title||""; var tb=b.title||""; if(ta<tb) return -1; if(ta>tb) return 1; return 0;
       });
