@@ -1189,9 +1189,11 @@ function renderWorkHead(){
   var ws=document.getElementById("calWorkSaldo");
   var wsv=document.getElementById("calWorkSaldoVal");
   if(ws && wsv){
+    var wday=new Date().getDay();
+    var isWeekend=(wday===0 || wday===6);
     var saldo=c.saldoMin;
     wsv.textContent = (saldo>=0?"+":"") + minToHM(saldo);
-    ws.style.display = "inline-flex";
+    ws.style.display = isWeekend ? "none" : "inline-flex";
     ws.classList.toggle("neg", saldo<0);
     ws.classList.toggle("pos", saldo>0);
     wsv.style.color = saldo<0 ? "#fca5a5" : saldo>0 ? "#86efac" : "#e2e8f0";
