@@ -244,6 +244,8 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
   background:#141c2e;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;
 }
 .item.done .it-title{text-decoration:line-through;opacity:.5}
+.tgroup{font-size:11.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:16px 2px 8px}
+.tgroup:first-child{margin-top:2px}
 .check{
   width:22px;height:22px;border-radius:7px;border:2px solid #465782;background:transparent;
   display:grid;place-items:center;flex:none;font-size:13px;color:transparent;transition:.12s;

@@ -1268,7 +1268,7 @@ function renderTasks(){
       var html="";
       function renderGroup(title,arr){
         if(!arr.length) return "";
-        var out='<div class="sec">'+esc(title)+" ("+arr.length+")</div>";
+        var out='<div class="tgroup">'+esc(title)+" ("+arr.length+")</div>";
         out+=arr.map(function(t){
           var idx=S.todos.indexOf(t);
           var done=taskIsDone(t);
