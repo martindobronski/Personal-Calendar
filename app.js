@@ -1225,7 +1225,7 @@ function renderTasks(){
     if(!Array.isArray(S.todos)) S.todos=[];
     var list=document.getElementById('tasksList'); if(!list) return;
     var search=((document.getElementById('taskSearch')||{}).value||"").trim().toLowerCase();
-    var filter=(document.getElementById('taskFilter')||{}).value||"all";
+    var filter="all"; var seg=document.getElementById("taskSeg"); if(seg){ var ab=seg.querySelector(".segbtn.active"); if(ab) filter=ab.dataset.seg||"all"; } else { var f=(document.getElementById("taskFilter")||{}).value||"all"; filter=f; }
     var items=S.todos.filter(function(t){
       if(!inProfile(t.cat)) return false;
       var done=taskIsDone(t);
@@ -1435,3 +1435,14 @@ if(__addWd) __addWd.onclick=function(){
   try{save();}catch(e){}
   openWorkDay(k);
 };
+
+(function(){
+  var seg=document.getElementById("taskSeg");
+  if(seg){
+    seg.addEventListener("click", function(e){
+      var b=e.target.closest(".segbtn"); if(!b) return;
+      seg.querySelectorAll(".segbtn").forEach(function(x){x.classList.toggle("active", x===b);});
+      if(typeof renderTasks==="function") renderTasks();
+    });
+  }
+})();

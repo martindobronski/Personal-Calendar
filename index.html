@@ -15,7 +15,7 @@
       <div class="logo">📅</div>
       <div id="brandName"><span id="brandTitle">Familienkalender</span><small>v1.1.0 (10.10.2026)</small></div>
     </div>
-    <div class="spacer"></div><div class="muted" style="font-size:11px;margin-left:10px">v1.1.0 (10.10.2026)</div>
+    <div class="spacer"></div>
     <div class="profiles" id="profiles"></div>
     <div class="astro">
       <div class="chip clock" id="clockChip">–</div>
@@ -100,9 +100,16 @@
   <div class="flex gap" style="justify-content:flex-end;margin-bottom:10px">
     <button class="btn primary" id="btnNewTask">+ Neue Aufgabe</button>
   </div>
-  <div class="flex gap" style="margin-bottom:10px">
-    <input id="taskSearch" class="input" placeholder="Aufgaben suchen..." style="color:#000">
-    <select id="taskFilter" class="select"><option value="all">Alle</option><option value="open">Offen</option><option value="done">Erledigt</option></select>
+  <div class="flex gap" style="margin-bottom:10px;align-items:center">
+    <div style="position:relative;flex:1">
+      <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;opacity:.7">🔍</span>
+      <input id="taskSearch" class="input" placeholder="Aufgaben suchen..." style="color:#000;padding-left:28px">
+    </div>
+    <div class="seg" id="taskSeg" style="display:flex;gap:4px;background:#0b1324;border:1px solid var(--line);border-radius:12px;padding:4px">
+      <button class="segbtn active" data-seg="all">Alle</button>
+      <button class="segbtn" data-seg="open">Offen</button>
+      <button class="segbtn" data-seg="done">Erledigt</button>
+    </div>
   </div>
   <div class="card"><div class="list" id="tasksList"></div></div>
 </section>
