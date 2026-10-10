@@ -1242,23 +1242,46 @@ function renderTasks(){
     });
     if(!items.length){ list.innerHTML='<div class="empty"><span class="big">🗒️</span>Keine Aufgaben vorhanden.</div>'; }
     else {
-      list.innerHTML=items.map(function(t){
-        var idx=S.todos.indexOf(t);
+      var groups={ueberfaellig:[],heute:[],demnaechst:[],ohne:[],erledigt:[]};
+      var td=today();
+      items.forEach(function(t){
         var done=taskIsDone(t);
-        var c=(typeof cat==="function")?cat(t.cat):{name:"",color:"#64748b"};
-        var rep=repLabel(t.repeat);
-        return '<div class="item'+(done?" done":"")+'">'
-          + '<button class="check'+(done?" on":"")+'" data-task-toggle="'+idx+'">✓</button>'
-          + '<div><div class="it-title">'+esc(t.title||t.text||"")+'</div>'
-          + '<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
-          + (rep?'<span>↻ '+esc(rep)+'</span>':'')
-          + (t.due?(function(){var d=parseISO(t.due);var td=today();var txt=(t.due||'').split('-').reverse().join('.');if(sameDay(d,td)) txt='Heute'; else if(sameDay(d,addDays(td,-1))) txt='Gestern'; else if(sameDay(d,addDays(td,1))) txt='Morgen'; var col=(d<td&&!done)?'#f87171':'#cbd5e1';return '<span style="color:'+col+'">📅 '+esc(txt)+'</span>';}()):'')
-          + (t.completedAt?(function(){var d=new Date(t.completedAt);return '<span>✓ '+esc(d.getDate().toString().padStart(2,'0')+'.'+(d.getMonth()+1).toString().padStart(2,'0')+'.'+d.getFullYear().toString().slice(-2)+' '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'))+'</span>';}()):'')
-          + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
-          + '<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
-          + '<button class="btn sm del" data-task-del="'+idx+'" title="Löschen">🗑</button></div>'
-          + '</div>';
-      }).join("");
+        if(done){ groups.erledigt.push(t); return; }
+        if(!t.due){ groups.ohne.push(t); return; }
+        var d=parseISO(t.due);
+        if(d < td){ groups.ueberfaellig.push(t); return; }
+        if(sameDay(d,td)){ groups.heute.push(t); return; }
+        groups.demnaechst.push(t);
+      });
+      var html="";
+      function renderGroup(title,arr){
+        if(!arr.length) return "";
+        var out='<div class="sec">'+esc(title)+" ("+arr.length+")</div>";
+        out+=arr.map(function(t){
+          var idx=S.todos.indexOf(t);
+          var done=taskIsDone(t);
+          var c=(typeof cat==="function")?cat(t.cat):{name:"",color:"#64748b"};
+          var rep=repLabel(t.repeat);
+          return '<div class="item'+(done?" done":"")+'">'
+            + '<button class="check'+(done?" on":"")+'" data-task-toggle="'+idx+'">✓</button>'
+            + '<div><div class="it-title">'+esc(t.title||t.text||"")+'</div>'
+            + '<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
+            + (rep?'<span>↻ '+esc(rep)+'</span>':'')
+            + (t.due?(function(){var dd=parseISO(t.due);var tdx=td;var txt=(t.due||'').split('-').reverse().join('.');if(sameDay(dd,tdx)) txt='Heute'; else if(sameDay(dd,addDays(tdx,-1))) txt='Gestern'; else if(sameDay(dd,addDays(tdx,1))) txt='Morgen'; var col=(dd<tdx&&!done)?'#f87171':'#cbd5e1';return '<span style="color:'+col+'">📅 '+esc(txt)+'</span>';}()):'')
+            + (t.completedAt?(function(){var d2=new Date(t.completedAt);return '<span>✓ '+esc(d2.getDate().toString().padStart(2,'0')+'.'+(d2.getMonth()+1).toString().padStart(2,'0')+'.'+d2.getFullYear().toString().slice(-2)+' '+d2.getHours().toString().padStart(2,'0')+':'+d2.getMinutes().toString().padStart(2,'0'))+'</span>';}()):'')
+            + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
+            + '<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
+            + '<button class="btn sm del" data-task-del="'+idx+'" title="Löschen">🗑</button></div>'
+            + '</div>';
+        }).join("");
+        return out;
+      }
+      html += renderGroup("Überfällig", groups.ueberfaellig);
+      html += renderGroup("Heute", groups.heute);
+      html += renderGroup("Demnächst", groups.demnaechst);
+      html += renderGroup("Ohne Datum", groups.ohne);
+      html += renderGroup("Erledigt", groups.erledigt);
+      list.innerHTML=html;
     }
     updateTaskBadge();
     try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
