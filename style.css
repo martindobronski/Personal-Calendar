@@ -418,3 +418,7 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 }
 .wk-rowdel:hover{border-color:#7f1d1d;color:#fca5a5;background:#2a1520}
 @media(max-width:520px){.wk-row{grid-template-columns:1fr 1fr}.wk-rowdel{grid-column:2;justify-self:end}}
+.segbtn{background:transparent;border:1px solid transparent;color:var(--muted);padding:6px 10px;border-radius:10px;font-size:12px;cursor:pointer}
+.segbtn.active{background:rgba(245,165,36,.18);border-color:rgba(245,165,36,.45);color:#f8fafc}
+.segbtn:focus{outline:2px solid rgba(245,165,36,.45);outline-offset:2px}
+
