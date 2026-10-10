@@ -250,7 +250,7 @@ function updateBadges(){
     const b = document.getElementById("todoBadge");
     if(b){ b.textContent = n; b.style.display = n ? "grid" : "none"; }
     let rn = 0;
-    if(S && Array.isArray(S.routines)) rn = S.routines.filter(r=>inProfile(r.cat)).length;
+    if(S && Array.isArray(S.routines)) rn = S.routines.filter(r=>inProfile(r.cat) && !routineIsDone(r)).length;
     const rb = document.getElementById("routineBadge");
     if(rb){ rb.textContent = rn; rb.style.display = rn ? "grid" : "none"; }
   }catch(e){}
@@ -652,9 +652,9 @@ document.getElementById("tdSave").onclick = ()=>{
   const due = document.getElementById("tdDue").value;
   const note = document.getElementById("tdNote").value.trim();
   if(tdMode==="routine"){
-    const data = {name:title, freq:repeat, cat, note};
+    const data = {name:title, freq:repeat, cat, note, points};
     if(editingRoutine) Object.assign(editingRoutine, data);
-    else S.routines.push(Object.assign({id:uid(), time:"any"}, data));
+    else S.routines.push(Object.assign({id:uid(), time:"any", done:false, lastDone:null, completedAt:null}, data));
   }else{
     const data = {title, cat, repeat, points, due, note};
     if(editingTodo) Object.assign(editingTodo, data);
@@ -1274,6 +1274,10 @@ function taskIsDone(t){
   if(t.repeat==="yearly") return d.getFullYear()===n.getFullYear();
   return !!t.lastDone;
 }
+function routineIsDone(r){
+  if(!r) return false;
+  return taskIsDone(Object.assign({}, r, {repeat: r.freq || r.repeat || "none"}));
+}
 function repLabel(r){
   return r==="daily"?"Täglich":r==="weekly"?"Wöchentlich":r==="monthly"?"Monatlich":r==="quarterly"?"Vierteljährlich":r==="yearly"?"Jährlich":"";
 }
@@ -1373,9 +1377,13 @@ function renderRoutines(){
         var i=S.routines.indexOf(r);
         var c=(typeof cat==="function")?cat(r.cat):null;
         var rep=repLabel(r.freq);
-        return '<div class="item"><div><div class="it-title">'+esc(r.name||'')+'</div><div class="it-sub">'
+        var done=routineIsDone(r);
+        return '<div class="item'+(done?' done':'')+'">'
+          +'<button type="button" class="check'+(done?' on':'')+'" data-routine-toggle="'+i+'" title="Erledigt abhaken">✓</button>'
+          +'<div><div class="it-title">'+esc(r.name||'')+'</div><div class="it-sub">'
           +(c?'<span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>':'')
           +(rep?'<span>↻ '+esc(rep)+'</span>':'')
+          +(done&&r.freq&&r.freq!=="none"&&nextDue(Object.assign({},r,{repeat:r.freq}))?'<span style="color:#7dd3fc">↻ Nächste: '+esc(fmtDate(nextDue(Object.assign({},r,{repeat:r.freq}))))+'</span>':'')
           +(r.note?'<span> '+esc(r.note)+'</span>':'')
           +'</div></div><div class="it-actions">'
           +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
@@ -1453,6 +1461,29 @@ function renderRoutines(){
     if(t.matches&&t.matches('[data-routine-edit]')){
       var ridx=parseInt(t.getAttribute('data-routine-edit'));
       if(!isNaN(ridx)&&Array.isArray(S.routines)&&S.routines[ridx]) openTodo(ridx, "routine");
+      return;
+    }
+    if(t.matches&&t.matches('[data-routine-toggle]')){
+      var rti=parseInt(t.getAttribute('data-routine-toggle'));
+      if(!isNaN(rti)&&Array.isArray(S.routines)&&S.routines[rti]){
+        var rk=S.routines[rti];
+        var rwas=routineIsDone(rk);
+        if(!rk.freq || rk.freq==="none"){
+          rk.done = !rk.done;
+          if(rk.done){ rk.completedAt=new Date().toISOString(); addPoints(rk.points||1, rk.name||rk.title||""); }
+          else { delete rk.completedAt; removePoints(rk.points||1, rk.name||rk.title||""); }
+        } else if(rwas){
+          rk.lastDone=null;
+          delete rk.completedAt;
+          removePoints(rk.points||1, rk.name||rk.title||"");
+        } else {
+          rk.lastDone=iso(today());
+          rk.completedAt=new Date().toISOString();
+          addPoints(rk.points||1, rk.name||rk.title||"");
+        }
+        save(); renderRoutines(); updateBadges();
+        try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+      }
       return;
     }
     if(t.matches&&t.matches('[data-routine-del]')){
@@ -1552,7 +1583,10 @@ function renderCalSide(){
       }else{
         rBox.innerHTML=routines.map(function(r){
           var i=S.routines.indexOf(r);
-          return '<div class="item"><div><div class="it-title">'+esc(r.name||'')+'</div>'
+          var rdone=routineIsDone(r);
+          return '<div class="item'+(rdone?' done':'')+'">'
+            +'<button type="button" class="check'+(rdone?' on':'')+'" data-routine-toggle="'+i+'" title="Erledigt abhaken">✓</button>'
+            +'<div><div class="it-title">'+esc(r.name||'')+'</div>'
             +'<div class="it-sub"><span>↻ '+esc(repLabel(r.freq))+'</span>'+(r.note?' · '+esc(r.note):'')+'</div></div>'
             +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
             +'<button type="button" class="btn sm act" data-routine-edit="'+i+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
@@ -1560,7 +1594,7 @@ function renderCalSide(){
         }).join('');
       }
       var rcnt=document.getElementById('calRoutineCount');
-      if(rcnt) rcnt.textContent=routines.length;
+      if(rcnt) rcnt.textContent=routines.filter(function(r){return !routineIsDone(r)}).length;
     }
   }catch(e){}
   try{ updateBadges(); }catch(e){}
