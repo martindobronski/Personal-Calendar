@@ -1246,7 +1246,7 @@ function renderTasks(){
           + '<div><div class="it-title">'+esc(t.title||t.text||"")+'</div>'
           + '<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
           + (rep?'<span>↻ '+esc(rep)+'</span>':'')
-          + (t.due?'<span>📅 '+esc((t.due||'').split('-').reverse().join('.'))+'</span>':'')
+          + (t.due?(function(){var d=parseISO(t.due);var td=today();var txt=(t.due||'').split('-').reverse().join('.');if(sameDay(d,td)) txt='Heute'; else if(sameDay(d,addDays(td,-1))) txt='Gestern'; else if(sameDay(d,addDays(td,1))) txt='Morgen'; var col=(d<td&&!done)?'#f87171':'#cbd5e1';return '<span style="color:'+col+'">📅 '+esc(txt)+'</span>';}()):'')
           + (t.completedAt?(function(){var d=new Date(t.completedAt);return '<span>✓ '+esc(d.getDate().toString().padStart(2,'0')+'.'+(d.getMonth()+1).toString().padStart(2,'0')+'.'+d.getFullYear().toString().slice(-2)+' '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'))+'</span>';}()):'')
           + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
           + '<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
