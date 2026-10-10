@@ -1205,7 +1205,7 @@ function renderWork(){
           +'<div class="it-actions">'
           +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
           +'<button type="button" class="btn sm act" data-wk-editday="'+esc(k)+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
-          +'<button type="button" class="btn sm act del" data-wk-delall="'+esc(k)+'" title="Tag leeren">'+ICON_TRASH+'</button></div>'
+          +'<button type="button" class="btn sm act del" data-wk-delall="'+esc(k)+'" title="Löschen">'+ICON_TRASH+'</button></div>'
           +'</div>';
       }).join('');
     }
@@ -1600,9 +1600,32 @@ function renderRoutines(){
       else { wkDraft=[{s:"",e:""}]; renderWkRows(); }
       return;
     }
-    if(t.closest&&t.closest('[data-wk-del]')){ var idx=parseInt(t.closest('[data-wk-del]').getAttribute('data-wk-del')); var k=wkTodayKey(); var a=workArr(k); if(!isNaN(idx)&&a[idx]){ a.splice(idx,1); try{save();if(typeof renderWork==="function")renderWork();}catch(ex){} return; }
+    if(t.closest&&t.closest('[data-wk-del]')){
+      var idx=parseInt(t.closest('[data-wk-del]').getAttribute('data-wk-del'));
+      var k=wkTodayKey(); var a=workArr(k);
+      if(!isNaN(idx)&&a[idx]){
+        var wemit=a.splice(idx,1)[0];
+        try{save();if(typeof renderWork==="function")renderWork();}catch(ex){}
+        showUndo('Eintrag gelöscht', function(){
+          var ai=Math.min(idx, workArr(k).length);
+          workArr(k).splice(ai,0,wemit);
+          try{save();if(typeof renderWork==="function")renderWork();}catch(ex){}
+        });
+        return;
+      }
     }
-    if(t.closest&&t.closest('[data-wk-delall]')){ var kk=t.closest('[data-wk-delall]').getAttribute('data-wk-delall'); if(typeof S!=="undefined"&&S.work&&S.work[kk]){ if(confirm('Tag '+kk.split('-').reverse().join('.')+' wirklich leeren?')){ delete S.work[kk]; try{save();if(typeof renderWork==="function")renderWork();}catch(ex){} return; }}
+    if(t.closest&&t.closest('[data-wk-delall]')){
+      var kk=t.closest('[data-wk-delall]').getAttribute('data-wk-delall');
+      if(typeof S!=="undefined"&&S.work&&S.work[kk]){
+        var wdremoved=S.work[kk];
+        delete S.work[kk];
+        try{save();if(typeof renderWork==="function")renderWork();}catch(ex){}
+        showUndo('Eintrag gelöscht', function(){
+          S.work[kk]=wdremoved;
+          try{save();if(typeof renderWork==="function")renderWork();}catch(ex){}
+        });
+        return;
+      }
     }
   });
 })();
