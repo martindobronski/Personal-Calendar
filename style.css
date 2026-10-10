@@ -227,6 +227,18 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 }
 .ev:hover .ev-copy{display:grid}
 .ev .ev-copy:hover{background:var(--accent);color:#1a1200}
+.task-chip{
+  display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
+  padding:2px 6px;border-radius:7px;cursor:pointer;
+  color:var(--txt);background:color-mix(in srgb, var(--tc,#64748b) 14%, transparent);
+  border:1px solid color-mix(in srgb, var(--tc,#64748b) 55%, transparent);
+  border-left:3px solid var(--tc,#64748b);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:100%;
+}
+.task-chip .t{opacity:.85;font-variant-numeric:tabular-nums;flex:0 0 auto;color:#cbd5e1}
+.task-chip .mark{flex:0 0 auto;font-size:10px;opacity:.7}
+.task-chip>span:last-child{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-chip:hover{filter:brightness(1.2);border-color:var(--tc,#64748b)}
 .cal-grid.copy-mode{outline:2px dashed var(--accent);outline-offset:4px;border-radius:13px}
 .cal-grid.copy-mode .day{cursor:copy}
 .cal-grid.copy-mode .ev{opacity:.4}
@@ -253,6 +265,15 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .linkbtn{background:none;border:0;color:var(--muted);font-size:12px;padding:2px 5px;border-radius:6px}
 .linkbtn:hover{background:var(--card2);color:var(--txt)}
 .linkbtn.del:hover{color:#fca5a5}
+.ag-item.task{border-left-style:dashed}
+.ag-item.task .task-check{
+  flex:0 0 auto;width:22px;height:22px;border-radius:50%;
+  border:1.5px solid var(--c,#666);background:transparent;color:var(--c,#666);
+  font-size:12px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0;transition:.14s;margin-top:1px;
+}
+.ag-item.task .task-check:hover{background:color-mix(in srgb, var(--c,#666) 28%, transparent)}
+.ag-item.task .tclick{cursor:pointer;min-width:0}
+.ag-item.task .tclick:hover .ttl{color:var(--accent)}
 
 /* ---------- Lists / ToDos ---------- */
 .item{

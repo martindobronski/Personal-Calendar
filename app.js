@@ -305,9 +305,11 @@ function renderCalendar(){
     const key = iso(d);
     const out = d.getMonth()!==m;
     const evs = eventsOn(key);
+    const tks = tasksOn(key);
     let chips = "";
-    evs.slice(0,3).forEach(ev=>{ chips += chipHTML(ev); });
-    if(evs.length>3) chips += '<div class="more">+'+(evs.length-3)+" weitere</div>";
+    const cellItems = evs.map(chipHTML).concat(tks.map(taskChipHTML));
+    cellItems.slice(0,3).forEach(h=>{ chips += h; });
+    if(cellItems.length>3) chips += '<div class="more">+'+(cellItems.length-3)+" weitere</div>";
     const hol = (H[key] || Hnext[key] || Hprev[key]) || "";
     html += '<div class="day'+(out?" out":"")+(sameDay(d,today())?" today":"")+(sameDay(d,selDate)?" selected":"")+'" data-date="'+key+'">'
           +   '<div class="day-head">'
@@ -380,6 +382,19 @@ function chipHTML(ev){
        + '<button class="ev-copy" data-copy="'+ev.id+'" title="Termin kopieren">⧉</button>'
        + t + marker + "<span>" + esc(ev.title) + "</span></div>";
 }
+function tasksOn(key){
+  return (Array.isArray(S.todos)?S.todos:[]).filter(function(t){
+    return inProfile(t.cat) && !taskIsDone(t) && t.due===key && t.dueTime && (!t.repeat || t.repeat==="none");
+  }).sort(function(a,b){ return (a.dueTime||"").localeCompare(b.dueTime||""); });
+}
+function taskChipHTML(t){
+  var c = cat(t.cat);
+  var tip = esc(t.title) + " · " + esc(t.dueTime);
+  return '<div class="task-chip" data-task-open="'+t.id+'" style="--tc:'+c.color+'" title="'+tip+'">'
+       + '<span class="t">'+esc(t.dueTime)+'</span>'
+       + '<span class="mark" aria-hidden="true">✓</span>'
+       + '<span>'+esc(t.title)+'</span></div>';
+}
 function renderLegend(){
   document.getElementById("legend").innerHTML = S.categories.map(c=>
     '<span class="chip" style="background:'+hexA(c.color,.16)+';border-color:'+hexA(c.color,.45)+(activeProfile&&c.id!==activeProfile?";opacity:.4":"")+'">'
@@ -388,20 +403,25 @@ function renderLegend(){
 }
 function renderAgenda(){
   document.getElementById("agendaDate").textContent = fmtDate(selDate);
-  const evs = eventsOn(iso(selDate));
-  const hol = holidays(selDate.getFullYear())[iso(selDate)];
+  const key = iso(selDate);
+  const evs = eventsOn(key);
+  const tks = tasksOn(key);
+  const hol = holidays(selDate.getFullYear())[key];
+  const parts = [];
+  if(evs.length) parts.push(evs.length+(evs.length===1?" Termin":" Termine"));
+  if(tks.length) parts.push(tks.length+(tks.length===1?" Aufgabe":" Aufgaben"));
   document.getElementById("agendaSub").innerHTML =
     (hol ? '<span style="color:#fca5a5">🎉 '+esc(hol)+"</span> · " : "")
-    + (sameDay(selDate,today()) ? "Heute" : "")
-    + (evs.length ? evs.length+(evs.length===1?" Termin":" Termine") : "keine Termine");
+    + (sameDay(selDate,today()) ? "Heute · " : "")
+    + (parts.length ? parts.join(" · ") : "keine Einträge");
 
   const box = document.getElementById("agenda");
-  if(!evs.length){
+  if(!evs.length && !tks.length){
     box.innerHTML = '<div class="empty"><span class="big">🗓️</span>Noch keine Termine an diesem Tag.<br>'
                   + 'Über „+ Termin“ oder das <b>+</b> in der Tageszelle anlegen.</div>';
     return;
   }
-  box.innerHTML = evs.map(ev=>{
+  const evHtml = evs.map(ev=>{
     const c = cat(ev.cat);
     return '<div class="ag-item" style="--c:'+c.color+'">'
       + '<div class="when">'+(ev.allDay?"ganztägig":esc((ev.start||"—")+"–"+(ev.end||"")))+"</div>"
@@ -414,9 +434,25 @@ function renderAgenda(){
       + '<button type="button" class="linkbtn act del" data-evdel="'+ev.id+'" title="Löschen">'+ICON_TRASH+'</button></div>'
       + "</div>";
   }).join("");
+  const tkHtml = tks.map(t=>{
+    const c = cat(t.cat);
+    const idx = S.todos.indexOf(t);
+    return '<div class="ag-item task" style="--c:'+c.color+'">'
+      + '<button type="button" class="task-check" data-task-toggle="'+idx+'" title="Erledigt abhaken">✓</button>'
+      + '<div class="when">'+esc(t.dueTime)+'</div>'
+      + '<div class="tclick" data-task-open="'+t.id+'"><div class="ttl">'+esc(t.title)+'</div>'
+      + '<div class="sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
+      + (t.note ? " · "+esc(t.note) : "") + "</div></div>"
+      + '<div class="ag-actions"><button type="button" class="linkbtn act" data-task-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+      + '<button type="button" class="linkbtn act del" data-task-del="'+idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'
+      + "</div>";
+  }).join("");
+  box.innerHTML = evHtml + tkHtml;
 }
 
 var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("click", e=>{
+  const tOpen = e.target.closest("[data-task-open]");
+  if(tOpen){ const tt=S.todos.find(x=>x.id===tOpen.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
   const copy = e.target.closest("[data-copy]");
   if(copy){ setCopyEv(copy.dataset.copy); return; }
   if(copyEvId){
@@ -434,6 +470,8 @@ var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("clic
   if(day){ selDate = parseISO(day.dataset.date); renderCalendar(); }
 });
 var __el=document.getElementById("agenda"); if(__el)__el.addEventListener("click", e=>{
+  const tOpen = e.target.closest("[data-task-open]");
+  if(tOpen){ const tt=S.todos.find(x=>x.id===tOpen.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
   const ed = e.target.closest("[data-evdel]");
   if(ed){ 
     if(copyEvId && e.target.closest("[data-copy]")) return;
@@ -1496,9 +1534,11 @@ function renderRoutines(){
           S.todos.splice(ri,0,removed);
           save(); renderTasks(); updateBadges();
           try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+          try{ if(typeof renderCalendar==="function") renderCalendar(); }catch(e){}
         });
         renderTasks(); updateBadges();
         try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+        try{ if(typeof renderCalendar==="function") renderCalendar(); }catch(e){}
       }
       return;
     }
@@ -1529,6 +1569,7 @@ function renderRoutines(){
           }
         }
         save(); renderTasks(); updateBadges();
+        try{ if(typeof renderCalendar==="function") renderCalendar(); }catch(e){}
       }
       return;
     }
