@@ -1376,6 +1376,20 @@ function renderCalSide(){
     var tBox=document.getElementById('calTasksList');
     if(tBox){
       var todos=(Array.isArray(S.todos)?S.todos:[]).filter(function(t){ return inProfile(t.cat); });
+      todos.sort(function(a,b){
+        var da=a.due?parseISO(a.due).getTime():Number.POSITIVE_INFINITY;
+        var db=b.due?parseISO(b.due).getTime():Number.POSITIVE_INFINITY;
+        var da2=isNaN(da)?Number.POSITIVE_INFINITY:da;
+        var db2=isNaN(db)?Number.POSITIVE_INFINITY:db;
+        if(da2!==db2) return da2-db2;
+        var ta=a.title||""; var tb=b.title||""; if(ta<tb) return -1; if(ta>tb) return 1; return 0;
+      });
+      // move done to bottom
+      todos.sort(function(a,b){
+        var ad=taskIsDone(a), bd=taskIsDone(b);
+        if(ad!==bd) return ad?1:-1;
+        return 0;
+      });
       if(!todos.length){
         tBox.innerHTML='<div class="empty"><span class="big">🎉</span>Noch keine Aufgaben.</div>';
       }else{
