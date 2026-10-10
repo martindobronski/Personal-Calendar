@@ -17,7 +17,7 @@ function defaults(){
       {id:uid(), name:"Familie", color:"#f5a524"}
     ],
     events:[], todos:[],tasks:[],routines:[], meals:{}, lists:null, rewards:[], points:0, history:[],
-    settings:{ weekStart:1, showDone:false, appTitle:"Familienkalender", paidBreakfastMin:0 }
+    settings:{ weekStart:1, showDone:false, appTitle:"Familienkalender", paidBreakfastMin:0, showMoon:false, showZodiac:false }
   };
 }
 
@@ -79,6 +79,15 @@ const sameDay = (a,b) => iso(a)===iso(b);
 const ICON_EDIT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
 const ICON_TRASH = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
 const ICON_MORE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>';
+
+function astroHTML(d){
+  const s=S.settings||{};
+  if(!s.showMoon && !s.showZodiac) return "";
+  let parts=[];
+  if(s.showMoon){ const p=moonInfo(d); parts.push('<span class="m-ph" title="Mondphase: '+esc(p.name)+'">'+p.emoji+"</span>"); }
+  if(s.showZodiac){ const z=zodiacInfo(d); parts.push('<span class="m-zod" title="Sternzeichen: '+esc(z.name)+'">'+z.sym+"</span>"); }
+  return '<div class="astro">'+parts.join("")+"</div>";
+}
 
 let undoInfo=null, undoTimer=null;
 function showUndo(msg, fn){
@@ -289,6 +298,7 @@ function renderCalendar(){
           +     '<button class="plus" data-new="'+key+'" title="Termin anlegen">+</button>'
           +   "</div>"
           +   (hol ? '<div class="holiday">'+esc(hol)+"</div>" : "")
+          +   astroHTML(d)
           +   chips
           + "</div>";
   }
@@ -906,6 +916,8 @@ function renderSettings(){
   var pb=document.getElementById("paidBreakfastMin"); if(pb) pb.value = (S.settings && S.settings.paidBreakfastMin) || 0;
   var at=document.getElementById("appTitle");
   if(at) at.value = (S.settings && S.settings.appTitle) || "Familienkalender";
+  var sm=document.getElementById("showMoon"); if(sm) sm.checked = !!(S.settings && S.settings.showMoon);
+  var sz=document.getElementById("showZodiac"); if(sz) sz.checked = !!(S.settings && S.settings.showZodiac);
   if(S.settings && S.settings.appTitle){
     var t=(S.settings.appTitle||"").trim();
     document.title = t + " – Ordnung im Alltag ohne Abo";
@@ -921,6 +933,8 @@ var __el=document.getElementById("view-settings"); if(__el)__el.addEventListener
   if(e.target.id==="weekStart"){ S.settings.weekStart = Number(e.target.value); save(); renderSettings(); }
   if(e.target.id==="appTitle"){ if(!S.settings) S.settings={}; S.settings.appTitle = e.target.value.trim()||"Familienkalender"; save(); renderSettings(); }
   if(e.target.id==="paidBreakfastMin"){ if(!S.settings) S.settings={}; var v=parseInt(e.target.value)||0; if(v<0) v=0; S.settings.paidBreakfastMin=v; save(); renderSettings(); }
+  if(e.target.id==="showMoon"){ if(!S.settings) S.settings={}; S.settings.showMoon=e.target.checked; save(); renderSettings(); renderCalendar(); }
+  if(e.target.id==="showZodiac"){ if(!S.settings) S.settings={}; S.settings.showZodiac=e.target.checked; save(); renderSettings(); renderCalendar(); }
 });
 var __el=document.getElementById("view-settings"); if(__el)__el.addEventListener("click", e=>{
   const del = e.target.closest("[data-cat-del]");
