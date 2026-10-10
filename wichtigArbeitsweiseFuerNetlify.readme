@@ -1,0 +1,30 @@
+# WICHTIG: Arbeitsweise für Netlify (Free-Plan)
+
+## Zweck
+Credits schonen. Der Free-Plan hat 300 Credits/Monat. Sind sie verbraucht,
+werden Production-Deploys pausiert (die Seite bleibt online, Updates aber nicht).
+
+## Credit-Kosten (Netlify 2026, Free-Plan)
+- Production deploy (Push/Merge nach `main`, live): **15 Credits je Deploy**
+- Deploy Preview / Branch-Deploy (Vorschau): **0 Credits (kostenlos)**
+- Fehlgeschlagener Deploy: kostenlos
+- Agent runs: AI-Inference, variabel
+- Live Preview Server (Preview server compute): 10 Credits/GB-h (separates Feature)
+- Free-Plan: 300 Credits/Monat
+
+## Regeln
+1. **Kein `git push` ohne ausdrückliche Freigabe.**
+2. **Bis einschließlich 13.10.2026 gar kein Push** (Credits füllen sich am Zyklusstart neu auf).
+3. Lokale `git commit`s sind erlaubt; `git push` nur auf Anweisung.
+4. Änderungen auf einen **Branch** pushen → kostenlose **Deploy Preview** → testen.
+5. Nur fertige, getestete Stände nach `main` → **1 Production-Deploy = 15 Credits**.
+6. **Bündeln:** mehrere Änderungen sammeln und mit **einem** Push/Deploy veröffentlichen.
+7. Netlify „Auto publishing“ prüfen (ggf. aus), damit nicht jeder Push automatisch Credits kostet.
+
+## Beobachtung aus der Abrechnung
+20 Production-Deploys = 300 Credits (≈ 15/Deploy) = komplettes Monatsbudget.
+Deshalb so selten wie möglich nach `main` pushen; Vorschauen nutzen.
+
+## Aktueller Stand
+- `v1.1.1` ist lokal committet, wartet auf gebündelten Push nach ~13.10.2026.
+- Optional danach: Aufräumen (`netlify.toml` Cache-Header, unwirksame `<meta http-equiv>`-Tags entfernen, Version als einzige Quelle).
