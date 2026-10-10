@@ -1239,12 +1239,6 @@ function tick(){
   document.getElementById("clockChip").innerHTML =
     "<b>"+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds())+"</b>&nbsp; "
     + DOW_FULL[now.getDay()].slice(0,2) + ". " + now.getDate() + ". " + MONTHS[now.getMonth()].slice(0,3);
-  const m = moonInfo(now);
-  document.getElementById("moonChip").innerHTML =
-    '<span class="big">'+m.emoji+"</span><b>"+m.name+"</b>&nbsp; "+m.illum+" %";
-  const z = zodiacInfo(now);
-  document.getElementById("zodiacChip").innerHTML =
-    '<span class="big">'+z.sym+"</span><b>"+z.name+"</b>";
   try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
 }
 setInterval(tick, 1000); tick();
