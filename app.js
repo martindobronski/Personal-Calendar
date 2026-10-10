@@ -638,6 +638,7 @@ function openTodo(id, mode){
   document.getElementById("tdRepeat").value = e ? (e.repeat || e.freq || "none") : (isR ? "daily" : "none");
   document.getElementById("tdPoints").value = e ? (e.points ?? 1) : 1;
   document.getElementById("tdDue").value = (e && e.due) ? e.due : "";
+  document.getElementById("tdDueTime").value = (e && e.dueTime) ? e.dueTime : "";
   document.getElementById("tdNote").value = (e && e.note) ? e.note : "";
   document.getElementById("tdDelete").style.display = e ? "" : "none";
   openModal("tdModal");
@@ -650,13 +651,14 @@ document.getElementById("tdSave").onclick = ()=>{
   const repeat = document.getElementById("tdRepeat").value;
   const points = Math.max(0, parseInt(document.getElementById("tdPoints").value||"0",10));
   const due = document.getElementById("tdDue").value;
+  const dueTime = due ? (document.getElementById("tdDueTime").value || "") : "";
   const note = document.getElementById("tdNote").value.trim();
   if(tdMode==="routine"){
     const data = {name:title, freq:repeat, cat, note, points};
     if(editingRoutine) Object.assign(editingRoutine, data);
     else S.routines.push(Object.assign({id:uid(), time:"any", done:false, lastDone:null, completedAt:null}, data));
   }else{
-    const data = {title, cat, repeat, points, due, note};
+    const data = {title, cat, repeat, points, due, dueTime, note};
     if(editingTodo) Object.assign(editingTodo, data);
     else S.todos.push(Object.assign({id:uid(), done:false, lastDone:null}, data));
   }
@@ -1299,6 +1301,34 @@ function fmtCompletedAt(s){
   if(isNaN(d.getTime())) return "";
   return "✓ "+pad(d.getDate())+"."+pad(d.getMonth()+1)+"."+String(d.getFullYear()).slice(-2)+" "+pad(d.getHours())+":"+pad(d.getMinutes());
 }
+function dueDateTime(t){
+  if(!t||!t.due) return null;
+  var d=parseISO(t.due);
+  if(t.dueTime){
+    var p=String(t.dueTime).split(":");
+    d.setHours(parseInt(p[0],10)||0, parseInt(p[1],10)||0, 0, 0);
+  } else {
+    d.setHours(23,59,59,999);
+  }
+  return d;
+}
+function isTaskOverdue(t){
+  if(!t||!t.due) return false;
+  if(typeof taskIsDone==="function" && taskIsDone(t)) return false;
+  var dt=dueDateTime(t);
+  return dt ? dt < new Date() : false;
+}
+function fmtDue(t,done){
+  if(!t||!t.due) return "";
+  var dd=parseISO(t.due), td=today();
+  var txt=(t.due||"").split("-").reverse().join(".");
+  if(sameDay(dd,td)) txt="Heute";
+  else if(sameDay(dd,addDays(td,-1))) txt="Gestern";
+  else if(sameDay(dd,addDays(td,1))) txt="Morgen";
+  if(t.dueTime) txt+=" "+t.dueTime;
+  var col=(!done && isTaskOverdue(t))?"#f87171":"#cbd5e1";
+  return '<span style="color:'+col+'">📅 '+esc(txt)+"</span>";
+}
 function updateTaskBadge(){ try{ var b=document.getElementById('todoBadge'); if(!b) return; var n=0; if(typeof S!=="undefined"&&S&&Array.isArray(S.todos)) n=S.todos.filter(function(t){return inProfile(t.cat) && !taskIsDone(t)}).length; b.textContent=n; b.style.display=n?"grid":"none"; }catch(e){} }
 function renderTasks(){
   try{
@@ -1319,6 +1349,8 @@ function renderTasks(){
       var da=a.due?parseISO(a.due).getTime():Number.POSITIVE_INFINITY;
       var db=b.due?parseISO(b.due).getTime():Number.POSITIVE_INFINITY;
       if(da!==db) return da-db;
+      var tma=a.dueTime||"99:99", tmb=b.dueTime||"99:99";
+      if(tma!==tmb) return tma<tmb?-1:1;
       var ta=a.title||""; var tb=b.title||""; if(ta<tb) return -1; if(ta>tb) return 1; return 0;
     });
     if(!items.length){ list.innerHTML='<div class="empty"><span class="big">🗒️</span>Keine Aufgaben vorhanden.</div>'; }
@@ -1329,8 +1361,8 @@ function renderTasks(){
         var done=taskIsDone(t);
         if(done){ groups.erledigt.push(t); return; }
         if(!t.due){ groups.ohne.push(t); return; }
+        if(isTaskOverdue(t)){ groups.ueberfaellig.push(t); return; }
         var d=parseISO(t.due);
-        if(d < td){ groups.ueberfaellig.push(t); return; }
         if(sameDay(d,td)){ groups.heute.push(t); return; }
         groups.demnaechst.push(t);
       });
@@ -1348,7 +1380,7 @@ function renderTasks(){
             + '<div><div class="it-title">'+esc(t.title||t.text||"")+'</div>'
             + '<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
             + (rep?'<span>↻ '+esc(rep)+'</span>':'')
-            + (t.due?(function(){var dd=parseISO(t.due);var tdx=td;var txt=(t.due||'').split('-').reverse().join('.');if(sameDay(dd,tdx)) txt='Heute'; else if(sameDay(dd,addDays(tdx,-1))) txt='Gestern'; else if(sameDay(dd,addDays(tdx,1))) txt='Morgen'; var col=(dd<tdx&&!done)?'#f87171':'#cbd5e1';return '<span style="color:'+col+'">📅 '+esc(txt)+'</span>';}()):'')
+            + fmtDue(t,done)
             + (t.completedAt?'<span>'+esc(fmtCompletedAt(t.completedAt))+'</span>':'')
             + (done&&t.repeat&&t.repeat!=="none"&&nextDue(t)?'<span style="color:#7dd3fc">↻ Nächste: '+esc(fmtDate(nextDue(t)))+'</span>':'')
             + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
@@ -1564,6 +1596,8 @@ function renderCalSide(){
         var da2=isNaN(da)?Number.POSITIVE_INFINITY:da;
         var db2=isNaN(db)?Number.POSITIVE_INFINITY:db;
         if(da2!==db2) return da2-db2;
+        var tma=a.dueTime||"99:99", tmb=b.dueTime||"99:99";
+        if(tma!==tmb) return tma<tmb?-1:1;
         var ta=a.title||""; var tb=b.title||""; if(ta<tb) return -1; if(ta>tb) return 1; return 0;
       });
       // move done to bottom
@@ -1584,7 +1618,7 @@ function renderCalSide(){
             +'<div><div class="it-title">'+esc(t.title||t.text||'')+'</div>'
             +'<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
             +(t.repeat&&t.repeat!=='none'?'<span>↻ '+esc(repLabel(t.repeat))+'</span>':'')
-            +(t.due?'<span>📅 '+esc((t.due||'').split('-').reverse().join('.'))+'</span>':'')+'</div></div>'
+            + fmtDue(t,done)+'</div></div>'
             +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
             +'<button type="button" class="btn sm act" data-task-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
             +'<button type="button" class="btn sm act del" data-task-del="'+idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'

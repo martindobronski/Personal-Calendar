@@ -141,6 +141,9 @@ input[type=date]::-webkit-calendar-picker-indicator{
 label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight:600;letter-spacing:.03em}
 .field{margin-bottom:14px}
 .field2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.due-wrap{display:flex;gap:8px}
+.due-wrap input[type=date]{flex:2;min-width:0}
+.due-wrap input[type=time]{flex:1.2;min-width:0}
 .time-wrap{position:relative;display:block}
 .time-wrap input[type=time]{width:100%;min-width:0;height:38px;padding:10px 46px 10px 12px}
 .time-pick{
