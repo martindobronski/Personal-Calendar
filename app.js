@@ -1218,6 +1218,18 @@ function taskIsDone(t){
 function repLabel(r){
   return r==="daily"?"Täglich":r==="weekly"?"Wöchentlich":r==="monthly"?"Monatlich":r==="quarterly"?"Vierteljährlich":r==="yearly"?"Jährlich":"";
 }
+function nextDue(t){
+  if(!t.repeat||t.repeat==="none") return null;
+  var base=t.lastDone?parseISO(t.lastDone):(t.due?parseISO(t.due):today());
+  var d=clone(base);
+  if(t.repeat==="daily") d=addDays(d,1);
+  else if(t.repeat==="weekly") d=addDays(d,7);
+  else if(t.repeat==="monthly") d=new Date(d.getFullYear(),d.getMonth()+1,d.getDate());
+  else if(t.repeat==="quarterly") d=new Date(d.getFullYear(),d.getMonth()+3,d.getDate());
+  else if(t.repeat==="yearly") d=new Date(d.getFullYear()+1,d.getMonth(),d.getDate());
+  return d;
+}
+function fmtDate(d){ return pad(d.getDate())+"."+pad(d.getMonth()+1)+"."; }
 function updateTaskBadge(){ try{ var b=document.getElementById('todoBadge'); if(!b) return; var n=0; if(typeof S!=="undefined"&&S&&Array.isArray(S.todos)) n=S.todos.filter(function(t){return inProfile(t.cat) && !taskIsDone(t)}).length; b.textContent=n; b.style.display=n?"grid":"none"; }catch(e){} }
 function renderTasks(){
   try{
@@ -1269,6 +1281,7 @@ function renderTasks(){
             + (rep?'<span>↻ '+esc(rep)+'</span>':'')
             + (t.due?(function(){var dd=parseISO(t.due);var tdx=td;var txt=(t.due||'').split('-').reverse().join('.');if(sameDay(dd,tdx)) txt='Heute'; else if(sameDay(dd,addDays(tdx,-1))) txt='Gestern'; else if(sameDay(dd,addDays(tdx,1))) txt='Morgen'; var col=(dd<tdx&&!done)?'#f87171':'#cbd5e1';return '<span style="color:'+col+'">📅 '+esc(txt)+'</span>';}()):'')
             + (t.completedAt?(function(){var d2=new Date(t.completedAt);return '<span>✓ '+esc(d2.getDate().toString().padStart(2,'0')+'.'+(d2.getMonth()+1).toString().padStart(2,'0')+'.'+d2.getFullYear().toString().slice(-2)+' '+d2.getHours().toString().padStart(2,'0')+':'+d2.getMinutes().toString().padStart(2,'0'))+'</span>';}()):'')
+            + (done&&t.repeat&&t.repeat!=="none"&&nextDue(t)?'<span style="color:#7dd3fc">↻ Nächste: '+esc(fmtDate(nextDue(t)))+'</span>':'')
             + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
             + '<div class="it-actions"><button class="btn sm" data-task-edit="'+idx+'" title="Bearbeiten">✎</button>'
             + '<button class="btn sm del" data-task-del="'+idx+'" title="Löschen">🗑</button></div>'
