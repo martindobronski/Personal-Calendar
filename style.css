@@ -422,3 +422,6 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .segbtn.active{background:rgba(245,165,36,.18);border-color:rgba(245,165,36,.45);color:#f8fafc}
 .segbtn:focus{outline:2px solid rgba(245,165,36,.45);outline-offset:2px}
 
+
+.searchwrap:focus-within{outline:2px solid rgba(245,165,36,.45);outline-offset:2px;border-color:rgba(245,165,36,.6)}
+
