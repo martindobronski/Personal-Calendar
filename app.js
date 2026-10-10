@@ -1293,6 +1293,12 @@ function nextDue(t){
   return d;
 }
 function fmtDate(d){ return pad(d.getDate())+"."+pad(d.getMonth()+1)+"."; }
+function fmtCompletedAt(s){
+  if(!s) return "";
+  var d=new Date(s);
+  if(isNaN(d.getTime())) return "";
+  return "✓ "+pad(d.getDate())+"."+pad(d.getMonth()+1)+"."+String(d.getFullYear()).slice(-2)+" "+pad(d.getHours())+":"+pad(d.getMinutes());
+}
 function updateTaskBadge(){ try{ var b=document.getElementById('todoBadge'); if(!b) return; var n=0; if(typeof S!=="undefined"&&S&&Array.isArray(S.todos)) n=S.todos.filter(function(t){return inProfile(t.cat) && !taskIsDone(t)}).length; b.textContent=n; b.style.display=n?"grid":"none"; }catch(e){} }
 function renderTasks(){
   try{
@@ -1343,7 +1349,7 @@ function renderTasks(){
             + '<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
             + (rep?'<span>↻ '+esc(rep)+'</span>':'')
             + (t.due?(function(){var dd=parseISO(t.due);var tdx=td;var txt=(t.due||'').split('-').reverse().join('.');if(sameDay(dd,tdx)) txt='Heute'; else if(sameDay(dd,addDays(tdx,-1))) txt='Gestern'; else if(sameDay(dd,addDays(tdx,1))) txt='Morgen'; var col=(dd<tdx&&!done)?'#f87171':'#cbd5e1';return '<span style="color:'+col+'">📅 '+esc(txt)+'</span>';}()):'')
-            + (t.completedAt?(function(){var d2=new Date(t.completedAt);return '<span>✓ '+esc(d2.getDate().toString().padStart(2,'0')+'.'+(d2.getMonth()+1).toString().padStart(2,'0')+'.'+d2.getFullYear().toString().slice(-2)+' '+d2.getHours().toString().padStart(2,'0')+':'+d2.getMinutes().toString().padStart(2,'0'))+'</span>';}()):'')
+            + (t.completedAt?'<span>'+esc(fmtCompletedAt(t.completedAt))+'</span>':'')
             + (done&&t.repeat&&t.repeat!=="none"&&nextDue(t)?'<span style="color:#7dd3fc">↻ Nächste: '+esc(fmtDate(nextDue(t)))+'</span>':'')
             + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
             + '<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
@@ -1398,6 +1404,7 @@ function renderRoutines(){
           +(c?'<span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>':'')
           +(rep?'<span>↻ '+esc(rep)+'</span>':'')
           +(done&&r.freq&&r.freq!=="none"&&nextDue(Object.assign({},r,{repeat:r.freq}))?'<span style="color:#7dd3fc">↻ Nächste: '+esc(fmtDate(nextDue(Object.assign({},r,{repeat:r.freq}))))+'</span>':'')
+          +(done&&r.completedAt?'<span>'+esc(fmtCompletedAt(r.completedAt))+'</span>':'')
           +(r.note?'<span> '+esc(r.note)+'</span>':'')
           +'</div></div><div class="it-actions">'
           +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
@@ -1602,7 +1609,9 @@ function renderCalSide(){
           return '<div class="item'+(rdone?' done':'')+'">'
             +'<button type="button" class="check'+(rdone?' on':'')+'" data-routine-toggle="'+i+'" title="Erledigt abhaken">✓</button>'
             +'<div><div class="it-title">'+esc(r.name||'')+'</div>'
-            +'<div class="it-sub"><span>↻ '+esc(repLabel(r.freq))+'</span>'+(r.note?' · '+esc(r.note):'')+'</div></div>'
+            +'<div class="it-sub"><span>↻ '+esc(repLabel(r.freq))+'</span>'
+            +(rdone&&r.completedAt?'<span>'+esc(fmtCompletedAt(r.completedAt))+'</span>':'')
+            +(r.note?' · '+esc(r.note):'')+'</div></div>'
             +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
             +'<button type="button" class="btn sm act" data-routine-edit="'+i+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
             +'<button type="button" class="btn sm act del" data-routine-del="'+i+'" title="Löschen">'+ICON_TRASH+'</button></div></div>';
