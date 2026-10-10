@@ -308,8 +308,7 @@ function renderCalendar(){
   updateCalModeUI();
   if(calMode==="day"){ renderDayView(); return; }
   const y = calMonth.getFullYear(), m = calMonth.getMonth();
-  document.getElementById("calTitle").innerHTML =
-    MONTHS[m] + " " + y + '<span>' + (Object.keys(holidays(y)).length - 2) + " Feiertage</span>";
+  document.getElementById("calTitle").textContent = MONTHS[m] + " " + y;
 
   const first = new Date(y,m,1);
   const ws = weekStartDay();
@@ -627,7 +626,13 @@ var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("clic
   const evBtn = e.target.closest("[data-ev]");
   if(evBtn){ openEvent(evBtn.dataset.ev); return; }
   const day = e.target.closest(".day");
-  if(day){ selDate = parseISO(day.dataset.date); renderCalendar(); }
+  if(day){
+    selDate = parseISO(day.dataset.date);
+    document.querySelectorAll("#calGrid .day.selected").forEach(x=>x.classList.remove("selected"));
+    day.classList.add("selected");
+    renderAgenda(); try{if(typeof updateWorkLive==="function") updateWorkLive();}catch(e){}
+    try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+  }
 });
 var __el=document.getElementById("agenda"); if(__el)__el.addEventListener("click", e=>{
   const tOpen = e.target.closest("[data-task-open]");
@@ -643,6 +648,7 @@ var __el=document.getElementById("agenda"); if(__el)__el.addEventListener("click
   if(ev){ openEvent(ev.dataset.ev); }
 });
 var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("dblclick", e=>{
+  if(e.target.closest("[data-new],[data-ev],[data-task-open],[data-copy]")) return;
   const day=e.target.closest(".day");
   if(day){ selDate=parseISO(day.dataset.date); setCalMode("day"); }
 });
