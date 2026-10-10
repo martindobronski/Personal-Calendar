@@ -1341,7 +1341,7 @@ function renderRoutines(){
     if(e.target&&e.target.id==='taskSearch') renderTasks();
   });
   document.addEventListener('change', function(e){
-    if(e.target&&e.target.id==='taskFilter') renderTasks();
+
   });
 })();
 (function(){
