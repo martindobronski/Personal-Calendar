@@ -1077,7 +1077,7 @@ function wkPad(n){return String(n).padStart(2,"0");}
 function wkIsoKey(d){return d.getFullYear()+"-"+wkPad(d.getMonth()+1)+"-"+wkPad(d.getDate());}
 function wkTodayKey(){return wkIsoKey(new Date());}
 function workArr(k){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};if(!S.work[k])S.work[k]=[];return S.work[k];}
-function workOpenInterval(k){var a=workArr(k);for(var i=a.length-1;i>=0;i--){if(a[i]&&!a[i].e)return a[i];}return null;}
+function workOpenInterval(k){var a=(S&&S.work&&S.work[k])||[];for(var i=a.length-1;i>=0;i--){if(a[i]&&!a[i].e)return a[i];}return null;}
 function workRunningToday(){return !!workOpenInterval(wkTodayKey());}
 function hmToMin(hm){if(!hm)return 0;var p=hm.split(":");return parseInt(p[0])*60+parseInt(p[1]);}
 function minToHM(min){var s=min<0?"-":"";var m=Math.abs(min);var h=Math.floor(m/60),mm=m%60;return s+h+":"+String(mm).padStart(2,"0");}
@@ -1166,11 +1166,10 @@ function renderWork(){
   if(typeof S==="undefined") window.S={work:{}};
   if(!S.work) S.work={};
   var nk=wkTodayKey();
-  if(!S.work[nk]) S.work[nk]=[];
   renderWorkHead();
   var box=document.getElementById("workTodayList");
   if(box){
-    var arr=S.work[nk];
+    var arr=S.work[nk]||[];
     if(!arr.length){
       box.innerHTML='<div class="empty"><span class="big">⏱️</span>Keine Einträge heute.</div>';
     }else{
@@ -1602,13 +1601,15 @@ function renderRoutines(){
     }
     if(t.closest&&t.closest('[data-wk-del]')){
       var idx=parseInt(t.closest('[data-wk-del]').getAttribute('data-wk-del'));
-      var k=wkTodayKey(); var a=workArr(k);
-      if(!isNaN(idx)&&a[idx]){
+      var k=wkTodayKey(); var a=S.work[k];
+      if(!isNaN(idx)&&a&&a[idx]){
         var wemit=a.splice(idx,1)[0];
+        if(!a.length) delete S.work[k];
         try{save();if(typeof renderWork==="function")renderWork();}catch(ex){}
         showUndo('Eintrag gelöscht', function(){
-          var ai=Math.min(idx, workArr(k).length);
-          workArr(k).splice(ai,0,wemit);
+          var arr=workArr(k);
+          var ai=Math.min(idx, arr.length);
+          arr.splice(ai,0,wemit);
           try{save();if(typeof renderWork==="function")renderWork();}catch(ex){}
         });
         return;
