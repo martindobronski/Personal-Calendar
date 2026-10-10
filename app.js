@@ -656,6 +656,9 @@ function openTodo(id, mode){
   document.getElementById("tdPoints").value = e ? (e.points ?? 1) : 1;
   document.getElementById("tdDue").value = (e && e.due) ? e.due : "";
   document.getElementById("tdDueTime").value = (e && e.dueTime) ? e.dueTime : "";
+  document.getElementById("tdTime").value = (e && e.time && e.time!=="any") ? e.time : "";
+  document.getElementById("tdDueField").style.display = isR ? "none" : "";
+  document.getElementById("tdRoutineTimeField").style.display = isR ? "" : "none";
   document.getElementById("tdNote").value = (e && e.note) ? e.note : "";
   document.getElementById("tdDelete").style.display = e ? "" : "none";
   openModal("tdModal");
@@ -671,9 +674,10 @@ document.getElementById("tdSave").onclick = ()=>{
   const dueTime = due ? (document.getElementById("tdDueTime").value || "") : "";
   const note = document.getElementById("tdNote").value.trim();
   if(tdMode==="routine"){
-    const data = {name:title, freq:repeat, cat, note, points};
+    const time = document.getElementById("tdTime").value || "";
+    const data = {name:title, freq:repeat, cat, note, points, time};
     if(editingRoutine) Object.assign(editingRoutine, data);
-    else S.routines.push(Object.assign({id:uid(), time:"any", done:false, lastDone:null, completedAt:null}, data));
+    else S.routines.push(Object.assign({id:uid(), done:false, lastDone:null, completedAt:null}, data));
   }else{
     const data = {title, cat, repeat, points, due, dueTime, note};
     if(editingTodo) Object.assign(editingTodo, data);
@@ -1452,6 +1456,7 @@ function renderRoutines(){
           +'<div><div class="it-title">'+esc(r.name||'')+'</div><div class="it-sub">'
           +(c?'<span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>':'')
           +(rep?'<span>↻ '+esc(rep)+'</span>':'')
+          +(r.time&&r.time!=="any"?'<span>🕒 '+esc(r.time)+'</span>':'')
           +(done&&r.freq&&r.freq!=="none"&&nextDue(Object.assign({},r,{repeat:r.freq}))?'<span style="color:#7dd3fc">↻ Nächste: '+esc(fmtDate(nextDue(Object.assign({},r,{repeat:r.freq}))))+'</span>':'')
           +(done&&r.completedAt?'<span>'+esc(fmtCompletedAt(r.completedAt))+'</span>':'')
           +(r.note?'<span> '+esc(r.note)+'</span>':'')
@@ -1684,6 +1689,7 @@ function renderCalSide(){
             +'<button type="button" class="check'+(rdone?' on':'')+'" data-routine-toggle="'+i+'" title="Erledigt abhaken">✓</button>'
             +'<div><div class="it-title">'+esc(r.name||'')+'</div>'
             +'<div class="it-sub"><span>↻ '+esc(repLabel(r.freq))+'</span>'
+            +(r.time&&r.time!=="any"?'<span>🕒 '+esc(r.time)+'</span>':'')
             +(rdone&&r.completedAt?'<span>'+esc(fmtCompletedAt(r.completedAt))+'</span>':'')
             +(r.note?' · '+esc(r.note):'')+'</div></div>'
             +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'

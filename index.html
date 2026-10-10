@@ -423,12 +423,16 @@
         <label class="fl">Punkte fürs Abhaken</label>
         <input type="number" id="tdPoints" min="0" max="100" value="1">
       </div>
-      <div class="field">
+      <div class="field" id="tdDueField">
         <label class="fl">Fällig am (optional)</label>
         <div class="due-wrap">
           <input type="date" id="tdDue">
           <input type="time" id="tdDueTime" title="Uhrzeit (optional)">
         </div>
+      </div>
+      <div class="field" id="tdRoutineTimeField" style="display:none">
+        <label class="fl">Uhrzeit (optional)</label>
+        <input type="time" id="tdTime">
       </div>
     </div>
     <div class="field">
