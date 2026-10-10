@@ -117,8 +117,8 @@ function showUndo(msg, fn){
   undoInfo=run;
   undoTimer=setTimeout(hideUndo, 6000);
   bar.querySelector('.undo-btn').onclick=function(){
-    hideUndo();
     const f=undoInfo; undoInfo=null;
+    hideUndo();
     if(f) f();
   };
 }
