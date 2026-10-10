@@ -1370,9 +1370,23 @@ function renderRoutines(){
     if(!Array.isArray(S.routines)) S.routines=[];
     try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
     var list=document.getElementById('routinesList'); if(!list) return;
-    var items=S.routines.filter(function(r){ return inProfile(r.cat); });
+    var search=((document.getElementById('routineSearch')||{}).value||"").trim().toLowerCase();
+    var rfilter="all"; var rseg=document.getElementById("routineSeg"); if(rseg){ var rab=rseg.querySelector(".segbtn.active"); if(rab) rfilter=rab.dataset.seg||"all"; }
+    var items=S.routines.filter(function(r){
+      if(!inProfile(r.cat)) return false;
+      var rdone=routineIsDone(r);
+      if(rfilter==="open" && rdone) return false;
+      if(rfilter==="done" && !rdone) return false;
+      if(search && String(r.name||r.title||"").toLowerCase().indexOf(search)<0) return false;
+      return true;
+    });
     if(!items.length){ list.innerHTML='<div class="empty"><span class="big">🗓️</span>Keine Routinen vorhanden.</div>'; }
     else {
+      items.sort(function(a,b){
+        var ad=routineIsDone(a), bd=routineIsDone(b);
+        if(ad!==bd) return ad?1:-1;
+        var ta=a.name||"", tb=b.name||""; if(ta<tb) return -1; if(ta>tb) return 1; return 0;
+      });
       list.innerHTML=items.map(function(r){
         var i=S.routines.indexOf(r);
         var c=(typeof cat==="function")?cat(r.cat):null;
@@ -1505,6 +1519,7 @@ function renderRoutines(){
   });
   document.addEventListener('input', function(e){
     if(e.target&&e.target.id==='taskSearch') renderTasks();
+    if(e.target&&e.target.id==='routineSearch') renderRoutines();
   });
   document.addEventListener('change', function(e){
 
@@ -1628,6 +1643,16 @@ if(__addWd) __addWd.onclick=function(){
       var b=e.target.closest(".segbtn"); if(!b) return;
       seg.querySelectorAll(".segbtn").forEach(function(x){x.classList.toggle("active", x===b);});
       if(typeof renderTasks==="function") renderTasks();
+    });
+  }
+})();
+(function(){
+  var seg=document.getElementById("routineSeg");
+  if(seg){
+    seg.addEventListener("click", function(e){
+      var b=e.target.closest(".segbtn"); if(!b) return;
+      seg.querySelectorAll(".segbtn").forEach(function(x){x.classList.toggle("active", x===b);});
+      if(typeof renderRoutines==="function") renderRoutines();
     });
   }
 })();

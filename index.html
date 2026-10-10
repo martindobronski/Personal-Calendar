@@ -118,6 +118,17 @@
   <div class="flex gap" style="justify-content:flex-end;margin-bottom:10px">
     <button class="btn primary" id="btnNewRoutine">+ Neue Routine</button>
   </div>
+  <div class="flex gap" style="display:flex;flex-direction:row;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:nowrap;white-space:nowrap;width:100%">
+    <div class="searchwrap" style="position:relative;flex:1;background:#0b1324;border:1px solid var(--line);border-radius:12px;overflow:hidden">
+      <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;opacity:.7">🔍</span>
+      <input id="routineSearch" class="input" placeholder="Routinen suchen..." style="color:#e6edf7;padding-left:28px;background:transparent;border:0;border-radius:0;outline:none;box-shadow:none">
+    </div>
+    <div class="seg" id="routineSeg" style="display:flex;gap:4px;background:#0b1324;border:1px solid var(--line);border-radius:12px;padding:4px;flex-shrink:0;width:auto;min-width:180px">
+      <button class="segbtn" data-seg="all">Alle</button>
+      <button class="segbtn active" data-seg="open">Offen</button>
+      <button class="segbtn" data-seg="done">Erledigt</button>
+    </div>
+  </div>
   <div class="card"><div class="list" id="routinesList"></div></div>
 </section>
 <section class="view" id="view-meals">
