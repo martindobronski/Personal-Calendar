@@ -292,7 +292,7 @@ function renderCalendar(){
     evs.slice(0,3).forEach(ev=>{ chips += chipHTML(ev); });
     if(evs.length>3) chips += '<div class="more">+'+(evs.length-3)+" weitere</div>";
     const hol = (H[key] || Hnext[key] || Hprev[key]) || "";
-    html += '<div class="day'+(out?" out":"")+(sameDay(d,today())?" today":"")+'" data-date="'+key+'">'
+    html += '<div class="day'+(out?" out":"")+(sameDay(d,today())?" today":"")+(sameDay(d,selDate)?" selected":"")+'" data-date="'+key+'">'
           +   '<div class="day-head">'
           +     '<div class="daynum">'+d.getDate()+"</div>"
           +     '<button class="plus" data-new="'+key+'" title="Termin anlegen">+</button>'

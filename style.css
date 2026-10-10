@@ -183,6 +183,8 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .day>*{min-width:0;max-width:100%}
 .day.out{opacity:.4}
 .day.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.day.selected{border-color:var(--accent2);box-shadow:0 0 0 1px var(--accent2) inset;background:#1a2540}
+.day.today.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
 .day-head{display:flex;align-items:center;justify-content:space-between;gap:4px}
 .daynum{
   font-weight:700;font-size:13.5px;width:25px;height:25px;border-radius:50%;
