@@ -1482,13 +1482,13 @@ function renderRoutines(){
       }
       return;
     }
-    if(t.matches&&t.matches('[data-task-edit]')){
-      var idx=parseInt(t.getAttribute('data-task-edit'));
+    if(t.closest&&t.closest('[data-task-edit]')){
+      var idx=parseInt(t.closest('[data-task-edit]').getAttribute('data-task-edit'));
       if(!isNaN(idx)&&Array.isArray(S.todos)&&S.todos[idx]) openTodo(S.todos[idx].id, "task");
       return;
     }
-    if(t.matches&&t.matches('[data-task-del]')){
-      var idx=parseInt(t.getAttribute('data-task-del'));
+    if(t.closest&&t.closest('[data-task-del]')){
+      var idx=parseInt(t.closest('[data-task-del]').getAttribute('data-task-del'));
       if(!isNaN(idx)&&Array.isArray(S.todos)&&idx>=0&&idx<S.todos.length){
         var removed=S.todos.splice(idx,1)[0];
         save();
@@ -1503,8 +1503,8 @@ function renderRoutines(){
       }
       return;
     }
-    if(t.matches&&t.matches('[data-task-toggle]')){
-      var ti=parseInt(t.getAttribute('data-task-toggle'));
+    if(t.closest&&t.closest('[data-task-toggle]')){
+      var ti=parseInt(t.closest('[data-task-toggle]').getAttribute('data-task-toggle'));
       if(!isNaN(ti)&&Array.isArray(S.todos)&&S.todos[ti]){
         var tk=S.todos[ti];
         if(tk.repeat&&tk.repeat!=="none"){
@@ -1533,13 +1533,13 @@ function renderRoutines(){
       }
       return;
     }
-    if(t.matches&&t.matches('[data-routine-edit]')){
-      var ridx=parseInt(t.getAttribute('data-routine-edit'));
+    if(t.closest&&t.closest('[data-routine-edit]')){
+      var ridx=parseInt(t.closest('[data-routine-edit]').getAttribute('data-routine-edit'));
       if(!isNaN(ridx)&&Array.isArray(S.routines)&&S.routines[ridx]) openTodo(ridx, "routine");
       return;
     }
-    if(t.matches&&t.matches('[data-routine-toggle]')){
-      var rti=parseInt(t.getAttribute('data-routine-toggle'));
+    if(t.closest&&t.closest('[data-routine-toggle]')){
+      var rti=parseInt(t.closest('[data-routine-toggle]').getAttribute('data-routine-toggle'));
       if(!isNaN(rti)&&Array.isArray(S.routines)&&S.routines[rti]){
         var rk=S.routines[rti];
         var rwas=routineIsDone(rk);
@@ -1561,8 +1561,8 @@ function renderRoutines(){
       }
       return;
     }
-    if(t.matches&&t.matches('[data-routine-del]')){
-      var ridx=parseInt(t.getAttribute('data-routine-del'));
+    if(t.closest&&t.closest('[data-routine-del]')){
+      var ridx=parseInt(t.closest('[data-routine-del]').getAttribute('data-routine-del'));
       if(!isNaN(ridx)&&Array.isArray(S.routines)&&ridx>=0&&ridx<S.routines.length){
         var rremoved=S.routines.splice(ridx,1)[0];
         save();
