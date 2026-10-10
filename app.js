@@ -61,8 +61,7 @@ load(); save();
 try{
   var t=(S.settings&&S.settings.appTitle)||"Familienkalender";
   document.title = t + " – Ordnung im Alltag ohne Abo";
-  var bn=document.getElementById("brandName");
-  if(bn) bn.innerHTML = esc(t)+"<small>v1.1.0 (10.10.2026)</small>";
+  var bt=document.getElementById("brandTitle"); if(bt) bt.textContent=t;
 }catch(e){}
 
 
@@ -876,8 +875,7 @@ function renderSettings(){
   if(S.settings && S.settings.appTitle){
     var t=(S.settings.appTitle||"").trim();
     document.title = t + " – Ordnung im Alltag ohne Abo";
-    var bn=document.getElementById("brandName");
-    if(bn) bn.innerHTML = esc(t)+"<small>v1.1.0 (10.10.2026)</small>";
+    var bt=document.getElementById("brandTitle"); if(bt) bt.textContent=t;
   }
   save();
 }
