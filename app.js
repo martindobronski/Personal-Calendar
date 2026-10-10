@@ -1589,20 +1589,20 @@ function renderRoutines(){
 (function(){
   document.addEventListener('click', function(e){
     var t=e.target;
-    if(t.matches('#workClearDay')){ if(confirm('Tag wirklich leeren?')){ var k=wkTodayKey(); if(typeof S!=="undefined") delete S.work[k]; try{save();if(typeof renderWork==="function")renderWork();if(typeof updateWorkLive==="function")updateWorkLive();}catch(ex){} return; }
+    if(t.closest&&t.closest('#workClearDay')){ if(confirm('Tag wirklich leeren?')){ var k=wkTodayKey(); if(typeof S!=="undefined") delete S.work[k]; try{save();if(typeof renderWork==="function")renderWork();if(typeof updateWorkLive==="function")updateWorkLive();}catch(ex){} return; }
     }
-    if(t.matches('[data-wk-edit]')){ openWorkDay(wkTodayKey()); return; }
-    if(t.matches('[data-wk-editday]')){ openWorkDay(t.getAttribute('data-wk-editday')); return; }
-    if(t.matches('[data-wk-rowdel]')){
+    if(t.closest&&t.closest('[data-wk-edit]')){ openWorkDay(wkTodayKey()); return; }
+    if(t.closest&&t.closest('[data-wk-editday]')){ openWorkDay(t.closest('[data-wk-editday]').getAttribute('data-wk-editday')); return; }
+    if(t.closest&&t.closest('[data-wk-rowdel]')){
       syncWkDraft();
-      var ri=parseInt(t.getAttribute('data-wk-rowdel'));
+      var ri=parseInt(t.closest('[data-wk-rowdel]').getAttribute('data-wk-rowdel'));
       if(!isNaN(ri)&&wkDraft.length>1){ wkDraft.splice(ri,1); renderWkRows(); }
       else { wkDraft=[{s:"",e:""}]; renderWkRows(); }
       return;
     }
-    if(t.matches('[data-wk-del]')){ var idx=parseInt(t.getAttribute('data-wk-del')); var k=wkTodayKey(); var a=workArr(k); if(!isNaN(idx)&&a[idx]){ a.splice(idx,1); try{save();if(typeof renderWork==="function")renderWork();}catch(ex){} return; }
+    if(t.closest&&t.closest('[data-wk-del]')){ var idx=parseInt(t.closest('[data-wk-del]').getAttribute('data-wk-del')); var k=wkTodayKey(); var a=workArr(k); if(!isNaN(idx)&&a[idx]){ a.splice(idx,1); try{save();if(typeof renderWork==="function")renderWork();}catch(ex){} return; }
     }
-    if(t.matches('[data-wk-delall]')){ var kk=t.getAttribute('data-wk-delall'); if(typeof S!=="undefined"&&S.work&&S.work[kk]){ if(confirm('Tag '+kk.split('-').reverse().join('.')+' wirklich leeren?')){ delete S.work[kk]; try{save();if(typeof renderWork==="function")renderWork();}catch(ex){} return; }}
+    if(t.closest&&t.closest('[data-wk-delall]')){ var kk=t.closest('[data-wk-delall]').getAttribute('data-wk-delall'); if(typeof S!=="undefined"&&S.work&&S.work[kk]){ if(confirm('Tag '+kk.split('-').reverse().join('.')+' wirklich leeren?')){ delete S.work[kk]; try{save();if(typeof renderWork==="function")renderWork();}catch(ex){} return; }}
     }
   });
 })();
