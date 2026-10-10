@@ -75,16 +75,30 @@
 
       <div class="card side-panel">
         <div class="panel-head">
-          <div class="panel-title">✅ Aufgaben</div>
-          <span class="panel-badge" id="calTaskCount">0</span>
+          <div class="panel-title" data-goto="tasks" role="button" tabindex="0" title="Zur Aufgabenseite">✅ Aufgaben</div>
+          <div class="panel-tools">
+            <div class="seg mini" id="calTaskSeg">
+              <button class="segbtn active" data-seg="all">Alle</button>
+              <button class="segbtn" data-seg="open">Offen</button>
+              <button class="segbtn" data-seg="done">Erledigt</button>
+            </div>
+            <span class="panel-badge" id="calTaskCount">0</span>
+          </div>
         </div>
         <div class="list" id="calTasksList"></div>
       </div>
 
       <div class="card side-panel">
         <div class="panel-head">
-          <div class="panel-title">🗓️ Routinen</div>
-          <span class="panel-badge" id="calRoutineCount">0</span>
+          <div class="panel-title" data-goto="routines" role="button" tabindex="0" title="Zur Routinenseite">🗓️ Routinen</div>
+          <div class="panel-tools">
+            <div class="seg mini" id="calRoutineSeg">
+              <button class="segbtn active" data-seg="all">Alle</button>
+              <button class="segbtn" data-seg="open">Offen</button>
+              <button class="segbtn" data-seg="done">Erledigt</button>
+            </div>
+            <span class="panel-badge" id="calRoutineCount">0</span>
+          </div>
         </div>
         <div class="list" id="calRoutinesList"></div>
       </div>

@@ -1589,7 +1589,15 @@ function renderCalSide(){
     if(typeof S==="undefined"||!S) return;
     var tBox=document.getElementById('calTasksList');
     if(tBox){
-      var todos=(Array.isArray(S.todos)?S.todos:[]).filter(function(t){ return inProfile(t.cat); });
+      var ctFilter='all'; var cs=document.getElementById('calTaskSeg');
+      if(cs){ var cb=cs.querySelector('.segbtn.active'); if(cb) ctFilter=cb.dataset.seg||'all'; }
+      var todos=(Array.isArray(S.todos)?S.todos:[]).filter(function(t){
+        if(!inProfile(t.cat)) return false;
+        var cdone=taskIsDone(t);
+        if(ctFilter==='open' && cdone) return false;
+        if(ctFilter==='done' && !cdone) return false;
+        return true;
+      });
       todos.sort(function(a,b){
         var da=a.due?parseISO(a.due).getTime():Number.POSITIVE_INFINITY;
         var db=b.due?parseISO(b.due).getTime():Number.POSITIVE_INFINITY;
@@ -1627,13 +1635,20 @@ function renderCalSide(){
       }
       var cnt=document.getElementById('calTaskCount');
       if(cnt){
-        var open=todos.filter(function(t){return !taskIsDone(t)}).length;
-        cnt.textContent=open;
+        cnt.textContent=todos.length;
       }
     }
     var rBox=document.getElementById('calRoutinesList');
     if(rBox){
-      var routines=(Array.isArray(S.routines)?S.routines:[]).filter(function(r){ return inProfile(r.cat); });
+      var crFilter='all'; var crs=document.getElementById('calRoutineSeg');
+      if(crs){ var crb=crs.querySelector('.segbtn.active'); if(crb) crFilter=crb.dataset.seg||'all'; }
+      var routines=(Array.isArray(S.routines)?S.routines:[]).filter(function(r){
+        if(!inProfile(r.cat)) return false;
+        var rd=routineIsDone(r);
+        if(crFilter==='open' && rd) return false;
+        if(crFilter==='done' && !rd) return false;
+        return true;
+      });
       routines.sort(function(a,b){
         var ta=a.name||"", tb=b.name||""; if(ta<tb) return -1; if(ta>tb) return 1; return 0;
       });
@@ -1660,7 +1675,7 @@ function renderCalSide(){
         }).join('');
       }
       var rcnt=document.getElementById('calRoutineCount');
-      if(rcnt) rcnt.textContent=routines.filter(function(r){return !routineIsDone(r)}).length;
+      if(rcnt) rcnt.textContent=routines.length;
     }
   }catch(e){}
   try{ updateBadges(); }catch(e){}
@@ -1706,4 +1721,23 @@ if(__addWd) __addWd.onclick=function(){
       if(typeof renderRoutines==="function") renderRoutines();
     });
   }
+})();
+(function(){
+  function segClick(id){
+    var seg=document.getElementById(id);
+    if(!seg) return;
+    seg.addEventListener("click", function(e){
+      var b=e.target.closest(".segbtn"); if(!b) return;
+      seg.querySelectorAll(".segbtn").forEach(function(x){x.classList.toggle("active", x===b);});
+      if(typeof renderCalSide==="function") renderCalSide();
+    });
+  }
+  segClick("calTaskSeg");
+  segClick("calRoutineSeg");
+  document.querySelectorAll(".panel-title[data-goto]").forEach(function(el){
+    el.addEventListener("click", function(){ if(typeof setView==="function") setView(el.dataset.goto); });
+    el.addEventListener("keydown", function(e){
+      if(e.key==="Enter" || e.key===" "){ e.preventDefault(); if(typeof setView==="function") setView(el.dataset.goto); }
+    });
+  });
 })();
