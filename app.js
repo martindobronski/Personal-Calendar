@@ -561,6 +561,7 @@ function renderAgenda(){
       + '<div class="when">'+esc(t.dueTime)+'</div>'
       + '<div class="tclick" data-task-open="'+t.id+'"><div class="ttl">'+esc(t.title)+'</div>'
       + '<div class="sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
+      + (spanTxt(t) ? " · 🗓 "+esc(spanTxt(t)) : "")
       + (t.note ? " · "+esc(t.note) : "") + "</div></div>"
       + '<div class="ag-actions"><button type="button" class="linkbtn act" data-task-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
       + '<button type="button" class="linkbtn act del" data-task-del="'+idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'
@@ -845,8 +846,12 @@ function openTodo(id, mode){
   document.getElementById("tdDue").value = (e && e.due) ? e.due : "";
   document.getElementById("tdDueTime").value = (e && e.dueTime) ? e.dueTime : "";
   document.getElementById("tdTime").value = (e && e.time && e.time!=="any") ? e.time : "";
+  document.getElementById("tdStart").value = (e && e.startDate) ? e.startDate : "";
+  document.getElementById("tdEnd").value = (e && e.endDate) ? e.endDate : "";
+  updateTdSpan();
   document.getElementById("tdDueField").style.display = isR ? "none" : "";
   document.getElementById("tdRoutineTimeField").style.display = isR ? "" : "none";
+  document.getElementById("tdSpanFields").style.display = isR ? "none" : "";
   document.getElementById("tdNote").value = (e && e.note) ? e.note : "";
   document.getElementById("tdDelete").style.display = e ? "" : "none";
   openModal("tdModal");
@@ -867,7 +872,12 @@ document.getElementById("tdSave").onclick = ()=>{
     if(editingRoutine) Object.assign(editingRoutine, data);
     else S.routines.push(Object.assign({id:uid(), done:false, lastDone:null, completedAt:null}, data));
   }else{
-    const data = {title, cat, repeat, points, due, dueTime, note};
+    let startDate = document.getElementById("tdStart").value || "";
+    let endDate = document.getElementById("tdEnd").value || "";
+    if(endDate && !startDate){ startDate = endDate; endDate = ""; }
+    if(startDate && endDate && endDate < startDate){ toast("Das Enddatum liegt vor dem Beginn."); return; }
+    if(endDate === startDate) endDate = "";
+    const data = {title, cat, repeat, points, due, dueTime, note, startDate, endDate};
     if(editingTodo) Object.assign(editingTodo, data);
     else S.todos.push(Object.assign({id:uid(), done:false, lastDone:null}, data));
   }
@@ -882,6 +892,32 @@ document.getElementById("tdDelete").onclick = ()=>{
     S.todos = S.todos.filter(t=>t!==editingTodo);
   }
   save(); closeModals(); render(); toast("Eintrag gelöscht.");
+};
+function updateTdSpan(){
+  const s=document.getElementById("tdStart").value;
+  const e=document.getElementById("tdEnd");
+  if(s) e.min=s;
+  let n=1;
+  if(s && e.value && e.value > s) n=Math.round((parseISO(e.value)-parseISO(s))/86400000)+1;
+  const dEl=document.getElementById("tdDays");
+  if(dEl) dEl.value=n;
+}
+document.getElementById("tdStart").onchange = ()=>{
+  const s=document.getElementById("tdStart").value;
+  const e=document.getElementById("tdEnd");
+  if(s && e.value && e.value < s) e.value=s;
+  updateTdSpan();
+};
+document.getElementById("tdEnd").onchange = updateTdSpan;
+document.getElementById("tdDays").onchange = ()=>{
+  const s=document.getElementById("tdStart").value;
+  if(!s) return;
+  let n=parseInt(document.getElementById("tdDays").value)||1;
+  if(n<1) n=1;
+  if(n>366) n=366;
+  document.getElementById("tdDays").value=n;
+  document.getElementById("tdEnd").value=iso(addDays(parseISO(s), n-1));
+  updateTdSpan();
 };
 
 /* =========================================================
@@ -1536,16 +1572,27 @@ function isTaskOverdue(t){
   var dt=dueDateTime(t);
   return dt ? dt < new Date() : false;
 }
+function spanTxt(t){
+  if(!t || !t.startDate) return "";
+  var a=t.startDate.split("-").reverse().join(".");
+  if(t.endDate && t.endDate > t.startDate) return a+" – "+t.endDate.split("-").reverse().join(".");
+  return "ab "+a;
+}
 function fmtDue(t,done){
-  if(!t||!t.due) return "";
-  var dd=parseISO(t.due), td=today();
-  var txt=(t.due||"").split("-").reverse().join(".");
-  if(sameDay(dd,td)) txt="Heute";
-  else if(sameDay(dd,addDays(td,-1))) txt="Gestern";
-  else if(sameDay(dd,addDays(td,1))) txt="Morgen";
-  if(t.dueTime) txt+=" "+t.dueTime;
-  var col=(!done && isTaskOverdue(t))?"#f87171":"#cbd5e1";
-  return '<span style="color:'+col+'">📅 '+esc(txt)+"</span>";
+  var out="";
+  if(t && t.due){
+    var dd=parseISO(t.due), td=today();
+    var txt=(t.due||"").split("-").reverse().join(".");
+    if(sameDay(dd,td)) txt="Heute";
+    else if(sameDay(dd,addDays(td,-1))) txt="Gestern";
+    else if(sameDay(dd,addDays(td,1))) txt="Morgen";
+    if(t.dueTime) txt+=" "+t.dueTime;
+    var col=(!done && isTaskOverdue(t))?"#f87171":"#cbd5e1";
+    out+='<span style="color:'+col+'">📅 '+esc(txt)+"</span>";
+  }
+  var sp=spanTxt(t);
+  if(sp) out+='<span style="color:#7dd3fc">🗓 '+esc(sp)+"</span>";
+  return out;
 }
 function updateTaskBadge(){ try{ var b=document.getElementById('todoBadge'); if(!b) return; var n=0; if(typeof S!=="undefined"&&S&&Array.isArray(S.todos)) n=S.todos.filter(function(t){return inProfile(t.cat) && !taskIsDone(t)}).length; b.textContent=n; b.style.display=n?"grid":"none"; }catch(e){} }
 function renderTasks(){
