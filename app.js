@@ -1634,6 +1634,14 @@ function renderCalSide(){
     var rBox=document.getElementById('calRoutinesList');
     if(rBox){
       var routines=(Array.isArray(S.routines)?S.routines:[]).filter(function(r){ return inProfile(r.cat); });
+      routines.sort(function(a,b){
+        var ta=a.name||"", tb=b.name||""; if(ta<tb) return -1; if(ta>tb) return 1; return 0;
+      });
+      routines.sort(function(a,b){
+        var ad=routineIsDone(a), bd=routineIsDone(b);
+        if(ad!==bd) return ad?1:-1;
+        return 0;
+      });
       if(!routines.length){
         rBox.innerHTML='<div class="empty"><span class="big">🗓️</span>Noch keine Routinen.</div>';
       }else{
