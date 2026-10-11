@@ -747,6 +747,7 @@ function refreshDayDrag(){ initDayDrag(); }
 })();
 if(document.getElementById("dayView")) initDayDrag();
 var __dv=document.getElementById("dayView"); if(__dv)__dv.addEventListener("click", e=>{
+  if(dragState) return;
   const to=e.target.closest("[data-task-open]");
   if(to){ const tt=S.todos.find(x=>x.id===to.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
   const ev=e.target.closest("[data-ev]");
