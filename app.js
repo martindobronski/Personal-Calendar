@@ -1684,7 +1684,7 @@ var period=parseHistMonth((mEl&&mEl.value)||"");
     if(mInfo){
       if(period===null) mInfo.textContent="Ungültig – bitte MM.JJ (z. B. 09.26)";
       else if(period==="") mInfo.textContent="";
-      else mInfo.textContent=MONTHS[parseInt(period.slice(5,7),10)-1]+" '"+period.slice(2,4);
+      else mInfo.textContent=MONTHS[parseInt(period.slice(5,7),10)-1]+" "+period.slice(0,4);
     }
     if(period===null){
       hist.innerHTML='<div class="empty">Ungültiger Zeitraum. Bitte Format MM.JJ (z. B. 09.26).</div>';
