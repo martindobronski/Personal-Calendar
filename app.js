@@ -1634,12 +1634,83 @@ document.getElementById("wkSave").onclick = function(){
 };
 /* WORK-END */
 
+/* ---- Fälligkeits-Erinnerungen ---- */
+var REMIND_GRACE_MIN = 30;
+var REMIND_ALLDAY_TIME = "08:00";
+var lastRemindCheck = null;
+var lastRemindPrune = 0;
+function remindMoment(dateStr, timeStr){
+  if(!dateStr) return null;
+  var d = parseISO(dateStr);
+  var p = (timeStr || REMIND_ALLDAY_TIME).split(":");
+  d.setHours(parseInt(p[0],10)||0, parseInt(p[1],10)||0, 0, 0);
+  return d;
+}
+function eventRemindMoment(e){
+  if(!e || !e.date) return null;
+  return remindMoment(e.date, e.allDay ? REMIND_ALLDAY_TIME : (e.start || REMIND_ALLDAY_TIME));
+}
+function taskRemindMoment(t){
+  if(!t || taskIsDone(t)) return null;
+  var d = taskDate(t); if(!d) return null;
+  return remindMoment(d, t.allDay ? REMIND_ALLDAY_TIME : (t.startTime || REMIND_ALLDAY_TIME));
+}
+function pruneReminded(now){
+  if(now.getTime() - lastRemindPrune < 6*3600000) return;
+  lastRemindPrune = now.getTime();
+  var c = new Date(now.getTime()); c.setDate(c.getDate()-3);
+  var cutoff = c.getFullYear()+"-"+pad(c.getMonth()+1)+"-"+pad(c.getDate());
+  Object.keys(S.reminded).forEach(function(k){ var d=(k.split("@")[1]||"").slice(0,10); if(d && d < cutoff) delete S.reminded[k]; });
+}
+function checkReminders(){
+  if(typeof S==="undefined" || !S) return;
+  if(!S.reminded) S.reminded = {};
+  var now = new Date();
+  pruneReminded(now);
+  var low = lastRemindCheck || new Date(now.getTime() - REMIND_GRACE_MIN*60000);
+  var due = [];
+  function consider(kind, id, title, moment, when){
+    if(!moment) return;
+    if(moment > low && moment <= now){
+      var key = id + "@" + iso(moment) + "T" + pad(moment.getHours()) + ":" + pad(moment.getMinutes());
+      if(!S.reminded[key]){
+        S.reminded[key] = 1;
+        due.push({kind:kind, title:title, moment:moment, when:when});
+      }
+    }
+  }
+  (S.events||[]).forEach(function(e){
+    if(!inProfile(e.cat)) return;
+    consider("Termin", "ev:"+e.id, e.title||"", eventRemindMoment(e), (e.allDay ? "ganztägig" : (e.start||"")));
+  });
+  (S.todos||[]).forEach(function(t){
+    if(!inProfile(t.cat)) return;
+    consider("Aufgabe", "td:"+t.id, t.title||"", taskRemindMoment(t), (t.allDay ? "ganztägig" : (t.startTime||"")));
+  });
+  lastRemindCheck = now;
+  if(due.length){ try{ save(); }catch(e){} showReminder(due); }
+}
+function showReminder(items){
+  var body = document.getElementById("remindBody");
+  if(!body) return;
+  body.innerHTML = items.map(function(it){
+    var ico = it.kind==="Termin" ? "📅" : "✅";
+    var when = it.when==="ganztägig" ? "ganztägig"
+      : pad(it.moment.getHours())+":"+pad(it.moment.getMinutes());
+    return '<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08)">'
+      + ico+' <b>'+esc(it.title)+'</b> <span class="muted">· '+it.kind+' · '+when+'</span></div>';
+  }).join("");
+  openModal("remindModal");
+}
+var __remindOk=document.getElementById("remindOk");
+if(__remindOk) __remindOk.onclick = function(){ var m=document.getElementById("remindModal"); if(m) m.classList.remove("open"); };
 function tick(){
   const now = new Date();
   document.getElementById("clockChip").innerHTML =
     "<b>"+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds())+"</b>&nbsp; "
     + DOW_FULL[now.getDay()].slice(0,2) + ". " + now.getDate() + ". " + MONTHS[now.getMonth()].slice(0,3);
   try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
+  try{ checkReminders(); }catch(e){}
 }
 setInterval(tick, 1000); tick();
 
