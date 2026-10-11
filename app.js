@@ -1583,7 +1583,7 @@ function renderWork(){
 var mEl=document.getElementById("workHistMonth");
 if(mEl && !mEl.dataset.init && !mEl.value){
   var t=today();
-  mEl.value = pad(t.getMonth()+1)+"."+String(t.getFullYear()).slice(2);
+  mEl.value = String(t.getFullYear())+"-"+pad(t.getMonth()+1);
   mEl.dataset.init="1";
 }
 var period=parseHistMonth((mEl&&mEl.value)||"");
@@ -1640,7 +1640,13 @@ function parseHistMonth(str){
   if(str==null) return "";
   var s=String(str).trim();
   if(!s) return "";
-  var m=s.match(/^(\d{1,2})[.\/\-](\d{2}|\d{4})$/);
+  var m=s.match(/^(\d{4})-(\d{1,2})$/);
+  if(m){
+    var mm2=parseInt(m[2],10);
+    if(mm2<1||mm2>12) return null;
+    return m[1]+"-"+pad(mm2);
+  }
+  m=s.match(/^(\d{1,2})[.\/\-](\d{2}|\d{4})$/);
   if(m){
     var mm=parseInt(m[1],10);
     if(mm<1||mm>12) return null;
