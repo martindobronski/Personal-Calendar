@@ -396,7 +396,7 @@ function renderDayView(){
   const evs=eventsOn(key);
   const banner=evs.filter(function(e){ return e.allDay || evEndKey(e)!==e.date; });
   const timed=evs.filter(function(e){ return !e.allDay && evEndKey(e)===e.date; });
-  const tks=tasksOn(key);
+  const tks=tasksOn(key,true);
   const tksBanner=tks.filter(function(t){ return taskIsAllDay(t) || taskRangeEnd(t)!==taskDate(t); });
   const tksTimed=tks.filter(function(t){ return !taskIsAllDay(t) && taskRangeEnd(t)===taskDate(t); });
 
@@ -532,9 +532,10 @@ function taskStartTime(t){ return (t && !t.allDay && (t.startTime || t.dueTime))
 function taskEndTime(t){ return (t && !t.allDay && t.endTime) ? t.endTime : ""; }
 function taskIsAllDay(t){ return !taskStartTime(t); }
 function taskRangeEnd(t){ var s=taskDate(t); return (t && t.endDate && t.endDate>s) ? t.endDate : s; }
-function tasksOn(key){
+function tasksOn(key, includeDone){
   return (Array.isArray(S.todos)?S.todos:[]).filter(function(t){
-    if(!inProfile(t.cat) || taskIsDone(t)) return false;
+    if(!inProfile(t.cat)) return false;
+    if(!includeDone && taskIsDone(t)) return false;
     if(t.repeat && t.repeat!=="none") return false;
     var s=taskDate(t); if(!s) return false;
     return key>=s && key<=taskRangeEnd(t);
