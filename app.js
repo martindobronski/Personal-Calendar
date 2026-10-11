@@ -695,6 +695,7 @@ function initDayDrag(){
     target.classList.add('dragging');
     if(resize) target.classList.add('resize-bottom');
     document.body.style.userSelect='none';
+    window.__dragging=true;
     e.preventDefault();
   };
   document.onmousemove = function(e){
@@ -718,24 +719,27 @@ function initDayDrag(){
     }
     e.preventDefault();
   };
-  document.onmouseup = function(){
+  document.onmouseup = function(e){
     if(!dragState) return;
-    var ev=S.events.find(function(x){ return x.id===dragState.id; });
+    var wasDrag=dragState;
+    var ev=S.events.find(function(x){ return x.id===wasDrag.id; });
     if(ev){
-      var s=Math.round(dragState.startMin/5)*5;
-      var en=Math.round(dragState.endMin/5)*5;
+      var s=Math.round(wasDrag.startMin/5)*5;
+      var en=Math.round(wasDrag.endMin/5)*5;
       if(en<=s) en=s+15;
       ev.start=dvHM(s%1440);
       ev.end=dvHM(en%1440);
       try{ save(); }catch(err){}
     }
-    if(dragState.el){
-      dragState.el.classList.remove('dragging');
-      dragState.el.classList.remove('resize-bottom');
-      dragState.el.style.top=''; dragState.el.style.height='';
+    if(wasDrag.el){
+      wasDrag.el.classList.remove('dragging');
+      wasDrag.el.classList.remove('resize-bottom');
+      wasDrag.el.style.top=''; wasDrag.el.style.height='';
     }
     document.body.style.userSelect='';
     dragState=null;
+    window.__dragging=false;
+    if(e) e.preventDefault();
   };
 }
 function refreshDayDrag(){ initDayDrag(); }
@@ -748,6 +752,7 @@ function refreshDayDrag(){ initDayDrag(); }
 if(document.getElementById("dayView")) initDayDrag();
 var __dv=document.getElementById("dayView"); if(__dv)__dv.addEventListener("click", e=>{
   if(dragState) return;
+  if(window.__dragging) return;
   const to=e.target.closest("[data-task-open]");
   if(to){ const tt=S.todos.find(x=>x.id===to.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
   const ev=e.target.closest("[data-ev]");
