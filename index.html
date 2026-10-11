@@ -336,7 +336,10 @@
     </div>
     <div class="card">
       <div class="card-title">Verlauf</div>
-      <div class="row" style="margin:-4px 0 6px;justify-content:flex-end"><button class="btn sm" id="btnAddWorkDay">+ Tag hinzufügen</button></div>
+      <div class="row" style="margin:-4px 0 6px;gap:8px">
+        <input type="search" id="workHistSearch" placeholder="Suchen: Datum (z. B. 20.10.2026) oder Urlaub, Freizeit …" style="flex:1;min-width:0">
+        <button class="btn sm" id="btnAddWorkDay">+ Tag hinzufügen</button>
+      </div>
       <div class="list" id="workHistory"></div>
     </div>
   </div>

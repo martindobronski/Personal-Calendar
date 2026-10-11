@@ -134,7 +134,7 @@ h2.sec{font-size:15px;text-transform:uppercase;letter-spacing:.12em;color:var(--
 .btn.icon{padding:8px 11px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 
-input[type=text],input[type=date],input[type=time],input[type=number],select,textarea{
+input[type=text],input[type=search],input[type=date],input[type=time],input[type=number],select,textarea{
   background:#121a2b;border:1px solid var(--line);border-radius:11px;
   padding:10px 12px;width:100%;outline:none;
 }

@@ -1542,10 +1542,12 @@ function renderWork(){
   var hist=document.getElementById("workHistory");
   if(hist){
     var keys=Object.keys(S.work).sort().reverse();
+    var qEl=document.getElementById("workHistSearch");
+    var q=((qEl&&qEl.value)||"").toString().trim().toLowerCase();
     if(!keys.length){
       hist.innerHTML='<div class="empty">Keine Einträge.</div>';
     }else{
-      hist.innerHTML=keys.map(function(k){
+      var items=keys.map(function(k){
         var c2=workCalcDay(k,new Date(k+"T23:59:59"));
         var saldo=(c2.saldoMin>0?"+":"")+minToHM(c2.saldoMin);
         var sub = c2.dayType
@@ -1553,15 +1555,26 @@ function renderWork(){
           : 'Anw. '+minToHM(c2.anwesMin)+' · Pause '+minToHM(c2.pauseMinBooked)
             +' · Arb. '+minToHM(c2.arbeitsMin)+' · Ind. '+minToDec(c2.arbeitsMin)
             +' · Saldo <b class="'+(c2.saldoMin<0?"neg":"pos")+'">'+saldo+'</b>';
-        return '<div class="item">'
-          +'<div><div class="it-title">'+esc(k.split("-").reverse().join("."))+'</div>'
-          +'<div class="it-sub">'+sub+'</div></div>'
-          +'<div class="it-actions">'
-          +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
-          +'<button type="button" class="btn sm act" data-wk-editday="'+esc(k)+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
-          +'<button type="button" class="btn sm act del" data-wk-delall="'+esc(k)+'" title="Löschen">'+ICON_TRASH+'</button></div>'
-          +'</div>';
-      }).join('');
+        var dmy=k.split("-").reverse().join(".");
+        var dmLabel=dayTypeLabel(c2.dayType)||"Arbeitstag";
+        var hay=(dmy+" "+k+" "+dmLabel+" "+sub).toLowerCase();
+        return {k:k,sub:sub,dmy:dmy,hay:hay};
+      });
+      if(q) items=items.filter(function(it){ return it.hay.indexOf(q)!==-1; });
+      if(!items.length){
+        hist.innerHTML='<div class="empty">Keine Treffer'+(q?' für „'+esc(q)+'“':'')+'.</div>';
+      }else{
+        hist.innerHTML=items.map(function(it){
+          return '<div class="item">'
+            +'<div><div class="it-title">'+esc(it.dmy)+'</div>'
+            +'<div class="it-sub">'+it.sub+'</div></div>'
+            +'<div class="it-actions">'
+            +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
+            +'<button type="button" class="btn sm act" data-wk-editday="'+esc(it.k)+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+            +'<button type="button" class="btn sm act del" data-wk-delall="'+esc(it.k)+'" title="Löschen">'+ICON_TRASH+'</button></div>'
+            +'</div>';
+        }).join('');
+      }
     }
   }
 }
@@ -2183,6 +2196,8 @@ function renderCalSide(){
   try{ updateBadges(); }catch(e){}
 }
 
+var __whs=document.getElementById("workHistSearch");
+if(__whs) __whs.oninput = function(){ try{ renderWork(); }catch(e){} };
 var __addWd=document.getElementById("btnAddWorkDay");
 if(__addWd) __addWd.onclick=function(){
   var tk=wkTodayKey();
