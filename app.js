@@ -1581,10 +1581,12 @@ function renderWork(){
   var hist=document.getElementById("workHistory");
   if(hist){
 var mEl=document.getElementById("workHistMonth");
-if(mEl && !mEl.dataset.init && !mEl.value){
-  var t=today();
-  mEl.value = String(t.getFullYear())+"-"+pad(t.getMonth()+1);
-  mEl.dataset.init="1";
+if(mEl){
+  if(!mEl.value){
+    var t=today();
+    mEl.value = String(t.getFullYear())+"-"+pad(t.getMonth()+1);
+  }
+  if(!mEl.dataset.init) mEl.dataset.init="1";
 }
 var period=parseHistMonth((mEl&&mEl.value)||"");
     var mInfo=document.getElementById("workHistMonthInfo");
@@ -2344,11 +2346,19 @@ var __whs=document.getElementById("workHistSearch");
 if(__whs) __whs.oninput = function(){ try{ renderWork(); }catch(e){} };
 var __whm=document.getElementById("workHistMonth");
 if(__whm){
-  if(!__whm.value){ var t=today(); __whm.value = pad(t.getMonth()+1)+"."+String(t.getFullYear()).slice(2); }
+  if(!__whm.value){ var t=today(); __whm.value = String(t.getFullYear())+"-"+pad(t.getMonth()+1); }
   __whm.oninput = function(){ try{ renderWork(); }catch(e){} };
 }
 var __whmAll=document.getElementById("btnHistMonthAll");
-if(__whmAll) __whmAll.onclick = function(){ var i=document.getElementById("workHistMonth"); if(i) i.value=""; try{ renderWork(); }catch(e){} };
+if(__whmAll) __whmAll.onclick = function(){
+  var i=document.getElementById("workHistMonth");
+  if(i){
+    var t=today();
+    i.value = String(t.getFullYear())+"-"+pad(t.getMonth()+1);
+    try{ i.dataset.init="1"; }catch(e){}
+  }
+  try{ renderWork(); }catch(e){}
+};
 var __addWd=document.getElementById("btnAddWorkDay");
 if(__addWd) __addWd.onclick=function(){
   var tk=wkTodayKey();
