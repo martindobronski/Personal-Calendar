@@ -1580,8 +1580,13 @@ function renderWork(){
   }
   var hist=document.getElementById("workHistory");
   if(hist){
-    var mEl=document.getElementById("workHistMonth");
-    var period=parseHistMonth((mEl&&mEl.value)||"");
+var mEl=document.getElementById("workHistMonth");
+if(mEl && !mEl.dataset.init && !mEl.value){
+  var t=today();
+  mEl.value = pad(t.getMonth()+1)+"."+String(t.getFullYear()).slice(2);
+  mEl.dataset.init="1";
+}
+var period=parseHistMonth((mEl&&mEl.value)||"");
     var mInfo=document.getElementById("workHistMonthInfo");
     if(mInfo){
       if(period===null) mInfo.textContent="Ungültig – bitte MM.JJ (z. B. 09.26)";
@@ -2332,7 +2337,10 @@ function renderCalSide(){
 var __whs=document.getElementById("workHistSearch");
 if(__whs) __whs.oninput = function(){ try{ renderWork(); }catch(e){} };
 var __whm=document.getElementById("workHistMonth");
-if(__whm) __whm.oninput = function(){ try{ renderWork(); }catch(e){} };
+if(__whm){
+  if(!__whm.value){ var t=today(); __whm.value = pad(t.getMonth()+1)+"."+String(t.getFullYear()).slice(2); }
+  __whm.oninput = function(){ try{ renderWork(); }catch(e){} };
+}
 var __whmAll=document.getElementById("btnHistMonthAll");
 if(__whmAll) __whmAll.onclick = function(){ var i=document.getElementById("workHistMonth"); if(i) i.value=""; try{ renderWork(); }catch(e){} };
 var __addWd=document.getElementById("btnAddWorkDay");
