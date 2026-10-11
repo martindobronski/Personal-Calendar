@@ -431,9 +431,11 @@ function renderDayView(){
     const style="top:"+top+"px;height:"+hgt+"px;left:calc("+left+"% + 4px);width:calc("+w+"% - 6px)";
     if(it.kind==="ev"){
       const c=cat(it.ev.cat);
-      grid+='<div class="dv-ev'+(it.ev.done?" done":"")+'" data-ev="'+it.ev.id+'" style="'+style+";background:"+c.color+'" title="'+esc(it.ev.title)+'">'
+      grid+='<div class="dv-ev dv-ev-term'+(it.ev.done?" done":"")+'" data-ev="'+it.ev.id+'" style="'+style+";background:"+c.color+'" title="'+esc(it.ev.title)+'">'
           + '<div class="dv-ev-t">'+esc(it.ev.start||"")+(it.ev.end?"–"+esc(it.ev.end):"")+"</div>"
-          + '<div class="dv-ev-n">'+esc(it.ev.title)+"</div></div>";
+          + '<div class="dv-ev-n">'+esc(it.ev.title)+"</div>"
+          + '<div class="dv-ev-resize" style="position:absolute;left:0;right:0;bottom:0;height:6px;cursor:ns-resize"></div>'
+          + '</div>';
     } else {
       const c=cat(it.task.cat);
       grid+='<div class="dv-ev dv-task'+(taskIsDone(it.task)?" done":"")+'" data-task-open="'+it.task.id+'" style="'+style+";--tc:"+c.color+'" title="'+esc(it.task.title)+'">'
@@ -462,6 +464,7 @@ function renderDayView(){
   renderLegend();
   try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
   try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
+  try{ if(typeof refreshDayDrag==="function") refreshDayDrag(); }catch(e){}
   const sc=document.querySelector("#dayView .dv-scroll");
   if(sc){
     if(sameDay(selDate,today())){
@@ -657,6 +660,92 @@ var __cms=document.getElementById("calModeSeg"); if(__cms)__cms.addEventListener
   const b=e.target.closest("[data-calmode]");
   if(b) setCalMode(b.dataset.calmode);
 });
+var dragState = null;
+function initDayDrag(){
+  var dv=document.getElementById("dayView");
+  if(!dv) return;
+  dv.onmousedown = function(e){
+    if(e.button!==0) return;
+    var target=e.target.closest('.dv-ev-term');
+    if(!target) return;
+    var resize=e.target.closest('.dv-ev-resize') || e.offsetY >= target.offsetHeight-6;
+    var id=target.getAttribute('data-ev');
+    var ev=S.events.find(function(x){ return x.id===id; });
+    if(!ev || ev.allDay) return;
+    var key=iso(selDate);
+    if(evEndKey(ev)!==key) return;
+    var sc=document.querySelector("#dayView .dv-scroll");
+    var rectGrid=(sc?sc.querySelector('.dv-grid'):dv.querySelector('.dv-grid')).getBoundingClientRect();
+    var PXH=48, PXM=PXH/60;
+    var startMin=ev.start?hmToMin(ev.start):9*60;
+    var endMin=ev.end?hmToMin(ev.end):startMin+60;
+    if(endMin<=startMin) endMin=startMin+60;
+    dragState={
+      id:id,
+      resize:!!resize,
+      el:target,
+      startY:e.clientY,
+      rectGrid:rectGrid,
+      sc:sc,
+      startMin:startMin,
+      endMin:endMin,
+      origStart:startMin,
+      origEnd:endMin
+    };
+    target.classList.add('dragging');
+    if(resize) target.classList.add('resize-bottom');
+    document.body.style.userSelect='none';
+    e.preventDefault();
+  };
+  document.onmousemove = function(e){
+    if(!dragState) return;
+    var dy=e.clientY-dragState.startY;
+    var PXM=48/60;
+    var dmin=Math.round(dy/PXM/5)*5;
+    if(dragState.resize){
+      var nm=Math.max(dragState.startMin+15, dragState.origEnd + dmin);
+      dragState.endMin=nm;
+      var h=(nm-dragState.startMin)*PXM;
+      dragState.el.style.height=Math.max(20,h)+'px';
+      dragState.el.querySelector('.dv-ev-t').textContent=dvHM(dragState.startMin)+(dragState.endMin!==dragState.startMin?'–'+dvHM(dragState.endMin%1440):'');
+    }else{
+      var ns=Math.max(0, Math.min(1440-15, dragState.origStart + dmin));
+      var ne=ns + (dragState.origEnd - dragState.origStart);
+      if(ne>1440) ne=1440;
+      dragState.startMin=ns; dragState.endMin=ne;
+      dragState.el.style.top=(ns*PXM)+'px';
+      dragState.el.querySelector('.dv-ev-t').textContent=dvHM(ns)+(dragState.endMin!==ns?'–'+dvHM(dragState.endMin%1440):'');
+    }
+    e.preventDefault();
+  };
+  document.onmouseup = function(){
+    if(!dragState) return;
+    var ev=S.events.find(function(x){ return x.id===dragState.id; });
+    if(ev){
+      var s=Math.round(dragState.startMin/5)*5;
+      var en=Math.round(dragState.endMin/5)*5;
+      if(en<=s) en=s+15;
+      ev.start=dvHM(s%1440);
+      ev.end=dvHM(en%1440);
+      try{ save(); }catch(err){}
+    }
+    if(dragState.el){
+      dragState.el.classList.remove('dragging');
+      dragState.el.classList.remove('resize-bottom');
+      dragState.el.style.top=''; dragState.el.style.height='';
+    }
+    document.body.style.userSelect='';
+    dragState=null;
+  };
+}
+function refreshDayDrag(){ initDayDrag(); }
+(function(){
+  var dv=document.getElementById("dayView");
+  if(dv && dv.addEventListener){
+    dv.addEventListener('mousedown', function(){}, true);
+  }
+})();
+if(document.getElementById("dayView")) initDayDrag();
 var __dv=document.getElementById("dayView"); if(__dv)__dv.addEventListener("click", e=>{
   const to=e.target.closest("[data-task-open]");
   if(to){ const tt=S.todos.find(x=>x.id===to.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
