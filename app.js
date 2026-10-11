@@ -1413,12 +1413,15 @@ function wkPad(n){return String(n).padStart(2,"0");}
 function wkIsoKey(d){return d.getFullYear()+"-"+wkPad(d.getMonth()+1)+"-"+wkPad(d.getDate());}
 function wkTodayKey(){return wkIsoKey(new Date());}
 function workArr(k){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};if(!S.work[k])S.work[k]=[];return S.work[k];}
-function workOpenInterval(k){var a=(S&&S.work&&S.work[k])||[];for(var i=a.length-1;i>=0;i--){if(a[i]&&!a[i].free&&a[i].s&&!a[i].e)return a[i];}return null;}
+function dayMarkerType(x){ if(!x) return ""; if(x.free===true || x.type==="free") return "free"; if(x.type==="vacation") return "vacation"; if(x.type==="sick") return "sick"; return ""; }
+function dayTypeLabel(t){ return t==="free" ? "Freizeittag" : t==="vacation" ? "Urlaubstag" : t==="sick" ? "Krankheitstag" : ""; }
+function workDayType(k){ var a=(S&&S.work&&S.work[k])||[]; return (a.length===1) ? dayMarkerType(a[0]) : ""; }
+function workOpenInterval(k){var a=(S&&S.work&&S.work[k])||[];for(var i=a.length-1;i>=0;i--){if(a[i]&&!dayMarkerType(a[i])&&a[i].s&&!a[i].e)return a[i];}return null;}
 function workRunningToday(){return !!workOpenInterval(wkTodayKey());}
 function hmToMin(hm){if(!hm)return 0;var p=hm.split(":");return parseInt(p[0])*60+parseInt(p[1]);}
 function minToHM(min){var s=min<0?"-":"";var m=Math.abs(min);var h=Math.floor(m/60),mm=m%60;return s+h+":"+String(mm).padStart(2,"0");}
 function minToDec(min){return (Math.round((min/60)*100)/100).toFixed(2);}
-function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var a=S.work[k]||[];if(a.length===1&&a[0]&&a[0].free)return {anwesMin:0,pauseMinBooked:0,arbeitsMin:0,sollMin:456,saldoMin:-456,free:true};var now=ref||new Date();var nk=wkTodayKey();var paidB=0;try{if(S.settings && S.settings.paidBreakfastMin) paidB=parseInt(S.settings.paidBreakfastMin)||0;}catch(e){}
+function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var a=S.work[k]||[];var __dt=workDayType(k);if(__dt){if(__dt==="free")return {anwesMin:0,pauseMinBooked:0,arbeitsMin:0,sollMin:456,saldoMin:-456,free:true,dayType:"free"};return {anwesMin:0,pauseMinBooked:0,arbeitsMin:0,sollMin:0,saldoMin:0,dayType:__dt};}var now=ref||new Date();var nk=wkTodayKey();var paidB=0;try{if(S.settings && S.settings.paidBreakfastMin) paidB=parseInt(S.settings.paidBreakfastMin)||0;}catch(e){}
   // build pairs
   var pairs=[];for(var i=0;i<a.length;i++){var it=a[i];if(!it||!it.s)continue;var sm=hmToMin(it.s),em;if(it.e)em=hmToMin(it.e);else em=(k===nk)?(now.getHours()*60+now.getMinutes()):(23*60+59);if(em>=sm)pairs.push({s:sm,e:em});}pairs.sort(function(x,y){return x.s-y.s});
   // Arbeitszeit netto = sum of intervals
@@ -1448,7 +1451,7 @@ function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.w
   return {anwesMin:anwesPres,pauseMinBooked:pauseAbzug,arbeitsMin:arbeitsZeit,sollMin:456,saldoMin:arbeitsZeit-456};}
 function fmtSecHMS(sec){var s=Math.max(0,Math.floor(sec||0));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return wkPad(h)+":"+wkPad(m)+":"+wkPad(ss);}
 function fmtHHMM(h,m){return wkPad(h)+":"+wkPad(m);}
-function workToggle(){var nk=wkTodayKey();var a=workArr(nk);var o=workOpenInterval(nk);var now=new Date();var ts=wkPad(now.getHours())+":"+wkPad(now.getMinutes());if(o){o.e=ts;}else{for(var i=a.length-1;i>=0;i--){if(a[i]&&a[i].free)a.splice(i,1);}a.push({s:ts,e:null});}try{save();renderWork();updateWorkLive();render();}catch(e){}}
+function workToggle(){var nk=wkTodayKey();var a=workArr(nk);var o=workOpenInterval(nk);var now=new Date();var ts=wkPad(now.getHours())+":"+wkPad(now.getMinutes());if(o){o.e=ts;}else{for(var i=a.length-1;i>=0;i--){if(a[i]&&dayMarkerType(a[i]))a.splice(i,1);}a.push({s:ts,e:null});}try{save();renderWork();updateWorkLive();render();}catch(e){}}
 function workSet(id,val){var el=document.getElementById(id); if(el) el.textContent=val;}
 function workRunningSec(){
   var c=workCalcDay(wkTodayKey()), o=workOpenInterval(wkTodayKey());
@@ -1513,10 +1516,11 @@ function renderWork(){
     }else{
       var rev=arr.map(function(it,idx){return {it:it,idx:idx};}).reverse();
       box.innerHTML=rev.map(function(x){
-        if(x.it.free){
+        var dm=dayMarkerType(x.it);
+        if(dm){
           return '<div class="item">'
-            +'<div><div class="it-title">Freizeittag</div>'
-            +'<div class="it-sub">−7:36 · Saldo</div></div>'
+            +'<div><div class="it-title">'+esc(dayTypeLabel(dm))+'</div>'
+            +'<div class="it-sub">'+(dm==="free"?"−7:36 · Saldo":"ausgeglichen · Saldo 0:00")+'</div></div>'
             +'<div class="it-actions">'
             +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
             +'<button type="button" class="btn sm act" data-wk-edit="'+x.idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
@@ -1544,8 +1548,8 @@ function renderWork(){
       hist.innerHTML=keys.map(function(k){
         var c2=workCalcDay(k,new Date(k+"T23:59:59"));
         var saldo=(c2.saldoMin>0?"+":"")+minToHM(c2.saldoMin);
-        var sub = c2.free
-          ? 'Freizeittag · Saldo <b class="neg">'+saldo+'</b>'
+        var sub = c2.dayType
+          ? esc(dayTypeLabel(c2.dayType))+' · '+(c2.dayType==="free"?'Saldo <b class="neg">'+saldo+'</b>':'ausgeglichen · Saldo 0:00')
           : 'Anw. '+minToHM(c2.anwesMin)+' · Pause '+minToHM(c2.pauseMinBooked)
             +' · Arb. '+minToHM(c2.arbeitsMin)+' · Ind. '+minToDec(c2.arbeitsMin)
             +' · Saldo <b class="'+(c2.saldoMin<0?"neg":"pos")+'">'+saldo+'</b>';
@@ -1586,20 +1590,27 @@ function renderWkRows(){
       +'</div>';
   }).join("");
 }
-function wkFreeChecked(){ var c=document.getElementById("wkFree"); return !!(c&&c.checked); }
-function updateWkFreeUI(){ var w=document.getElementById("wkTimeWrap"); if(w) w.style.display = wkFreeChecked() ? "none" : ""; }
+function wkDayTypeSelected(){
+  var r=document.querySelector('input[name="wkDayType"]:checked');
+  return r ? r.value : "normal";
+}
+function setWkDayType(t){
+  var r=document.querySelector('input[name="wkDayType"][value="'+(t||"normal")+'"]');
+  if(r) r.checked = true;
+}
+function updateWkFreeUI(){ var w=document.getElementById("wkTimeWrap"); if(w) w.style.display = (wkDayTypeSelected()!=="normal") ? "none" : ""; }
 function openWorkDay(k){
   wkEditKey = k;
   var arr0 = workArr(k)||[];
-  wkDraft = arr0.filter(function(x){ return !(x&&x.free); }).map(function(x){ return {s:x.s||"", e:x.e||""}; });
+  wkDraft = arr0.filter(function(x){ return !dayMarkerType(x); }).map(function(x){ return {s:x.s||"", e:x.e||""}; });
   if(!wkDraft.length) wkDraft=[{s:"",e:""}];
   renderWkRows();
-  document.getElementById("wkFree").checked = !!(arr0[0] && arr0[0].free);
+  setWkDayType(workDayType(k) || "normal");
   updateWkFreeUI();
   document.getElementById("wkModalTitle").textContent = "Arbeitstag "+k.split("-").reverse().join(".")+(k===wkTodayKey()?" (heute)":"");
   openModal("wkModal");
 }
-document.getElementById("wkFree").onchange = updateWkFreeUI;
+document.querySelectorAll('input[name="wkDayType"]').forEach(function(r){ r.onchange = updateWkFreeUI; });
 document.getElementById("wkAdd").onclick = function(){
   syncWkDraft();
   wkDraft.push({s:"",e:""});
@@ -1608,10 +1619,11 @@ document.getElementById("wkAdd").onclick = function(){
   if(rows.length) rows[rows.length-1].focus();
 };
 document.getElementById("wkSave").onclick = function(){
-  if(wkFreeChecked()){
-    var arr=workArr(wkEditKey); arr.length=0; arr.push({free:true});
+  var dtype=wkDayTypeSelected();
+  if(dtype!=="normal"){
+    var arr=workArr(wkEditKey); arr.length=0; arr.push({type:dtype});
     save(); closeModals(); renderWork(); render();
-    toast("Freizeittag gespeichert (−7:36).");
+    toast(dayTypeLabel(dtype)+" gespeichert"+(dtype==="free"?" (−7:36).":" (ausgeglichen)."));
     return;
   }
   syncWkDraft();

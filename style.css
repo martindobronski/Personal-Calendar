@@ -508,6 +508,9 @@ body.cal-day .cal-side .side-top{display:none}
 }
 .wk-rowdel:hover{border-color:#7f1d1d;color:#fca5a5;background:#2a1520}
 @media(max-width:520px){.wk-row{grid-template-columns:1fr 1fr}.wk-rowdel{grid-column:2;justify-self:end}}
+.wk-type{display:flex;flex-wrap:wrap;gap:9px 18px}
+.wk-type label{display:inline-flex;align-items:center;gap:7px;font-size:13px;cursor:pointer}
+.wk-type input[type="radio"]{width:auto;accent-color:var(--accent);cursor:pointer;flex:none}
 .segbtn{background:transparent;border:1px solid transparent;color:var(--muted);padding:6px 10px;border-radius:10px;font-size:12px;cursor:pointer}
 .segbtn.active{background:rgba(245,165,36,.18);border-color:rgba(245,165,36,.45);color:#f8fafc}
 .segbtn:focus{outline:2px solid rgba(245,165,36,.45);outline-offset:2px}

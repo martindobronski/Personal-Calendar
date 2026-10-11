@@ -493,7 +493,13 @@
   <div class="modal" role="dialog" aria-modal="true">
     <h3 id="wkModalTitle">Arbeitstag bearbeiten</h3>
     <div class="field">
-      <label class="fl"><input type="checkbox" id="wkFree" style="width:auto;margin-right:7px">Freizeittag</label>
+      <label class="fl">Tagestyp</label>
+      <div class="wk-type">
+        <label><input type="radio" name="wkDayType" value="normal" checked>Arbeitstag</label>
+        <label><input type="radio" name="wkDayType" value="free">Freizeittag</label>
+        <label><input type="radio" name="wkDayType" value="vacation">Urlaubstag</label>
+        <label><input type="radio" name="wkDayType" value="sick">Krankheitstag</label>
+      </div>
     </div>
     <div id="wkTimeWrap">
       <div class="list" id="wkRows"></div>
