@@ -436,7 +436,7 @@ function renderDayView(){
           + '<div class="dv-ev-n">'+esc(it.ev.title)+"</div></div>";
     } else {
       const c=cat(it.task.cat);
-      grid+='<div class="dv-ev dv-task" data-task-open="'+it.task.id+'" style="'+style+";--tc:"+c.color+'" title="'+esc(it.task.title)+'">'
+      grid+='<div class="dv-ev dv-task'+(taskIsDone(it.task)?" done":"")+'" data-task-open="'+it.task.id+'" style="'+style+";--tc:"+c.color+'" title="'+esc(it.task.title)+'">'
           + '<span class="mark">✓</span><span class="dv-ev-n">'+esc(it.task.title)+"</span></div>";
     }
   });
@@ -449,7 +449,7 @@ function renderDayView(){
   });
   const bannerTaskHtml = tksBanner.map(function(t){
     const c=cat(t.cat);
-    return '<div class="dv-ad dv-ad-task" data-task-open="'+t.id+'" style="background:'+c.color+'" title="'+esc(t.title)+'">'
+    return '<div class="dv-ad dv-ad-task'+(taskIsDone(t)?" done":"")+'" data-task-open="'+t.id+'" style="background:'+c.color+'" title="'+esc(t.title)+'">'
          + '<span class="mark">✓</span>'+esc(t.title)+"</div>";
   });
   const bannerAll = bannerEvHtml.concat(bannerTaskHtml);
@@ -548,7 +548,7 @@ function taskChipHTML(t){
   var c = cat(t.cat);
   var st = taskStartTime(t), en = taskEndTime(t);
   var tip = esc(t.title) + (st ? " · "+esc(st)+(en ? "–"+esc(en) : "") : " · ganztägig");
-  return '<div class="task-chip" data-task-open="'+t.id+'" style="--tc:'+c.color+'" title="'+tip+'">'
+  return '<div class="task-chip'+(taskIsDone(t)?" done":"")+'" data-task-open="'+t.id+'" style="--tc:'+c.color+'" title="'+tip+'">'
        + (st ? '<span class="t">'+esc(st)+'</span>' : '')
        + '<span class="mark" aria-hidden="true">✓</span>'
        + '<span>'+esc(t.title)+'</span></div>';

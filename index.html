@@ -335,16 +335,15 @@
       <div class="list" id="workTodayList"></div>
     </div>
     <div class="card">
-      <div class="card-title">Verlauf</div>
+      <div class="card-title">Verlauf <span id="workHistMonthInfo" class="muted" style="font-size:12px;font-weight:400;margin-left:8px"></span></div>
       <div class="row" style="margin:-4px 0 6px;gap:8px">
         <input type="search" id="workHistSearch" placeholder="Suchen: Datum (z. B. 20.10.2026) oder Urlaub, Freizeit …" style="flex:1;min-width:0">
         <button class="btn sm" id="btnAddWorkDay">+ Tag hinzufügen</button>
       </div>
-      <div class="row" style="margin:0 0 6px;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="row" style="margin:0 0 6px;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
         <label class="fl" for="workHistMonth" style="margin:0;white-space:nowrap">Zeitraum</label>
-        <input type="month" id="workHistMonth" title="Monat und Jahr auswählen" style="width:112px;flex:none">
+        <input type="month" id="workHistMonth" title="Monat und Jahr auswählen" style="width:130px;flex:none">
         <button type="button" class="btn sm ghost" id="btnHistMonthAll" title="Auf aktuellen Monat setzen">Aktueller Monat</button>
-        <span class="muted" id="workHistMonthInfo" style="font-size:12px"></span>
       </div>
       <div class="list" id="workHistory"></div>
     </div>
