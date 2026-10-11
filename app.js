@@ -1593,7 +1593,7 @@ var period=parseHistMonth((mEl&&mEl.value)||"");
     if(mInfo){
       if(period===null) mInfo.textContent="Ungültig – bitte MM.JJ (z. B. 09.26)";
       else if(period==="") mInfo.textContent="";
-      else mInfo.textContent=MONTHS[parseInt(period.slice(5,7),10)-1]+" "+period.slice(0,4);
+      else mInfo.textContent=MONTHS[parseInt(period.slice(5,7),10)-1]+" '"+period.slice(2,4);
     }
     if(period===null){
       hist.innerHTML='<div class="empty">Ungültiger Zeitraum. Bitte Format MM.JJ (z. B. 09.26).</div>';
@@ -1603,7 +1603,7 @@ var period=parseHistMonth((mEl&&mEl.value)||"");
     var qEl=document.getElementById("workHistSearch");
     var q=((qEl&&qEl.value)||"").toString().trim().toLowerCase();
     if(!keys.length){
-      hist.innerHTML='<div class="empty">'+(period?'Keine Einträge im '+MONTHS[parseInt(period.slice(5,7),10)-1]+' '+period.slice(0,4)+'.':'Keine Einträge.')+'</div>';
+      hist.innerHTML='<div class="empty">'+(period?'Keine Einträge im '+MONTHS[parseInt(period.slice(5,7),10)-1]+" '"+period.slice(2,4)+'.':'Keine Einträge.')+'</div>';
     }else{
       var items=keys.map(function(k){
         var c2=workCalcDay(k,new Date(k+"T23:59:59"));
