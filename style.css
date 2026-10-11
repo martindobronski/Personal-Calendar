@@ -134,13 +134,14 @@ h2.sec{font-size:15px;text-transform:uppercase;letter-spacing:.12em;color:var(--
 .btn.icon{padding:8px 11px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 
-input[type=text],input[type=search],input[type=date],input[type=time],input[type=number],select,textarea{
+input[type=text],input[type=search],input[type=datetime-local],input[type=date],input[type=time],input[type=number],select,textarea{
   background:#121a2b;border:1px solid var(--line);border-radius:11px;
   padding:10px 12px;width:100%;outline:none;
 }
 input:focus,select:focus,textarea:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(56,189,248,.15)}
 input[type=date]::-webkit-calendar-picker-indicator,
-input[type=time]::-webkit-calendar-picker-indicator{
+input[type=time]::-webkit-calendar-picker-indicator,
+input[type=datetime-local]::-webkit-calendar-picker-indicator{
   filter: invert(0.8) sepia(0.2) saturate(1) hue-rotate(180deg) brightness(1.2);
   cursor:pointer;
 }
@@ -534,4 +535,19 @@ body.cal-day .cal-side .side-top{display:none}
   font-size:13px;font-weight:700;padding:7px 14px;border-radius:9px;cursor:pointer;transition:.12s;
 }
 #undoToast .undo-btn:hover{background:rgba(245,165,36,.3)}
+
+/* ---------- Erledigt-Zustand ---------- */
+.ev.done,.dv-ev.done,.dv-ad.done,.ag-item.done{opacity:.55}
+.ev.done>span:last-child,.ag-item.done .ttl,.dv-ev.done .dv-ev-n,.dv-ad.done{text-decoration:line-through}
+
+/* ---------- Erinnerungs-Dialog ---------- */
+.rm-item{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.rm-item:last-child{border-bottom:0}
+.rm-item.done{opacity:.55}
+.rm-item.done .rm-chk>span{text-decoration:line-through}
+.rm-chk{display:flex;align-items:flex-start;gap:9px;cursor:pointer;font-size:14px;line-height:1.35}
+.rm-chk input[type=checkbox]{width:auto;flex:none;margin-top:3px;accent-color:var(--accent)}
+.rm-when{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 0 26px}
+.rm-when .rm-lbl{font-size:12px;color:var(--muted);font-weight:600}
+.rm-when input[type=datetime-local]{width:auto;flex:1;min-width:180px}
 

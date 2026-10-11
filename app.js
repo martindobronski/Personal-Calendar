@@ -431,7 +431,7 @@ function renderDayView(){
     const style="top:"+top+"px;height:"+hgt+"px;left:calc("+left+"% + 4px);width:calc("+w+"% - 6px)";
     if(it.kind==="ev"){
       const c=cat(it.ev.cat);
-      grid+='<div class="dv-ev" data-ev="'+it.ev.id+'" style="'+style+";background:"+c.color+'" title="'+esc(it.ev.title)+'">'
+      grid+='<div class="dv-ev'+(it.ev.done?" done":"")+'" data-ev="'+it.ev.id+'" style="'+style+";background:"+c.color+'" title="'+esc(it.ev.title)+'">'
           + '<div class="dv-ev-t">'+esc(it.ev.start||"")+(it.ev.end?"–"+esc(it.ev.end):"")+"</div>"
           + '<div class="dv-ev-n">'+esc(it.ev.title)+"</div></div>";
     } else {
@@ -444,7 +444,7 @@ function renderDayView(){
 
   const bannerEvHtml = banner.map(function(e){
     const c=cat(e.cat);
-    return '<div class="dv-ad" data-ev="'+e.id+'" style="background:'+c.color+'" title="'+esc(e.title)+'">'
+    return '<div class="dv-ad'+(e.done?" done":"")+'" data-ev="'+e.id+'" style="background:'+c.color+'" title="'+esc(e.title)+'">'
          + (evDays(e)>1?"⇥ ":"")+esc(e.title)+"</div>";
   });
   const bannerTaskHtml = tksBanner.map(function(t){
@@ -504,7 +504,7 @@ function copyEventTo(key){
     return;
   }
   const span = evDays(src);
-  S.events.push(Object.assign({}, src, {id:uid(), date:key,
+  S.events.push(Object.assign({}, src, {id:uid(), done:false, date:key,
     endDate: span>1 ? iso(addDays(parseISO(key), span-1)) : ""}));
   save(); renderCalendar();
   toast("Kopiert nach "+key.split("-").reverse().join("."));
@@ -523,7 +523,7 @@ function chipHTML(ev){
   const n = evDays(ev);
   const marker = n>1 ? "<span>⇥</span>" : "";
   const tip = esc(ev.title) + (n>1 ? " ("+evSpanLabel(ev)+")" : "");
-  return '<div class="ev'+(ev.id===copyEvId?" copysrc":"")+'" data-ev="'+ev.id+'" style="background:'+c.color+'" title="'+tip+'">'
+  return '<div class="ev'+(ev.id===copyEvId?" copysrc":"")+(ev.done?" done":"")+'" data-ev="'+ev.id+'" style="background:'+c.color+'" title="'+tip+'">'
        + '<button class="ev-copy" data-copy="'+ev.id+'" title="Termin kopieren">⧉</button>'
        + t + marker + "<span>" + esc(ev.title) + "</span></div>";
 }
@@ -581,7 +581,7 @@ function renderAgenda(){
   }
   const evHtml = evs.map(ev=>{
     const c = cat(ev.cat);
-    return '<div class="ag-item" style="--c:'+c.color+'">'
+    return '<div class="ag-item'+(ev.done?" done":"")+'" style="--c:'+c.color+'">'
       + '<div class="when">'+(ev.allDay?"ganztägig":esc((ev.start||"—")+"–"+(ev.end||"")))+"</div>"
       + "<div><div class=\"ttl\">"+esc(ev.title)+"</div>"
       + '<div class="sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+"</span>"
@@ -719,6 +719,8 @@ function openEvent(id, date, start){
     : (start ? dvHM(Math.min(hmToMin(start)+60, 1439)) : "10:00");
   document.getElementById("evNote").value = e ? (e.note||"") : "";
   document.getElementById("evDelete").style.display = e ? "" : "none";
+  document.getElementById("evDoneField").style.display = e ? "" : "none";
+  document.getElementById("evDone").checked = e ? !!e.done : false;
   toggleTimeFields();
   updateSpan();
   openModal("evModal");
@@ -772,7 +774,8 @@ document.getElementById("evSave").onclick = ()=>{
     allDay,
     start: allDay ? "" : document.getElementById("evStart").value,
     end: allDay ? "" : document.getElementById("evEnd").value,
-    note: document.getElementById("evNote").value.trim()
+    note: document.getElementById("evNote").value.trim(),
+    done: document.getElementById("evDone").checked
   };
   if(editingEvent) Object.assign(editingEvent, data);
   else S.events.push(Object.assign({id:uid()}, data));
@@ -1672,7 +1675,7 @@ function remindMoment(dateStr, timeStr){
   return d;
 }
 function eventRemindMoment(e){
-  if(!e || !e.date) return null;
+  if(!e || !e.date || e.done) return null;
   return remindMoment(e.date, e.allDay ? REMIND_ALLDAY_TIME : (e.start || REMIND_ALLDAY_TIME));
 }
 function taskRemindMoment(t){
@@ -1700,7 +1703,7 @@ function checkReminders(){
       var key = id + "@" + iso(moment) + "T" + pad(moment.getHours()) + ":" + pad(moment.getMinutes());
       if(!S.reminded[key]){
         S.reminded[key] = 1;
-        due.push({kind:kind, title:title, moment:moment, when:when});
+        due.push({kind:kind, uid:id, title:title, moment:moment, when:when});
       }
     }
   }
@@ -1715,6 +1718,13 @@ function checkReminders(){
   lastRemindCheck = now;
   if(due.length){ try{ save(); }catch(e){} showReminder(due); }
 }
+function toggleEventDone(id, done){
+  var e = S.events.find(function(x){ return x.id===id; });
+  if(!e) return;
+  if(done) e.done = true; else delete e.done;
+  try{ save(); }catch(err){}
+  try{ render(); }catch(err){}
+}
 function showReminder(items){
   var body = document.getElementById("remindBody");
   if(!body) return;
@@ -1722,10 +1732,65 @@ function showReminder(items){
     var ico = it.kind==="Termin" ? "📅" : "✅";
     var when = it.when==="ganztägig" ? "ganztägig"
       : pad(it.moment.getHours())+":"+pad(it.moment.getMinutes());
-    return '<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08)">'
-      + ico+' <b>'+esc(it.title)+'</b> <span class="muted">· '+it.kind+' · '+when+'</span></div>';
+    var head = '<label class="rm-chk"><input type="checkbox" data-rem-done="'+esc(it.uid)+'">'
+      + '<span>'+ico+' <b>'+esc(it.title)+'</b> <span class="muted">· '+it.kind+' · '+when+'</span></span></label>';
+    var extra = "";
+    var ev = it.kind==="Termin" ? S.events.find(function(x){ return "ev:"+x.id===it.uid; }) : null;
+    if(ev){
+      var dt = ev.date+"T"+(ev.allDay?REMIND_ALLDAY_TIME:(ev.start||REMIND_ALLDAY_TIME));
+      extra = '<div class="rm-when"><span class="rm-lbl">Neue Startzeit</span>'
+        + '<input type="datetime-local" data-rem-dt="'+esc(it.uid)+'" value="'+esc(dt)+'">'
+        + '<button type="button" class="btn sm" data-rem-move="'+esc(it.uid)+'">Verschieben</button>'
+        + '<button type="button" class="btn sm ghost" data-rem-today="'+esc(it.uid)+'">+1 Std</button></div>';
+    }
+    return '<div class="rm-item">'+head+extra+'</div>';
   }).join("");
   openModal("remindModal");
+}
+function localDT(d){
+  return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
+}
+var __remindBody=document.getElementById("remindBody");
+if(__remindBody){
+  __remindBody.addEventListener("change", function(ev){
+    var c=ev.target.closest && ev.target.closest("[data-rem-done]");
+    if(!c) return;
+    var uid=c.getAttribute("data-rem-done"), on=!!c.checked;
+    if(uid.indexOf("ev:")===0) toggleEventDone(uid.slice(3), on);
+    else if(uid.indexOf("td:")===0){ var t=S.todos.find(function(x){ return x.id===uid.slice(3); }); if(t){ setTaskDone(t, on); try{save();}catch(err){} try{render();}catch(err){} } }
+    var item=c.closest(".rm-item"); if(item) item.classList.toggle("done", on);
+  });
+  __remindBody.addEventListener("click", function(ev){
+    var td=ev.target.closest && ev.target.closest("[data-rem-today]");
+    if(td){
+      var inp=__remindBody.querySelector('[data-rem-dt="'+td.getAttribute("data-rem-today")+'"]');
+      if(inp) inp.value = localDT(new Date(Date.now()+3600000));
+      return;
+    }
+    var mv=ev.target.closest && ev.target.closest("[data-rem-move]");
+    if(!mv) return;
+    var uid=mv.getAttribute("data-rem-move");
+    var dtEl=__remindBody.querySelector('[data-rem-dt="'+uid+'"]');
+    var e=S.events.find(function(x){ return "ev:"+x.id===uid; });
+    if(!e || !dtEl || !dtEl.value) return;
+    var m=dtEl.value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if(!m){ toast("Bitte eine gültige Startzeit wählen."); return; }
+    var nd=new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], 0, 0);
+    if(nd.getTime() <= Date.now()){ toast("Bitte eine Zeit in der Zukunft wählen."); return; }
+    var newDate=m[1]+"-"+m[2]+"-"+m[3], newTime=m[4]+":"+m[5];
+    if(e.endDate){
+      var delta=Math.round((parseISO(newDate)-parseISO(e.date))/86400000);
+      e.endDate=iso(addDays(parseISO(e.endDate), delta));
+    }
+    e.date=newDate;
+    if(!e.allDay) e.start=newTime;
+    Object.keys(S.reminded).forEach(function(k){ if(k.indexOf("ev:"+e.id+"@")===0) delete S.reminded[k]; });
+    try{ save(); }catch(err){}
+    try{ render(); }catch(err){}
+    var item=mv.closest(".rm-item"); if(item) item.classList.add("done");
+    toast(e.allDay ? "Termin auf "+newDate.split("-").reverse().join(".")+" verschoben."
+                   : "Termin auf "+newTime+" verschoben.");
+  });
 }
 var __remindOk=document.getElementById("remindOk");
 if(__remindOk) __remindOk.onclick = function(){ var m=document.getElementById("remindModal"); if(m) m.classList.remove("open"); };
