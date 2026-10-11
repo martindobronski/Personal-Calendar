@@ -464,6 +464,7 @@ function renderDayView(){
   renderLegend();
   try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
   try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
+  try{ if(typeof refreshDayDrag==="function") refreshDayDrag(); }catch(e){}
   const sc=document.querySelector("#dayView .dv-scroll");
   if(sc){
     if(sameDay(selDate,today())){
@@ -659,20 +660,27 @@ var __cms=document.getElementById("calModeSeg"); if(__cms)__cms.addEventListener
   const b=e.target.closest("[data-calmode]");
   if(b) setCalMode(b.dataset.calmode);
 });
-var __dv=document.getElementById("dayView"); if(__dv)__dv.addEventListener("click", e=>{
-  const to=e.target.closest("[data-task-open]");
-  if(to){ const tt=S.todos.find(x=>x.id===to.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
-  const ev=e.target.closest("[data-ev]");
-  if(ev){ openEvent(ev.dataset.ev); return; }
-  const grid=e.target.closest(".dv-grid");
-  if(grid){
-    const rect=grid.getBoundingClientRect();
-    let min=Math.round(((e.clientY-rect.top)/48*60)/30)*30;
-    if(isNaN(min)) return;
-    min=Math.max(0,Math.min(min,1440-30));
-    openEvent(null, grid.dataset.date, dvHM(min));
-  }
-});
+var __dv=document.getElementById("dayView"); if(__dv){
+  __dv.addEventListener("dblclick", function(e){
+    const tev=e.target.closest("[data-ev]");
+    if(tev){ openEvent(tev.dataset.ev); return; }
+  }, true);
+  __dv.addEventListener("click", function(e){
+    if(window.__dvDrag) return;
+    const tto=e.target.closest("[data-task-open]");
+    if(tto){ return; }
+    const tev=e.target.closest("[data-ev]");
+    if(tev){ return; }
+    const grid=e.target.closest(".dv-grid");
+    if(grid){
+      const rect=grid.getBoundingClientRect();
+      let min=Math.round(((e.clientY-rect.top)/48*60)/30)*30;
+      if(isNaN(min)) return;
+      min=Math.max(0,Math.min(min,1440-30));
+      openEvent(null, grid.dataset.date, dvHM(min));
+    }
+  }, true);
+}
 document.getElementById("btnPrev").onclick = ()=>{
   if(calMode==="day"){ selDate=addDays(selDate,-1); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
   else { calMonth.setMonth(calMonth.getMonth()-1); }
