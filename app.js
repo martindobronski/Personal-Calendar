@@ -1580,11 +1580,23 @@ function renderWork(){
   }
   var hist=document.getElementById("workHistory");
   if(hist){
+    var mEl=document.getElementById("workHistMonth");
+    var period=parseHistMonth((mEl&&mEl.value)||"");
+    var mInfo=document.getElementById("workHistMonthInfo");
+    if(mInfo){
+      if(period===null) mInfo.textContent="Ungültig – bitte MM.JJ (z. B. 09.26)";
+      else if(period==="") mInfo.textContent="";
+      else mInfo.textContent=MONTHS[parseInt(period.slice(5,7),10)-1]+" "+period.slice(0,4);
+    }
+    if(period===null){
+      hist.innerHTML='<div class="empty">Ungültiger Zeitraum. Bitte Format MM.JJ (z. B. 09.26).</div>';
+    }else{
     var keys=Object.keys(S.work).sort().reverse();
+    if(period) keys=keys.filter(function(k){ return k.slice(0,7)===period; });
     var qEl=document.getElementById("workHistSearch");
     var q=((qEl&&qEl.value)||"").toString().trim().toLowerCase();
     if(!keys.length){
-      hist.innerHTML='<div class="empty">Keine Einträge.</div>';
+      hist.innerHTML='<div class="empty">'+(period?'Keine Einträge im '+MONTHS[parseInt(period.slice(5,7),10)-1]+' '+period.slice(0,4)+'.':'Keine Einträge.')+'</div>';
     }else{
       var items=keys.map(function(k){
         var c2=workCalcDay(k,new Date(k+"T23:59:59"));
@@ -1615,9 +1627,29 @@ function renderWork(){
         }).join('');
       }
     }
+    }
   }
 }
 /* ---- Arbeitstag bearbeiten (Komm/Geht) ---- */
+function parseHistMonth(str){
+  if(str==null) return "";
+  var s=String(str).trim();
+  if(!s) return "";
+  var m=s.match(/^(\d{1,2})[.\/\-](\d{2}|\d{4})$/);
+  if(m){
+    var mm=parseInt(m[1],10);
+    if(mm<1||mm>12) return null;
+    var yy=m[2].length===2 ? "20"+m[2] : m[2];
+    return yy+"-"+pad(mm);
+  }
+  m=s.match(/^(\d{4})[.\/\-](\d{1,2})$/);
+  if(m){
+    var mm2=parseInt(m[2],10);
+    if(mm2<1||mm2>12) return null;
+    return m[1]+"-"+pad(mm2);
+  }
+  return null;
+}
 let wkEditKey = null;
 let wkDraft = [];
 function syncWkDraft(){
@@ -2299,6 +2331,10 @@ function renderCalSide(){
 
 var __whs=document.getElementById("workHistSearch");
 if(__whs) __whs.oninput = function(){ try{ renderWork(); }catch(e){} };
+var __whm=document.getElementById("workHistMonth");
+if(__whm) __whm.oninput = function(){ try{ renderWork(); }catch(e){} };
+var __whmAll=document.getElementById("btnHistMonthAll");
+if(__whmAll) __whmAll.onclick = function(){ var i=document.getElementById("workHistMonth"); if(i) i.value=""; try{ renderWork(); }catch(e){} };
 var __addWd=document.getElementById("btnAddWorkDay");
 if(__addWd) __addWd.onclick=function(){
   var tk=wkTodayKey();

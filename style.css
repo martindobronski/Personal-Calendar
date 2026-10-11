@@ -538,7 +538,7 @@ body.cal-day .cal-side .side-top{display:none}
 
 /* ---------- Erledigt-Zustand ---------- */
 .ev.done,.dv-ev.done,.dv-ad.done,.ag-item.done{opacity:.55}
-.ev.done>span:last-child,.ag-item.done .ttl,.dv-ev.done .dv-ev-n,.dv-ad.done{text-decoration:line-through}
+.ev.done>span:last-child,.ag-item.done .ttl,.dv-ev.done,.dv-ev.done .dv-ev-t,.dv-ev.done .dv-ev-n,.dv-ad.done{text-decoration:line-through}
 
 /* ---------- Erinnerungs-Dialog ---------- */
 .rm-item{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08)}
