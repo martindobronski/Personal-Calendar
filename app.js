@@ -751,13 +751,18 @@ function refreshDayDrag(){ initDayDrag(); }
   }
 })();
 if(document.getElementById("dayView")) initDayDrag();
-var __dv=document.getElementById("dayView"); if(__dv)__dv.addEventListener("click", function(e){
+var __dv=document.getElementById("dayView"); if(__dv){
+  __dv.addEventListener("dblclick", function(e){
+    const ev=e.target.closest("[data-ev]");
+    if(ev){ openEvent(ev.dataset.ev); return; }
+  }, true);
+  __dv.addEventListener("click", function(e){
   if(window.__dragging) return;
   if(dragState) return;
   const to=e.target.closest("[data-task-open]");
   if(to){ const tt=S.todos.find(x=>x.id===to.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
   const ev=e.target.closest("[data-ev]");
-  if(ev){ openEvent(ev.dataset.ev); return; }
+  if(ev){ return; }
   const grid=e.target.closest(".dv-grid");
   if(grid){
     const rect=grid.getBoundingClientRect();
@@ -766,7 +771,8 @@ var __dv=document.getElementById("dayView"); if(__dv)__dv.addEventListener("clic
     min=Math.max(0,Math.min(min,1440-30));
     openEvent(null, grid.dataset.date, dvHM(min));
   }
-}, true);
+  }, true);
+}
 document.getElementById("btnPrev").onclick = ()=>{
   if(calMode==="day"){ selDate=addDays(selDate,-1); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
   else { calMonth.setMonth(calMonth.getMonth()-1); }
