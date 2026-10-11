@@ -431,11 +431,9 @@ function renderDayView(){
     const style="top:"+top+"px;height:"+hgt+"px;left:calc("+left+"% + 4px);width:calc("+w+"% - 6px)";
     if(it.kind==="ev"){
       const c=cat(it.ev.cat);
-      grid+='<div class="dv-ev dv-ev-term'+(it.ev.done?" done":"")+'" data-ev="'+it.ev.id+'" style="'+style+";background:"+c.color+'" title="'+esc(it.ev.title)+'">'
+      grid+='<div class="dv-ev'+(it.ev.done?" done":"")+'" data-ev="'+it.ev.id+'" style="'+style+";background:"+c.color+'" title="'+esc(it.ev.title)+'">'
           + '<div class="dv-ev-t">'+esc(it.ev.start||"")+(it.ev.end?"–"+esc(it.ev.end):"")+"</div>"
-          + '<div class="dv-ev-n">'+esc(it.ev.title)+"</div>"
-          + '<div class="dv-ev-resize" style="position:absolute;left:0;right:0;bottom:0;height:6px;cursor:ns-resize"></div>'
-          + '</div>';
+          + '<div class="dv-ev-n">'+esc(it.ev.title)+"</div></div>";
     } else {
       const c=cat(it.task.cat);
       grid+='<div class="dv-ev dv-task'+(taskIsDone(it.task)?" done":"")+'" data-task-open="'+it.task.id+'" style="'+style+";--tc:"+c.color+'" title="'+esc(it.task.title)+'">'
@@ -464,7 +462,6 @@ function renderDayView(){
   renderLegend();
   try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
   try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
-  try{ if(typeof refreshDayDrag==="function") refreshDayDrag(); }catch(e){}
   const sc=document.querySelector("#dayView .dv-scroll");
   if(sc){
     if(sameDay(selDate,today())){
@@ -660,109 +657,11 @@ var __cms=document.getElementById("calModeSeg"); if(__cms)__cms.addEventListener
   const b=e.target.closest("[data-calmode]");
   if(b) setCalMode(b.dataset.calmode);
 });
-var dragState = null;
-function initDayDrag(){
-  var dv=document.getElementById("dayView");
-  if(!dv) return;
-  dv.onmousedown = function(e){
-    if(e.button!==0) return;
-    var target=e.target.closest('.dv-ev-term');
-    if(!target) return;
-    var resize=e.target.closest('.dv-ev-resize') || e.offsetY >= target.offsetHeight-6;
-    var id=target.getAttribute('data-ev');
-    var ev=S.events.find(function(x){ return x.id===id; });
-    if(!ev || ev.allDay) return;
-    var key=iso(selDate);
-    if(evEndKey(ev)!==key) return;
-    var sc=document.querySelector("#dayView .dv-scroll");
-    var rectGrid=(sc?sc.querySelector('.dv-grid'):dv.querySelector('.dv-grid')).getBoundingClientRect();
-    var PXH=48, PXM=PXH/60;
-    var startMin=ev.start?hmToMin(ev.start):9*60;
-    var endMin=ev.end?hmToMin(ev.end):startMin+60;
-    if(endMin<=startMin) endMin=startMin+60;
-    dragState={
-      id:id,
-      resize:!!resize,
-      el:target,
-      startY:e.clientY,
-      rectGrid:rectGrid,
-      sc:sc,
-      startMin:startMin,
-      endMin:endMin,
-      origStart:startMin,
-      origEnd:endMin
-    };
-    target.classList.add('dragging');
-    if(resize) target.classList.add('resize-bottom');
-    document.body.style.userSelect='none';
-    window.__dragging=true;
-    e.preventDefault();
-  };
-  document.onmousemove = function(e){
-    if(!dragState) return;
-    window.__dragging=true;
-    var dy=e.clientY-dragState.startY;
-    var PXM=48/60;
-    var dmin=Math.round(dy/PXM/5)*5;
-    if(dragState.resize){
-      var nm=Math.max(dragState.startMin+15, dragState.origEnd + dmin);
-      dragState.endMin=nm;
-      var h=(nm-dragState.startMin)*PXM;
-      dragState.el.style.height=Math.max(20,h)+'px';
-      dragState.el.querySelector('.dv-ev-t').textContent=dvHM(dragState.startMin)+(dragState.endMin!==dragState.startMin?'–'+dvHM(dragState.endMin%1440):'');
-    }else{
-      var ns=Math.max(0, Math.min(1440-15, dragState.origStart + dmin));
-      var ne=ns + (dragState.origEnd - dragState.origStart);
-      if(ne>1440) ne=1440;
-      dragState.startMin=ns; dragState.endMin=ne;
-      dragState.el.style.top=(ns*PXM)+'px';
-      dragState.el.querySelector('.dv-ev-t').textContent=dvHM(ns)+(dragState.endMin!==ns?'–'+dvHM(dragState.endMin%1440):'');
-    }
-    e.preventDefault();
-  };
-  document.onmouseup = function(e){
-    if(!dragState) return;
-    var wasDrag=dragState;
-    var ev=S.events.find(function(x){ return x.id===wasDrag.id; });
-    if(ev){
-      var s=Math.round(wasDrag.startMin/5)*5;
-      var en=Math.round(wasDrag.endMin/5)*5;
-      if(en<=s) en=s+15;
-      ev.start=dvHM(s%1440);
-      ev.end=dvHM(en%1440);
-      try{ save(); }catch(err){}
-    }
-    if(wasDrag.el){
-      wasDrag.el.classList.remove('dragging');
-      wasDrag.el.classList.remove('resize-bottom');
-      wasDrag.el.style.top=''; wasDrag.el.style.height='';
-    }
-    document.body.style.userSelect='';
-    dragState=null;
-    window.__dragging=false;
-    if(e){ e.preventDefault(); e.stopPropagation(); }
-  };
-}
-function refreshDayDrag(){ initDayDrag(); }
-(function(){
-  var dv=document.getElementById("dayView");
-  if(dv && dv.addEventListener){
-    dv.addEventListener('mousedown', function(){}, true);
-  }
-})();
-if(document.getElementById("dayView")) initDayDrag();
-var __dv=document.getElementById("dayView"); if(__dv){
-  __dv.addEventListener("dblclick", function(e){
-    const ev=e.target.closest("[data-ev]");
-    if(ev){ openEvent(ev.dataset.ev); return; }
-  }, true);
-  __dv.addEventListener("click", function(e){
-  if(window.__dragging) return;
-  if(dragState) return;
+var __dv=document.getElementById("dayView"); if(__dv)__dv.addEventListener("click", e=>{
   const to=e.target.closest("[data-task-open]");
   if(to){ const tt=S.todos.find(x=>x.id===to.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
   const ev=e.target.closest("[data-ev]");
-  if(ev){ return; }
+  if(ev){ openEvent(ev.dataset.ev); return; }
   const grid=e.target.closest(".dv-grid");
   if(grid){
     const rect=grid.getBoundingClientRect();
@@ -771,8 +670,7 @@ var __dv=document.getElementById("dayView"); if(__dv){
     min=Math.max(0,Math.min(min,1440-30));
     openEvent(null, grid.dataset.date, dvHM(min));
   }
-  }, true);
-}
+});
 document.getElementById("btnPrev").onclick = ()=>{
   if(calMode==="day"){ selDate=addDays(selDate,-1); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
   else { calMonth.setMonth(calMonth.getMonth()-1); }
@@ -1696,7 +1594,7 @@ var period=parseHistMonth((mEl&&mEl.value)||"");
     if(mInfo){
       if(period===null) mInfo.textContent="Ungültig – bitte MM.JJ (z. B. 09.26)";
       else if(period==="") mInfo.textContent="";
-      else mInfo.textContent=MONTHS[parseInt(period.slice(5,7),10)-1]+" "+period.slice(0,4);
+      else mInfo.textContent=MONTHS[parseInt(period.slice(5,7),10)-1]+" '"+period.slice(2,4);
     }
     if(period===null){
       hist.innerHTML='<div class="empty">Ungültiger Zeitraum. Bitte Format MM.JJ (z. B. 09.26).</div>';
@@ -1706,7 +1604,7 @@ var period=parseHistMonth((mEl&&mEl.value)||"");
     var qEl=document.getElementById("workHistSearch");
     var q=((qEl&&qEl.value)||"").toString().trim().toLowerCase();
     if(!keys.length){
-      hist.innerHTML='<div class="empty">'+(period?'Keine Einträge im '+MONTHS[parseInt(period.slice(5,7),10)-1]+" "+period.slice(0,4)+'.':'Keine Einträge.')+'</div>';
+      hist.innerHTML='<div class="empty">'+(period?'Keine Einträge im '+MONTHS[parseInt(period.slice(5,7),10)-1]+" '"+period.slice(2,4)+'.':'Keine Einträge.')+'</div>';
     }else{
       var items=keys.map(function(k){
         var c2=workCalcDay(k,new Date(k+"T23:59:59"));
