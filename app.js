@@ -889,6 +889,8 @@ function openTodo(id, mode){
   fillCatSelect(document.getElementById("tdCat"), e ? e.cat : (activeProfile || (S.categories[0]||{}).id));
   document.getElementById("tdRepeat").value = e ? (e.repeat || e.freq || "none") : (isR ? "daily" : "none");
   document.getElementById("tdPoints").value = e ? (e.points ?? 1) : 1;
+  document.getElementById("tdDone").checked = e ? taskIsDone(e) : false;
+  document.getElementById("tdDoneField").style.display = isR ? "none" : "";
   document.getElementById("tdTime").value = (e && e.time && e.time!=="any") ? e.time : "";
   document.getElementById("tdStart").value = (e && e.startDate) ? e.startDate : "";
   document.getElementById("tdEnd").value = (e && e.endDate) ? e.endDate : "";
@@ -909,6 +911,17 @@ function openTodo(id, mode){
   document.getElementById("tdDelete").style.display = e ? "" : "none";
   openModal("tdModal");
   document.getElementById("tdTitle").focus();
+}
+function setTaskDone(t, done){
+  const pts = t.points || 1;
+  if(t.repeat && t.repeat !== "none"){
+    if(done){ t.lastDone = iso(today()); t.completedAt = new Date().toISOString(); addPoints(pts, t.title); }
+    else { t.lastDone = null; delete t.completedAt; removePoints(pts, t.title); }
+  }else{
+    t.done = !!done;
+    if(done){ t.completedAt = new Date().toISOString(); addPoints(pts, t.title); }
+    else { delete t.completedAt; removePoints(pts, t.title); }
+  }
 }
 document.getElementById("tdSave").onclick = ()=>{
   const title = document.getElementById("tdTitle").value.trim();
@@ -937,8 +950,16 @@ document.getElementById("tdSave").onclick = ()=>{
       if(endTime && endTime < startTime && !endDate) endDate = iso(addDays(parseISO(startDate),1));
     }
     const data = {title, cat, repeat, points, note, startDate, endDate, allDay, startTime, endTime};
-    if(editingTodo) Object.assign(editingTodo, data);
-    else S.todos.push(Object.assign({id:uid(), done:false, lastDone:null}, data));
+    const doneNow = document.getElementById("tdDone").checked;
+    if(editingTodo){
+      const wasDone = taskIsDone(editingTodo);
+      Object.assign(editingTodo, data);
+      if(doneNow !== wasDone) setTaskDone(editingTodo, doneNow);
+    }else{
+      const t = Object.assign({id:uid(), done:false, lastDone:null}, data);
+      S.todos.push(t);
+      if(doneNow) setTaskDone(t, true);
+    }
   }
   save(); closeModals(); render(); toast("Eintrag gespeichert.");
 };
@@ -1392,12 +1413,12 @@ function wkPad(n){return String(n).padStart(2,"0");}
 function wkIsoKey(d){return d.getFullYear()+"-"+wkPad(d.getMonth()+1)+"-"+wkPad(d.getDate());}
 function wkTodayKey(){return wkIsoKey(new Date());}
 function workArr(k){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};if(!S.work[k])S.work[k]=[];return S.work[k];}
-function workOpenInterval(k){var a=(S&&S.work&&S.work[k])||[];for(var i=a.length-1;i>=0;i--){if(a[i]&&!a[i].e)return a[i];}return null;}
+function workOpenInterval(k){var a=(S&&S.work&&S.work[k])||[];for(var i=a.length-1;i>=0;i--){if(a[i]&&!a[i].free&&a[i].s&&!a[i].e)return a[i];}return null;}
 function workRunningToday(){return !!workOpenInterval(wkTodayKey());}
 function hmToMin(hm){if(!hm)return 0;var p=hm.split(":");return parseInt(p[0])*60+parseInt(p[1]);}
 function minToHM(min){var s=min<0?"-":"";var m=Math.abs(min);var h=Math.floor(m/60),mm=m%60;return s+h+":"+String(mm).padStart(2,"0");}
 function minToDec(min){return (Math.round((min/60)*100)/100).toFixed(2);}
-function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var a=S.work[k]||[];var now=ref||new Date();var nk=wkTodayKey();var paidB=0;try{if(S.settings && S.settings.paidBreakfastMin) paidB=parseInt(S.settings.paidBreakfastMin)||0;}catch(e){}
+function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var a=S.work[k]||[];if(a.length===1&&a[0]&&a[0].free)return {anwesMin:0,pauseMinBooked:0,arbeitsMin:0,sollMin:456,saldoMin:-456,free:true};var now=ref||new Date();var nk=wkTodayKey();var paidB=0;try{if(S.settings && S.settings.paidBreakfastMin) paidB=parseInt(S.settings.paidBreakfastMin)||0;}catch(e){}
   // build pairs
   var pairs=[];for(var i=0;i<a.length;i++){var it=a[i];if(!it||!it.s)continue;var sm=hmToMin(it.s),em;if(it.e)em=hmToMin(it.e);else em=(k===nk)?(now.getHours()*60+now.getMinutes()):(23*60+59);if(em>=sm)pairs.push({s:sm,e:em});}pairs.sort(function(x,y){return x.s-y.s});
   // Arbeitszeit netto = sum of intervals
@@ -1427,7 +1448,7 @@ function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.w
   return {anwesMin:anwesPres,pauseMinBooked:pauseAbzug,arbeitsMin:arbeitsZeit,sollMin:456,saldoMin:arbeitsZeit-456};}
 function fmtSecHMS(sec){var s=Math.max(0,Math.floor(sec||0));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return wkPad(h)+":"+wkPad(m)+":"+wkPad(ss);}
 function fmtHHMM(h,m){return wkPad(h)+":"+wkPad(m);}
-function workToggle(){var nk=wkTodayKey();var a=workArr(nk);var o=workOpenInterval(nk);var now=new Date();var ts=wkPad(now.getHours())+":"+wkPad(now.getMinutes());if(o){o.e=ts;}else{a.push({s:ts,e:null});}try{save();renderWork();updateWorkLive();render();}catch(e){}}
+function workToggle(){var nk=wkTodayKey();var a=workArr(nk);var o=workOpenInterval(nk);var now=new Date();var ts=wkPad(now.getHours())+":"+wkPad(now.getMinutes());if(o){o.e=ts;}else{for(var i=a.length-1;i>=0;i--){if(a[i]&&a[i].free)a.splice(i,1);}a.push({s:ts,e:null});}try{save();renderWork();updateWorkLive();render();}catch(e){}}
 function workSet(id,val){var el=document.getElementById(id); if(el) el.textContent=val;}
 function workRunningSec(){
   var c=workCalcDay(wkTodayKey()), o=workOpenInterval(wkTodayKey());
@@ -1492,6 +1513,16 @@ function renderWork(){
     }else{
       var rev=arr.map(function(it,idx){return {it:it,idx:idx};}).reverse();
       box.innerHTML=rev.map(function(x){
+        if(x.it.free){
+          return '<div class="item">'
+            +'<div><div class="it-title">Freizeittag</div>'
+            +'<div class="it-sub">−7:36 · Saldo</div></div>'
+            +'<div class="it-actions">'
+            +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
+            +'<button type="button" class="btn sm act" data-wk-edit="'+x.idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+            +'<button type="button" class="btn sm act" data-wk-del="'+x.idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'
+            +'</div>';
+        }
         var dur=x.it.e ? 'Dauer '+minToHM(hmToMin(x.it.e)-hmToMin(x.it.s))+' · Ind. '+minToDec(hmToMin(x.it.e)-hmToMin(x.it.s)) : 'Läuft …';
         return '<div class="item">'
           +'<div><div class="it-title">Komm '+esc(x.it.s)+(x.it.e?' · Geht '+esc(x.it.e):' · offen')+'</div>'
@@ -1513,11 +1544,14 @@ function renderWork(){
       hist.innerHTML=keys.map(function(k){
         var c2=workCalcDay(k,new Date(k+"T23:59:59"));
         var saldo=(c2.saldoMin>0?"+":"")+minToHM(c2.saldoMin);
+        var sub = c2.free
+          ? 'Freizeittag · Saldo <b class="neg">'+saldo+'</b>'
+          : 'Anw. '+minToHM(c2.anwesMin)+' · Pause '+minToHM(c2.pauseMinBooked)
+            +' · Arb. '+minToHM(c2.arbeitsMin)+' · Ind. '+minToDec(c2.arbeitsMin)
+            +' · Saldo <b class="'+(c2.saldoMin<0?"neg":"pos")+'">'+saldo+'</b>';
         return '<div class="item">'
           +'<div><div class="it-title">'+esc(k.split("-").reverse().join("."))+'</div>'
-          +'<div class="it-sub">Anw. '+minToHM(c2.anwesMin)+' · Pause '+minToHM(c2.pauseMinBooked)
-          +' · Arb. '+minToHM(c2.arbeitsMin)+' · Ind. '+minToDec(c2.arbeitsMin)
-          +' · Saldo <b class="'+(c2.saldoMin<0?"neg":"pos")+'">'+saldo+'</b></div></div>'
+          +'<div class="it-sub">'+sub+'</div></div>'
           +'<div class="it-actions">'
           +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
           +'<button type="button" class="btn sm act" data-wk-editday="'+esc(k)+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
@@ -1552,14 +1586,20 @@ function renderWkRows(){
       +'</div>';
   }).join("");
 }
+function wkFreeChecked(){ var c=document.getElementById("wkFree"); return !!(c&&c.checked); }
+function updateWkFreeUI(){ var w=document.getElementById("wkTimeWrap"); if(w) w.style.display = wkFreeChecked() ? "none" : ""; }
 function openWorkDay(k){
   wkEditKey = k;
-  wkDraft = (workArr(k)||[]).map(function(x){ return {s:x.s||"", e:x.e||""}; });
+  var arr0 = workArr(k)||[];
+  wkDraft = arr0.filter(function(x){ return !(x&&x.free); }).map(function(x){ return {s:x.s||"", e:x.e||""}; });
   if(!wkDraft.length) wkDraft=[{s:"",e:""}];
   renderWkRows();
+  document.getElementById("wkFree").checked = !!(arr0[0] && arr0[0].free);
+  updateWkFreeUI();
   document.getElementById("wkModalTitle").textContent = "Arbeitstag "+k.split("-").reverse().join(".")+(k===wkTodayKey()?" (heute)":"");
   openModal("wkModal");
 }
+document.getElementById("wkFree").onchange = updateWkFreeUI;
 document.getElementById("wkAdd").onclick = function(){
   syncWkDraft();
   wkDraft.push({s:"",e:""});
@@ -1568,6 +1608,12 @@ document.getElementById("wkAdd").onclick = function(){
   if(rows.length) rows[rows.length-1].focus();
 };
 document.getElementById("wkSave").onclick = function(){
+  if(wkFreeChecked()){
+    var arr=workArr(wkEditKey); arr.length=0; arr.push({free:true});
+    save(); closeModals(); renderWork(); render();
+    toast("Freizeittag gespeichert (−7:36).");
+    return;
+  }
   syncWkDraft();
   var rows=wkDraft.filter(function(r){ return r.s; });
   if(!rows.length){ toast("Bitte eine Komm-Zeit eintragen."); return; }

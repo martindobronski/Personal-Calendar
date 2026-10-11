@@ -410,6 +410,9 @@
       <label class="fl">Titel</label>
       <input type="text" id="tdTitle" placeholder="z. B. Müll rausbringen, Zähne putzen, Paket abholen">
     </div>
+    <div class="field" id="tdDoneField">
+      <label class="fl"><input type="checkbox" id="tdDone" style="width:auto;margin-right:7px">Erledigt</label>
+    </div>
     <div class="field2">
       <div class="field">
         <label class="fl">Bereich / Farbe</label>
@@ -489,11 +492,16 @@
 <div class="overlay" id="wkModal">
   <div class="modal" role="dialog" aria-modal="true">
     <h3 id="wkModalTitle">Arbeitstag bearbeiten</h3>
-    <div class="list" id="wkRows"></div>
-    <div class="flex-end" style="margin-top:4px">
-      <button class="btn sm" id="wkAdd">+ Zeitraum hinzufügen</button>
+    <div class="field">
+      <label class="fl"><input type="checkbox" id="wkFree" style="width:auto;margin-right:7px">Freizeittag</label>
     </div>
-    <p class="note" style="margin-top:12px">„Geht“ leer lassen, wenn die Zeit noch läuft. Nach dem Speichern wird die Arbeitszeit neu berechnet.</p>
+    <div id="wkTimeWrap">
+      <div class="list" id="wkRows"></div>
+      <div class="flex-end" style="margin-top:4px">
+        <button class="btn sm" id="wkAdd">+ Zeitraum hinzufügen</button>
+      </div>
+      <p class="note" style="margin-top:12px">„Geht“ leer lassen, wenn die Zeit noch läuft. Nach dem Speichern wird die Arbeitszeit neu berechnet.</p>
+    </div>
     <div class="modal-actions">
       <button class="btn" data-close>Abbrechen</button>
       <button class="btn primary" id="wkSave">Speichern</button>
