@@ -619,6 +619,7 @@ function dvInitDrag(){
 }
 function dayViewDragStart(e){
   if(e.button != null && e.button !== 0) return;
+  if(e.target.closest(".task-toggle")) return;
   const grid = e.target.closest(".dv-ev");
   const banner = e.target.closest(".dv-ad");
   if(!grid && !banner) return;
@@ -896,13 +897,13 @@ function renderAgenda(){
   }
   const evHtml = evs.map(ev=>{
     const c = cat(ev.cat);
-    return '<div class="ag-item'+(ev.done?" done":"")+'" style="--c:'+c.color+'">'
+    return '<div class="ag-item'+(ev.done?" done":"")+'" data-ev="'+ev.id+'" style="--c:'+c.color+'">'
       + '<div class="when">'+(ev.allDay?"ganztägig":esc((ev.start||"—")+"–"+(ev.end||"")))+"</div>"
       + "<div><div class=\"ttl\">"+esc(ev.title)+"</div>"
       + '<div class="sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+"</span>"
       + (evDays(ev)>1 ? " · 📅 "+esc(ev.date.split("-").reverse().join("."))+"–"+esc(evEndKey(ev).split("-").reverse().join(".")) : "")
       + (ev.note ? " · "+esc(ev.note) : "") + "</div></div>"
-      + '<div class="ag-actions"><button type="button" class="linkbtn act" data-ev="'+ev.id+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+      + '<div class="ag-actions"><button type="button" class="linkbtn act" data-ev-edit="'+ev.id+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
       + '<button type="button" class="linkbtn act" data-copy="'+ev.id+'">⧉ Kopieren</button>'
       + '<button type="button" class="linkbtn act del" data-evdel="'+ev.id+'" title="Löschen">'+ICON_TRASH+'</button></div>'
       + "</div>";
@@ -927,7 +928,7 @@ function renderAgenda(){
 var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("click", e=>{
   if(window.__dvDrag) return;
   const tOpen = e.target.closest("[data-task-open]");
-  if(tOpen){ const tt=S.todos.find(x=>x.id===tOpen.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
+  if(tOpen){ openInfo("task", tOpen.dataset.taskOpen); return; }
   const copy = e.target.closest("[data-copy]");
   if(copy){ setCopyEv(copy.dataset.copy); return; }
   if(copyEvId){
@@ -940,7 +941,7 @@ var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("clic
   const plus = e.target.closest("[data-new]");
   if(plus){ openEvent(null, plus.dataset.new); return; }
   const evBtn = e.target.closest("[data-ev]");
-  if(evBtn){ openEvent(evBtn.dataset.ev); return; }
+  if(evBtn){ openInfo("ev", evBtn.dataset.ev); return; }
   const day = e.target.closest(".day");
   if(day){
     selDate = parseISO(day.dataset.date);
@@ -951,20 +952,26 @@ var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("clic
   }
 });
 var __el=document.getElementById("agenda"); if(__el)__el.addEventListener("click", e=>{
-  const tOpen = e.target.closest("[data-task-open]");
-  if(tOpen){ const tt=S.todos.find(x=>x.id===tOpen.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
-  const ed = e.target.closest("[data-evdel]");
-  if(ed){ 
+  const ed = e.target.closest("[data-ev-edit]");
+  if(ed){ openEvent(ed.dataset.evEdit); return; }
+  const del = e.target.closest("[data-evdel]");
+  if(del){ 
     if(copyEvId && e.target.closest("[data-copy]")) return;
-    deleteEvent(ed.dataset.evdel); return; 
+    deleteEvent(del.dataset.evdel); return; 
   }
   const cp = e.target.closest("[data-copy]");
   if(cp){ setCopyEv(cp.dataset.copy); return; }
+  const tOpen = e.target.closest("[data-task-open]");
+  if(tOpen){ openInfo("task", tOpen.dataset.taskOpen); return; }
   const ev = e.target.closest("[data-ev]");
-  if(ev){ openEvent(ev.dataset.ev); }
+  if(ev){ openInfo("ev", ev.dataset.ev); }
 });
 var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("dblclick", e=>{
-  if(e.target.closest("[data-new],[data-ev],[data-task-open],[data-copy]")) return;
+  const tev=e.target.closest("[data-ev]");
+  if(tev){ closeModals(); openEvent(tev.dataset.ev); return; }
+  const tto=e.target.closest("[data-task-open]");
+  if(tto){ closeModals(); const tt=S.todos.find(x=>x.id===tto.dataset.taskOpen); if(tt) openTodo(tt.id,"task"); return; }
+  if(e.target.closest("[data-new],[data-copy]")) return;
   const day=e.target.closest(".day");
   if(day){ selDate=parseISO(day.dataset.date); setCalMode("day"); }
 });
@@ -975,9 +982,9 @@ var __cms=document.getElementById("calModeSeg"); if(__cms)__cms.addEventListener
 var __dv=document.getElementById("dayView"); if(__dv){
   __dv.addEventListener("dblclick", function(e){
     const tev=e.target.closest("[data-ev]");
-    if(tev){ openEvent(tev.dataset.ev); return; }
+    if(tev){ closeModals(); openEvent(tev.dataset.ev); return; }
     const tto=e.target.closest("[data-task-open]");
-    if(tto){ const tt=S.todos.find(x=>x.id===tto.dataset.taskOpen); if(tt) openTodo(tt.id,"task"); return; }
+    if(tto){ closeModals(); const tt=S.todos.find(x=>x.id===tto.dataset.taskOpen); if(tt) openTodo(tt.id,"task"); return; }
   }, true);
   __dv.addEventListener("click", function(e){
     if(window.__dvDrag) return;
@@ -996,9 +1003,9 @@ var __dv=document.getElementById("dayView"); if(__dv){
       }
     }
     const tto=e.target.closest("[data-task-open]");
-    if(tto && !e.target.closest(".task-toggle")){ return; }
+    if(tto){ openInfo("task", tto.dataset.taskOpen); return; }
     const tev=e.target.closest("[data-ev]");
-    if(tev){ return; }
+    if(tev){ openInfo("ev", tev.dataset.ev); return; }
     const grid=e.target.closest(".dv-grid");
     if(grid){
       const rect=grid.getBoundingClientRect();
@@ -1188,6 +1195,115 @@ function deleteEvent(id){
   if(copyEvId===id) setCopyEv(null);
   save(); closeModals(); render(); toast("Termin gelöscht.");
 }
+
+/* =========================================================
+   Anzeige-Dialog (Info) – Einzelklick auf Termin/Aufgabe
+   ========================================================= */
+let infoRef = null;
+function infoDateLong(dateIso){
+  if(!dateIso) return "";
+  const d = parseISO(dateIso);
+  return DOW_FULL[d.getDay()] + ", " + d.getDate() + ". " + MONTHS[d.getMonth()] + " " + d.getFullYear();
+}
+function infoRow(label, value){
+  if(value==null || value==="") return "";
+  return '<div class="info-row"><span class="info-lbl">'+label+'</span><span class="info-val">'+value+'</span></div>';
+}
+function infoTimeRange(s, e){
+  if(!s) return "";
+  return esc(s) + (e ? " – "+esc(e) : "");
+}
+function infoNote(note){
+  return note ? esc(note).replace(/\n/g,"<br>") : "";
+}
+function openInfo(kind, id){
+  let obj;
+  if(kind==="ev") obj = S.events.find(e=>e.id===id);
+  else if(kind==="routine") obj = S.routines.find(r=>r.id===id) || S.routines[Number(id)];
+  else obj = S.todos.find(t=>t.id===id);
+  if(!obj) return;
+  infoRef = {kind:kind, id:id, obj:obj};
+  const c = cat(obj.cat);
+  const catEl = document.getElementById("infoCat");
+  catEl.textContent = c.name;
+  catEl.style.background = c.color;
+  document.getElementById("infoTitle").textContent = obj.title || obj.name || "(ohne Titel)";
+
+  let body = "";
+  if(kind==="ev"){
+    if(evDays(obj) > 1){
+      body += infoRow("Zeitraum", esc(infoDateLong(obj.date))+" – "+esc(infoDateLong(evEndKey(obj)))+" ("+evSpanLabel(obj)+")");
+    } else {
+      body += infoRow("Datum", esc(infoDateLong(obj.date)));
+    }
+    body += infoRow("Uhrzeit", obj.allDay ? "Ganztägig" : infoTimeRange(obj.start, obj.end));
+    body += infoRow("Bereich", esc(c.name));
+    body += infoRow("Notiz", infoNote(obj.note));
+  } else if(kind==="routine"){
+    body += infoRow("Wiederholung", repLabel(obj.freq));
+    body += infoRow("Uhrzeit", (obj.time && obj.time!=="any") ? esc(obj.time) : "Flexibel");
+    body += infoRow("Bereich", esc(c.name));
+    body += infoRow("Punkte", obj.points ? String(obj.points)+" ⭐" : "");
+    body += infoRow("Notiz", infoNote(obj.note));
+  } else {
+    const s = taskDate(obj);
+    const en = (obj.endDate && obj.endDate>s) ? obj.endDate : "";
+    if(en) body += infoRow("Zeitraum", esc(infoDateLong(s))+" – "+esc(infoDateLong(en)));
+    else if(s) body += infoRow("Datum", esc(infoDateLong(s)));
+    body += infoRow("Uhrzeit", taskIsAllDay(obj) ? "Ganztägig" : infoTimeRange(taskStartTime(obj), taskEndTime(obj)));
+    body += infoRow("Bereich", esc(c.name));
+    body += infoRow("Wiederholung", repLabel(obj.repeat));
+    body += infoRow("Punkte", obj.points ? String(obj.points)+" ⭐" : "");
+    body += infoRow("Notiz", infoNote(obj.note));
+  }
+  document.getElementById("infoBody").innerHTML = body;
+
+  const doneNow = (kind==="ev") ? !!obj.done : (kind==="routine") ? routineIsDone(obj) : taskIsDone(obj);
+  document.getElementById("infoDone").checked = doneNow;
+  document.getElementById("infoDoneAt").textContent = (doneNow && obj.completedAt) ? fmtCompletedAt(obj.completedAt) : "";
+  openModal("infoModal");
+}
+document.getElementById("infoDone").onchange = function(){
+  if(!infoRef || !infoRef.obj) return;
+  const on = this.checked;
+  const ref = infoRef, obj = ref.obj;
+  if(ref.kind==="ev"){
+    toggleEventDone(ref.id, on);
+  } else if(ref.kind==="routine"){
+    setRoutineDone(obj, on);
+    save(); render();
+  } else {
+    setTaskDone(obj, on);
+    save(); render();
+  }
+  document.getElementById("infoDoneAt").textContent = (on && obj.completedAt) ? fmtCompletedAt(obj.completedAt) : "";
+};
+document.getElementById("infoEdit").onclick = function(){
+  if(!infoRef || !infoRef.obj) return;
+  const ref = infoRef;
+  closeModals();
+  if(ref.kind==="ev") openEvent(ref.id);
+  else if(ref.kind==="routine") openTodo(S.routines.indexOf(ref.obj), "routine");
+  else openTodo(ref.id, "task");
+};
+document.getElementById("infoDelete").onclick = function(){
+  if(!infoRef || !infoRef.obj) return;
+  const ref = infoRef, obj = ref.obj;
+  infoRef = null;
+  if(ref.kind==="ev"){
+    deleteEvent(ref.id);
+  } else if(ref.kind==="routine"){
+    const idx = S.routines.indexOf(obj);
+    if(idx>=0){
+      const removed = S.routines.splice(idx,1)[0];
+      save(); closeModals(); render();
+      showUndo('Routine gelöscht', function(){ S.routines.splice(Math.min(idx,S.routines.length),0,removed); save(); render(); });
+    }
+  } else {
+    S.todos = S.todos.filter(t=>t.id!==ref.id);
+    save(); closeModals(); render(); toast("Aufgabe gelöscht.");
+  }
+};
 
 /* =========================================================
    To-Dos & Routinen
@@ -2271,6 +2387,20 @@ function routineIsDone(r){
   if(!r) return false;
   return taskIsDone(Object.assign({}, r, {repeat: r.freq || r.repeat || "none"}));
 }
+function setRoutineDone(r, done){
+  if(!r) return;
+  const pts = r.points || 1;
+  const label = r.name || r.title || "";
+  if(!r.freq || r.freq==="none"){
+    r.done = !!done;
+    if(done){ r.completedAt=new Date().toISOString(); addPoints(pts, label); }
+    else { delete r.completedAt; removePoints(pts, label); }
+  } else if(!done){
+    r.lastDone=null; delete r.completedAt; removePoints(pts, label);
+  } else {
+    r.lastDone=iso(today()); r.completedAt=new Date().toISOString(); addPoints(pts, label);
+  }
+}
 function repLabel(r){
   return r==="daily"?"Täglich":r==="weekly"?"Wöchentlich":r==="monthly"?"Monatlich":r==="quarterly"?"Vierteljährlich":r==="yearly"?"Jährlich":"";
 }
@@ -2561,6 +2691,11 @@ function renderRoutines(){
       }
       return;
     }
+    if(t.closest&&t.closest('[data-info-open]')){
+      var iel=t.closest('[data-info-open]');
+      openInfo(iel.getAttribute('data-info-open'), iel.getAttribute('data-info-id'));
+      return;
+    }
   });
   document.addEventListener('input', function(e){
     if(e.target&&e.target.id==='taskSearch') renderTasks();
@@ -2654,7 +2789,7 @@ function renderCalSide(){
           var c=(typeof cat==='function')?cat(t.cat):{name:'',color:'#64748b'};
           return '<div class="item'+(done?' done':'')+'">'
             +'<button class="check'+(done?' on':'')+'" data-task-toggle="'+idx+'">✓</button>'
-            +'<div><div class="it-title">'+esc(t.title||t.text||'')+'</div>'
+            +'<div data-info-open="task" data-info-id="'+t.id+'"><div class="it-title">'+esc(t.title||t.text||'')+'</div>'
             +'<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
             +(t.repeat&&t.repeat!=='none'?'<span>↻ '+esc(repLabel(t.repeat))+'</span>':'')
             + fmtDue(t,done)+'</div></div>'
@@ -2696,7 +2831,7 @@ function renderCalSide(){
           var rdone=routineIsDone(r);
           return '<div class="item'+(rdone?' done':'')+'">'
             +'<button type="button" class="check'+(rdone?' on':'')+'" data-routine-toggle="'+i+'" title="Erledigt abhaken">✓</button>'
-            +'<div><div class="it-title">'+esc(r.name||'')+'</div>'
+            +'<div data-info-open="routine" data-info-id="'+r.id+'"><div class="it-title">'+esc(r.name||'')+'</div>'
             +'<div class="it-sub"><span>↻ '+esc(repLabel(r.freq))+'</span>'
             +(r.time&&r.time!=="any"?'<span>🕒 '+esc(r.time)+'</span>':'')
             +(rdone&&r.completedAt?'<span>'+esc(fmtCompletedAt(r.completedAt))+'</span>':'')

@@ -1,1 +1,1 @@
-Drag & Resize fuer alle offenen Termine/Aufgaben - Version v1.4.0 (12.10.2026)
+Anzeige-Dialog per Einzelklick auf Termin/Aufgabe/Routine in Kalender und Seitenpanel (Details, Bearbeiten, Erledigt, Loeschen); Doppelklick oeffnet weiter Bearbeiten; Checkbox-Toggle-Fix; keine Scrollbalken - Version v1.5.0 (12.10.2026)
