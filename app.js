@@ -475,6 +475,82 @@ function renderDayView(){
     }
   }
 }
+/* =========================================================
+   Tagesansicht: Termine per Drag verschieben / per Griff skalieren
+   ========================================================= */
+var DV_PXM = 48/60;   /* Pixel pro Minute (muss zu PXH in renderDayView passen) */
+var DV_SNAP = 5;      /* Raster in Minuten */
+var dvDragState = null;
+
+function dvRoundMin(m){
+  return Math.max(0, Math.min(1440, Math.round(m/DV_SNAP)*DV_SNAP));
+}
+function dvTimeLabel(start, end){
+  const s = dvHM(start);
+  return (end == null) ? s : s + "–" + dvHM(end >= 1440 ? 1439 : end);
+}
+function refreshDayDrag(){
+  const grid = document.querySelector("#dayView .dv-grid");
+  if(!grid) return;
+  grid.querySelectorAll(".dv-ev-term[data-ev]").forEach(function(el){
+    el.addEventListener("pointerdown", function(e){
+      if(e.button != null && e.button !== 0) return;
+      const ev = S.events.find(function(x){ return x.id === el.dataset.ev; });
+      if(!ev) return;
+      const startMin = ev.start ? hmToMin(ev.start) : 9*60;
+      let endMin = ev.end ? hmToMin(ev.end) : startMin + 60;
+      if(endMin <= startMin) endMin = startMin + 60;
+      dvDragState = {
+        el: el, ev: ev, grid: grid,
+        label: el.querySelector(".dv-ev-t"),
+        resizing: !!e.target.closest(".dv-ev-resize"),
+        hadEnd: !!ev.end,
+        startY: e.clientY, moved: false,
+        origStart: startMin, origEnd: endMin,
+        curStart: startMin, curEnd: endMin
+      };
+      el.classList.add("dragging");
+      if(dvDragState.resizing) el.classList.add("resize-bottom");
+      if(el.setPointerCapture){ try{ el.setPointerCapture(e.pointerId); }catch(err){} }
+    });
+  });
+}
+window.addEventListener("pointermove", function(e){
+  const d = dvDragState;
+  if(!d) return;
+  const dy = e.clientY - d.startY;
+  if(Math.abs(dy) > 3) d.moved = true;
+  const dm = dy / DV_PXM;
+  if(d.resizing){
+    let ende = dvRoundMin(d.origEnd + dm);
+    if(ende < d.origStart + DV_SNAP) ende = d.origStart + DV_SNAP;
+    d.curEnd = ende;
+    d.el.style.height = Math.max((d.curEnd - d.curStart)*DV_PXM, 20) + "px";
+  } else {
+    const dur = d.origEnd - d.origStart;
+    let s = dvRoundMin(d.origStart + dm);
+    if(s + dur > 1440) s = 1440 - dur;
+    if(s < 0) s = 0;
+    d.curStart = s; d.curEnd = s + dur;
+    d.el.style.top = (d.curStart*DV_PXM) + "px";
+  }
+  if(d.label) d.label.textContent = dvTimeLabel(d.curStart, (d.resizing || d.hadEnd) ? d.curEnd : null);
+  e.preventDefault();
+});
+window.addEventListener("pointerup", function(){
+  const d = dvDragState;
+  if(!d) return;
+  dvDragState = null;
+  d.el.classList.remove("dragging","resize-bottom");
+  if(!d.moved) return;
+  d.ev.start = dvHM(d.curStart);
+  if(d.resizing || d.hadEnd) d.ev.end = dvHM(d.curEnd >= 1440 ? 1439 : d.curEnd);
+  window.__dvDrag = true;
+  setTimeout(function(){ window.__dvDrag = false; }, 80);
+  save();
+  render();
+});
+
 function evEndKey(ev){
   return (ev.endDate && ev.endDate > ev.date) ? ev.endDate : ev.date;
 }
