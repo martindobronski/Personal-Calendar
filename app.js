@@ -2365,6 +2365,11 @@ function tick(){
   document.getElementById("clockChip").innerHTML =
     "<b>"+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds())+"</b>&nbsp; "
     + DOW_FULL[now.getDay()].slice(0,2) + ". " + now.getDate() + ". " + MONTHS[now.getMonth()].slice(0,3);
+  var ld=document.getElementById("logoDay");
+  if(ld){
+    ld.textContent=now.getDate();
+    ld.title="Heute: "+DOW_FULL[now.getDay()]+", "+now.getDate()+". "+MONTHS[now.getMonth()]+" "+now.getFullYear();
+  }
   try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
   try{ checkReminders(); }catch(e){}
 }

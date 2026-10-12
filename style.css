@@ -44,7 +44,7 @@ a{color:var(--accent2)}
 .brand .logo{
   width:34px;height:34px;border-radius:10px;
   background:linear-gradient(135deg,var(--accent),#f43f5e);
-  display:grid;place-items:center;font-size:18px;
+  display:grid;place-items:center;font-size:17px;font-weight:800;line-height:1;
   box-shadow:0 6px 16px rgba(245,165,36,.25);
 }
 .brand small{display:block;font-weight:500;color:var(--muted);font-size:11px}
