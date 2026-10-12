@@ -24,16 +24,30 @@
       <div class="chip clock" id="clockChip">–</div>
     </div>
   </div>
-  <nav class="tabs" id="tabs">
-    <button class="tab active" data-view="cal">🗓️ Kalender</button>
-    <button class="tab" data-view="tasks">✅ Aufgaben <span class="badge" id="todoBadge">0</span></button>
-    <button class="tab" data-view="routines">🗓️ Routinen <span class="badge" id="routineBadge">0</span></button>
-    <button class="tab" data-view="meals">🍽️ Mahlzeiten</button>
-    <button class="tab" data-view="lists">🛒 Listen</button>
-    <button class="tab" data-view="points">⭐ Punkte</button>
-    <button class="tab" data-view="work">⏱️ Arbeitszeit</button>
-    <button class="tab" data-view="settings">⚙️ Einstellungen</button>
-</nav>
+  <div class="tabrow">
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-view="cal">🗓️ Kalender</button>
+      <button class="tab" data-view="tasks">✅ Aufgaben <span class="badge" id="todoBadge">0</span></button>
+      <button class="tab" data-view="routines">🗓️ Routinen <span class="badge" id="routineBadge">0</span></button>
+      <button class="tab" data-view="meals">🍽️ Mahlzeiten</button>
+      <button class="tab" data-view="lists">🛒 Listen</button>
+      <button class="tab" data-view="points">⭐ Punkte</button>
+      <button class="tab" data-view="work">⏱️ Arbeitszeit</button>
+      <button class="tab" data-view="settings">⚙️ Einstellungen</button>
+    </nav>
+    <div class="cal-search" id="calSearchBox">
+      <button type="button" class="btn icon cal-search-btn" id="calSearchBtn" aria-label="Termine, Aufgaben, Routinen durchsuchen" title="Suchen (Strg/Cmd+K)">🔍</button>
+      <div class="cal-search-field">
+        <span class="cal-search-ico">🔍</span>
+        <input id="calSearchInput" class="cal-search-input" placeholder="Termine, Aufgaben, Routinen durchsuchen …" autocomplete="off" spellcheck="false">
+        <button type="button" id="calSearchClear" class="cal-search-clear" title="Suche löschen" style="display:none">✕</button>
+        <div id="calSearchWrap" class="cal-search-drop" hidden>
+          <div class="muted" id="calSearchInfo"></div>
+          <div class="search-results" id="calSearchList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </header>
 
 <main>
@@ -48,14 +62,16 @@
           <span class="work-live" id="calWorkLive" title="Arbeitszeit läuft – zur Arbeitszeit" style="display:none;cursor:pointer">
             <span class="wl-dot"></span>⏱ <b id="calWorkLiveTime">0:00</b>
           </span>
-          <span class="chip" id="calWorkSaldo" title="Saldo heute (Arbeitszeit – Soll 7:36h)" style="display:none">Saldo <b id="calWorkSaldoVal">0:00</b></span>
+          <div class="navgroup">
+            <button class="btn icon" id="btnPrev" aria-label="Vorheriger Monat/Tag">‹</button>
+            <button class="btn sm" id="btnToday">Heute</button>
+            <button class="btn icon" id="btnNext" aria-label="Nächster Monat/Tag">›</button>
+          </div>
           <div class="seg mini" id="calModeSeg">
             <button class="segbtn active" data-calmode="month">Monat</button>
             <button class="segbtn" data-calmode="day">Tag</button>
           </div>
-          <button class="btn sm" id="btnToday">Heute</button>
-          <button class="btn icon" id="btnPrev" aria-label="Vorheriger Monat">‹</button>
-          <button class="btn icon" id="btnNext" aria-label="Nächster Monat">›</button>
+          <span class="cal-saldo" id="calWorkSaldo" title="Saldo heute (Arbeitszeit – Soll 7:36h)" style="display:none">Saldo <b id="calWorkSaldoVal">0:00</b></span>
           <button class="btn primary sm" id="btnNewEvent">+ Termin</button>
         </div>
       </div>

@@ -14,6 +14,7 @@
   --shadow:0 10px 30px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0;padding:0}
 body{
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -72,7 +73,8 @@ a{color:var(--accent2)}
 .chip .big{font-size:17px;line-height:1}
 .clock{font-variant-numeric:tabular-nums}
 
-.tabs{display:flex;gap:6px;padding:0 20px 12px;overflow-x:auto;scrollbar-width:none}
+.tabrow{display:flex;align-items:center;gap:16px;padding:0 20px 12px}
+.tabs{display:flex;gap:6px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none;padding:0}
 .tabs::-webkit-scrollbar{display:none}
 .tab{
   border:1px solid transparent;background:transparent;color:var(--muted);
@@ -167,6 +169,10 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .cal-title{font-size:22px;font-weight:700}
 .cal-title span{color:var(--muted);font-weight:600;font-size:15px;display:block;letter-spacing:.05em;text-transform:uppercase}
 .cal-nav{display:flex;gap:7px;align-items:center}
+.navgroup{display:flex;align-items:center;gap:2px}
+.cal-nav #btnNewEvent{margin-left:auto}
+.cal-saldo{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:5px}
+.cal-saldo b{color:var(--txt);font-weight:700}
 .work-live{
   display:inline-flex;align-items:center;gap:7px;
   background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.5);color:#86efac;
@@ -268,6 +274,44 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .copybar .btn{margin-left:auto}
 .more{font-size:10.5px;color:var(--muted);padding-left:4px;font-weight:700}
 
+/* ---------- Terminsuche (Toolbar) ---------- */
+.cal-search{position:relative;display:flex;align-items:center;flex:0 0 auto;margin-left:auto}
+.cal-search-btn{font-size:15px;padding:8px 10px}
+.cal-search-field{
+  position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:82;
+  display:flex;align-items:center;
+  width:0;opacity:0;overflow:hidden;
+  transition:width .2s ease,opacity .14s ease;
+}
+.cal-search.active .cal-search-field{width:var(--cal-w,320px);opacity:1;overflow:visible}
+.cal-search.active .cal-search-btn{visibility:hidden}
+.cal-search-ico{position:absolute;left:10px;font-size:13px;opacity:.7;pointer-events:none}
+.cal-search-input{
+  flex:1 1 auto;min-width:0;width:100%;height:38px;
+  padding:0 34px 0 30px;
+  background:#0b1324;border:1px solid var(--line);border-radius:11px;
+  color:#e6edf7;outline:none;box-shadow:none;
+}
+.cal-search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,165,36,.22)}
+.cal-search-clear{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  background:none;border:0;color:var(--muted);font-size:14px;cursor:pointer;
+  padding:4px 8px;border-radius:8px;line-height:1;
+}
+.cal-search-clear:hover{background:var(--card2);color:var(--txt)}
+.cal-search-drop{
+  position:absolute;top:calc(100% + 8px);right:0;z-index:80;
+  width:var(--cal-w,320px);max-width:calc(100vw - 24px);
+  max-height:min(60vh,460px);overflow-y:auto;overflow-x:hidden;
+  background:linear-gradient(180deg,var(--card),#182034);
+  border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 24px 50px rgba(0,0,0,.55);
+  padding:6px 12px 12px;scrollbar-width:none;
+}
+.cal-search-drop::-webkit-scrollbar{display:none}
+.cal-search-drop .muted{margin:8px 2px}
+.search-results{display:flex;flex-direction:column;gap:8px}
+
 /* ============ Tagesansicht (Google-Stil) ============ */
 .dayview{display:flex;flex-direction:column;gap:10px;overflow:hidden}
 .dv-allday{display:flex;gap:10px;align-items:flex-start;padding-bottom:9px;border-bottom:1px solid var(--line)}
@@ -282,9 +326,10 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .dv-scroll{overflow-y:auto;overflow-x:hidden;max-height:560px;border:1px solid var(--line);border-radius:12px;background:#131b2c;scrollbar-width:none}
 .dv-scroll::-webkit-scrollbar{display:none}
 .dv-grid{position:relative;margin-left:56px;border-left:1px solid var(--line)}
-.dv-hour{position:absolute;left:0;right:0;height:48px;border-top:1px solid var(--line)}
+.dv-hour{position:absolute;left:0;right:0;height:64px;border-top:1px solid var(--line)}
 .dv-hour:first-child{border-top:0}
 .dv-hour span{position:absolute;left:-52px;top:-7px;width:46px;text-align:right;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.dv-past{position:absolute;left:0;right:0;top:0;background:rgba(6,10,20,.30);pointer-events:none;z-index:5}
 .dv-ev{
   position:absolute;border-radius:8px;padding:3px 7px;color:#0c1220;overflow:hidden;
   cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.18);
@@ -295,7 +340,9 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .dv-ev:hover{filter:brightness(1.09);z-index:4}
 .dv-ev-t{font-size:10.5px;font-weight:700;opacity:.85;font-variant-numeric:tabular-nums}
 .dv-ev-n{font-size:12.5px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dv-task{background:#1b2438;color:var(--txt);border:1px dashed var(--tc,#64748b);display:flex;gap:6px;align-items:center}
+.dv-task{background:color-mix(in srgb, var(--tc,#64748b) 24%, #1b2438);color:var(--txt);border:1px solid color-mix(in srgb, var(--tc,#64748b) 55%, transparent);display:flex;gap:7px;align-items:center}
+.dv-task .task-check{flex:0 0 auto;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--tc,#64748b);background:transparent;color:var(--tc,#64748b);font-size:10px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0;transition:.14s}
+.dv-task .task-check:hover{background:color-mix(in srgb, var(--tc,#64748b) 32%, transparent)}
 .dv-task .mark{color:var(--tc,#64748b);font-size:11px;flex:0 0 auto}
 .dv-task .dv-ev-t{flex:0 0 auto}
 .dv-task .dv-ev-n{min-width:0;flex:1 1 auto}
@@ -579,7 +626,7 @@ body.cal-day .cal-side .side-top{display:none}
 
 /* ---------- Erledigt-Zustand ---------- */
 .ev.done,.dv-ev.done,.dv-ad.done,.ag-item.done{opacity:.55}
-.ev.done>span:last-child,.ag-item.done .ttl,.dv-ev.done,.dv-ev.done .dv-ev-t,.dv-ev.done .dv-ev-n,.dv-ad.done{text-decoration:line-through}
+.ev.done>span:last-child,.ag-item.done .ttl{text-decoration:line-through}
 
 /* ---------- Erinnerungs-Dialog ---------- */
 .rm-item{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08)}
