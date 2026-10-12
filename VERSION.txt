@@ -1,1 +1,1 @@
-Anzeige-Dialog per Einzelklick auf Termin/Aufgabe/Routine in Kalender und Seitenpanel (Details, Bearbeiten, Erledigt, Loeschen); Doppelklick oeffnet weiter Bearbeiten; Checkbox-Toggle-Fix; keine Scrollbalken - Version v1.5.1 (12.10.2026)
+Anzeige-Dialog per Einzelklick auf Termin/Aufgabe/Routine in Kalender und Seitenpanel (Details, Bearbeiten, Erledigt, Loeschen); Doppelklick oeffnet weiter Bearbeiten; Checkbox-Toggle-Fix; keine Scrollbalken - Version v1.5.2 (12.10.2026)

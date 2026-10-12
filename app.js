@@ -1937,6 +1937,7 @@ function workRunningToday(){return !!workOpenInterval(wkTodayKey());}
 function hmToMin(hm){if(!hm)return 0;var p=hm.split(":");return parseInt(p[0])*60+parseInt(p[1]);}
 function minToHM(min){var s=min<0?"-":"";var m=Math.abs(min);var h=Math.floor(m/60),mm=m%60;return s+h+":"+String(mm).padStart(2,"0");}
 function minToDec(min){return (Math.round((min/60)*100)/100).toFixed(2);}
+var WORK_MAX_DAY_MIN = 600; // max. 10:00 stdl. Arbeitszeit
 function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.work)S.work={};var a=S.work[k]||[];var __dt=workDayType(k);if(__dt){if(__dt==="free")return {anwesMin:0,pauseMinBooked:0,arbeitsMin:0,sollMin:456,saldoMin:-456,free:true,dayType:"free"};return {anwesMin:0,pauseMinBooked:0,arbeitsMin:0,sollMin:0,saldoMin:0,dayType:__dt};}var now=ref||new Date();var nk=wkTodayKey();var paidB=0;try{if(S.settings && S.settings.paidBreakfastMin) paidB=parseInt(S.settings.paidBreakfastMin)||0;}catch(e){}
   // build pairs
   var pairs=[];for(var i=0;i<a.length;i++){var it=a[i];if(!it||!it.s)continue;var sm=hmToMin(it.s),em;if(it.e)em=hmToMin(it.e);else em=(k===nk)?(now.getHours()*60+now.getMinutes()):(23*60+59);if(em>=sm)pairs.push({s:sm,e:em});}pairs.sort(function(x,y){return x.s-y.s});
@@ -1963,6 +1964,7 @@ function workCalcDay(k,ref){if(typeof S==="undefined")window.S={work:{}};if(!S.w
   }
   var arbeitsZeit = anwesPres - pauseAbzug;
   if(arbeitsZeit < 0) arbeitsZeit = 0;
+  if(arbeitsZeit > WORK_MAX_DAY_MIN) arbeitsZeit = WORK_MAX_DAY_MIN;
   // Saldo based on effective Arbeitszeit vs Soll
   return {anwesMin:anwesPres,pauseMinBooked:pauseAbzug,arbeitsMin:arbeitsZeit,sollMin:456,saldoMin:arbeitsZeit-456};}
 function fmtSecHMS(sec){var s=Math.max(0,Math.floor(sec||0));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return wkPad(h)+":"+wkPad(m)+":"+wkPad(ss);}
@@ -1971,7 +1973,8 @@ function workToggle(){var nk=wkTodayKey();var a=workArr(nk);var o=workOpenInterv
 function workSet(id,val){var el=document.getElementById(id); if(el) el.textContent=val;}
 function workRunningSec(){
   var c=workCalcDay(wkTodayKey()), o=workOpenInterval(wkTodayKey());
-  return c.arbeitsMin*60 + (o ? new Date().getSeconds() : 0);
+  var sec = c.arbeitsMin*60 + (o ? new Date().getSeconds() : 0);
+  return Math.min(sec, WORK_MAX_DAY_MIN*60);
 }
 function renderWorkHead(){
   if(typeof S==="undefined") window.S={work:{}};
