@@ -2687,12 +2687,25 @@ function spanTxt(t){
   if(t.startTime || t.endTime) out += " "+(t.startTime||"")+(t.endTime?"–"+t.endTime:"");
   return out;
 }
+function relDayTxt(dateStr){
+  if(!dateStr) return "";
+  var d=parseISO(dateStr), td=today();
+  if(sameDay(d,td)) return "Heute";
+  var tm=new Date(td.getFullYear(),td.getMonth(),td.getDate()+1);
+  if(sameDay(d,tm)) return "Morgen";
+  var ye=new Date(td.getFullYear(),td.getMonth(),td.getDate()-1);
+  if(sameDay(d,ye)) return "Gestern";
+  var s=pad(d.getDate())+"."+pad(d.getMonth()+1)+".";
+  if(d.getFullYear()!==td.getFullYear()) s+=" "+d.getFullYear();
+  return s;
+}
 function fmtDue(t,done){
   if(!t || !taskDate(t)) return "";
   var od = !done && isTaskOverdue(t);
-  var col = od ? "#f87171" : "#cbd5e1";
-  var prefix = od ? "überfällig " : "";
-  return '<span style="color:'+col+'">🗓 '+esc(prefix+spanTxt(t))+"</span>";
+  var st = taskStartTime(t), en = taskEndTime(t);
+  var time = st ? " "+esc(st)+(en?"–"+esc(en):"") : "";
+  var chip = od ? '<span class="due-chip due-overdue">Überfällig</span>' : "";
+  return chip+'<span class="due-when">🗓 '+esc(relDayTxt(taskDate(t)))+time+"</span>";
 }
 function updateTaskBadge(){ try{ var b=document.getElementById('todoBadge'); if(!b) return; var n=0; if(typeof S!=="undefined"&&S&&Array.isArray(S.todos)) n=S.todos.filter(function(t){return inProfile(t.cat) && !taskIsDone(t)}).length; b.textContent=n; b.style.display=n?"grid":"none"; }catch(e){} }
 function renderTasks(){

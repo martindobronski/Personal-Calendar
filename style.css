@@ -395,6 +395,9 @@ body.cal-day .cal-side .side-top{display:none}
 [data-info-open]{cursor:pointer;flex:1 1 auto;min-width:0}
 .it-sub{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pill{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;color:#0c1220}
+.due-chip{font-size:10.5px;padding:1px 7px;border-radius:999px;font-weight:700;line-height:1.55;white-space:nowrap}
+.due-overdue{background:rgba(248,113,113,.16);color:#f87171;border:1px solid rgba(248,113,113,.45)}
+.due-when{white-space:nowrap;font-variant-numeric:tabular-nums}
 .it-actions{margin-left:auto;display:flex;gap:6px}
 .menu-toggle{
   background:none;border:1px solid var(--line);color:var(--muted);width:30px;height:30px;
