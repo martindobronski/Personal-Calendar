@@ -440,7 +440,7 @@ function renderDayView(){
       const c=cat(it.task.cat);
       const tStart=taskStartTime(it.task), tEnd=taskEndTime(it.task);
       grid+='<div class="dv-ev dv-task'+(taskIsDone(it.task)?" done":"")+'" data-task-open="'+it.task.id+'" style="'+style+";--tc:"+c.color+'" title="'+esc(it.task.title)+'">'
-          + '<span class="mark">✓</span>'
+          + '<input type="checkbox" class="task-toggle" data-task-toggle-id="'+it.task.id+'" style="margin:0 6px 0 4px;flex:0 0 auto" '+(taskIsDone(it.task)?'checked':'')+'>'
           + '<span class="dv-ev-t">'+esc(tStart)+(tEnd?"–"+esc(tEnd):"")+'</span>'
           + '<span class="dv-ev-n">'+esc(it.task.title)+"</span>"
           + '<div class="dv-ev-resize" style="position:absolute;left:0;right:0;bottom:0;height:6px;cursor:ns-resize"></div>'
@@ -981,8 +981,17 @@ var __dv=document.getElementById("dayView"); if(__dv){
   }, true);
   __dv.addEventListener("click", function(e){
     if(window.__dvDrag) return;
+    const tchk=e.target.closest(".task-toggle");
+    if(tchk){
+      const id=tchk.getAttribute("data-task-toggle-id")||e.target.closest("[data-task-open]")?.dataset.taskOpen;
+      if(id){
+        var idx=S.todos.findIndex(x=>x&&x.id===id);
+        if(idx<0) idx=S.todos.findIndex(x=>x&&x.id===id);
+      }
+      // handle via bubbling to document? already have
+    }
     const tto=e.target.closest("[data-task-open]");
-    if(tto){ return; }
+    if(tto && !e.target.closest(".task-toggle")){ return; }
     const tev=e.target.closest("[data-ev]");
     if(tev){ return; }
     const grid=e.target.closest(".dv-grid");
@@ -1009,7 +1018,27 @@ document.getElementById("btnToday").onclick = ()=>{ calMonth=clone(today()); sel
 document.getElementById("btnNewEvent").onclick = ()=>openEvent(null, iso(selDate));
 document.getElementById("btnNewEvent2").onclick = ()=>openEvent(null, iso(selDate));
 document.getElementById("copyBarBtn").onclick = ()=>setCopyEv(null);
-document.addEventListener("click", e=>{
+document.addEventListener("click", function(e){
+  var t = e.target;
+  if(window.__dvDrag) return;
+  if(t.closest&&t.closest('[data-task-toggle]')){
+    var elT=t.closest('[data-task-toggle]');
+    var tid=elT.getAttribute('data-task-toggle-id');
+    var ti=parseInt(elT.getAttribute('data-task-toggle'));
+    if(isNaN(ti)&&tid){ ti = S.todos.findIndex(function(x){return x&&x.id===tid}); }
+    if(ti<0 && tid && t.closest&&t.closest('[data-task-open]')){
+      var to=t.closest('[data-task-open]');
+      ti = S.todos.findIndex(function(x){return x&&x.id===to.dataset.taskOpen});
+    }
+    if(ti>=0&&Array.isArray(S.todos)&&S.todos[ti]){
+      var tk=S.todos[ti];
+      var newDone = !taskIsDone(tk);
+      setTaskDone(tk, newDone);
+      e.stopPropagation();
+      save(); renderCalendar(); renderTasks(); updateBadges();
+      return;
+    }
+  }
   const tp = e.target.closest("[data-timefor]");
   if(!tp) return;
   const inp = document.getElementById(tp.dataset.timefor);
@@ -1255,6 +1284,8 @@ function openTodo(id, mode){
   document.getElementById("tdPoints").value = e ? (e.points ?? 1) : 1;
   document.getElementById("tdDone").checked = e ? taskIsDone(e) : false;
   document.getElementById("tdDoneField").style.display = isR ? "none" : "";
+  var doneAtEl=document.getElementById("tdDoneAt");
+  if(doneAtEl) doneAtEl.textContent = (e && taskIsDone(e) && e.completedAt) ? fmtCompletedAt(e.completedAt) : "";
   document.getElementById("tdTime").value = (e && e.time && e.time!=="any") ? e.time : "";
   document.getElementById("tdStart").value = (e && e.startDate) ? e.startDate : "";
   document.getElementById("tdEnd").value = (e && e.endDate) ? e.endDate : "";
@@ -1925,6 +1956,11 @@ var period=parseHistMonth((mEl&&mEl.value)||"");
     }else{
     var keys=Object.keys(S.work).sort().reverse();
     if(period) keys=keys.filter(function(k){ return k.slice(0,7)===period; });
+    if(mInfo && period){
+      var totSaldo=0;
+      for(var ti=0;ti<keys.length;ti++){ totSaldo+=workCalcDay(keys[ti],new Date(keys[ti]+"T23:59:59")).saldoMin; }
+      mInfo.textContent += " (Monats-Saldo: "+(totSaldo>0?"+":"")+minToDec(totSaldo)+")";
+    }
     var qEl=document.getElementById("workHistSearch");
     var q=((qEl&&qEl.value)||"").toString().trim().toLowerCase();
     if(!keys.length){
@@ -2441,8 +2477,13 @@ function renderRoutines(){
       return;
     }
     if(t.closest&&t.closest('[data-task-toggle]')){
-      var ti=parseInt(t.closest('[data-task-toggle]').getAttribute('data-task-toggle'));
-      if(!isNaN(ti)&&Array.isArray(S.todos)&&S.todos[ti]){
+      var elT=t.closest('[data-task-toggle]');
+      var ti=parseInt(elT.getAttribute('data-task-toggle'));
+      var tid=elT.getAttribute('data-task-toggle-id');
+      if(isNaN(ti) && tid){
+        ti = S.todos.findIndex(function(x){return x&&x.id===tid});
+      } else if(!isNaN(ti) && ti>=S.todos.length){ ti = -1; }
+      if(ti>=0&&Array.isArray(S.todos)&&S.todos[ti]){
         var tk=S.todos[ti];
         if(tk.repeat&&tk.repeat!=="none"){
           var was=taskIsDone(tk);

@@ -342,8 +342,8 @@
       </div>
       <div class="row" style="margin:0 0 6px;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-start">
         <label class="fl" for="workHistMonth" style="margin:0;white-space:nowrap">Zeitraum</label>
-        <input type="month" id="workHistMonth" title="Monat und Jahr auswählen" style="width:170px;flex:none">
-        <button type="button" class="btn sm ghost" id="btnHistMonthAll" title="Auf aktuellen Monat setzen">Aktueller Monat</button>
+        <input type="month" id="workHistMonth" title="Monat und Jahr auswählen" style="width:180px;flex:none;margin-left:auto">
+        <button type="button" class="btn sm ghost" id="btnHistMonthAll" title="Auf aktuellen Monat setzen" style="width:131px;flex:none">Aktueller Monat</button>
       </div>
       <div class="list" id="workHistory"></div>
     </div>
@@ -389,16 +389,11 @@
     <div class="field2" id="evTimeFields">
       <div class="field">
         <label class="fl">Von</label>
-        <div class="time-wrap">
-          <input type="time" id="evStart">
-          <button type="button" class="time-pick" data-timefor="evStart" title="Uhrzeit wählen">🕒</button>
-        </div>
+        <input type="time" id="evStart">
       </div>
       <div class="field">
         <label class="fl">Bis</label>
-        <div class="time-wrap">
-          <input type="time" id="evEnd">
-        </div>
+        <input type="time" id="evEnd">
       </div>
     </div>
     <div class="field" id="evDurField">
@@ -433,7 +428,7 @@
       <input type="text" id="tdTitle" placeholder="z. B. Müll rausbringen, Zähne putzen, Paket abholen">
     </div>
     <div class="field" id="tdDoneField">
-      <label class="fl"><input type="checkbox" id="tdDone" style="width:auto;margin-right:7px">Erledigt</label>
+      <label class="fl"><input type="checkbox" id="tdDone" style="width:auto;margin-right:7px">Erledigt <span id="tdDoneAt" class="muted" style="font-weight:400;margin-left:6px"></span></label>
     </div>
     <div class="field2">
       <div class="field">
