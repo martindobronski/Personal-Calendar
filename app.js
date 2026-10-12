@@ -983,12 +983,17 @@ var __dv=document.getElementById("dayView"); if(__dv){
     if(window.__dvDrag) return;
     const tchk=e.target.closest(".task-toggle");
     if(tchk){
-      const id=tchk.getAttribute("data-task-toggle-id")||e.target.closest("[data-task-open]")?.dataset.taskOpen;
+      const id=tchk.getAttribute("data-task-toggle-id") || (tchk.closest("[data-task-open]") && tchk.closest("[data-task-open]").dataset.taskOpen);
       if(id){
-        var idx=S.todos.findIndex(x=>x&&x.id===id);
-        if(idx<0) idx=S.todos.findIndex(x=>x&&x.id===id);
+        var idx=S.todos.findIndex(function(x){return x&&x.id===id;});
+        if(idx>=0){
+          var tk=S.todos[idx];
+          setTaskDone(tk, !taskIsDone(tk));
+          e.stopPropagation();
+          save(); renderCalendar(); renderTasks(); updateBadges();
+          return;
+        }
       }
-      // handle via bubbling to document? already have
     }
     const tto=e.target.closest("[data-task-open]");
     if(tto && !e.target.closest(".task-toggle")){ return; }
