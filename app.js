@@ -494,7 +494,7 @@ function renderDayView(){
    Erledigte Einträge sind gesperrt.
    ========================================================= */
 var DV_PXM = 48/60;   /* Pixel pro Minute (muss zu PXH in renderDayView passen) */
-var DV_SNAP = 5;      /* Raster für resize-end in Minuten */
+var DV_SNAP = 5;      /* Raster für Verschieben und Skalieren in Minuten */
 var dvDragState = null;
 
 function dvRoundMin(m){
@@ -720,7 +720,7 @@ window.addEventListener("pointermove", function(e){
     let dayShift = Math.floor(raw / 1440);
     let s = raw - dayShift * 1440;
     if(s < 0){ dayShift -= 1; s += 1440; }
-    s = Math.round(s);
+    s = dvRoundMin(s);
     if(s + dur > 1440) s = 1440 - dur;
     d.dayShift = dayShift; d.curStart = s; d.curEnd = s + dur;
     d.el.style.top = (s * DV_PXM) + "px";
@@ -976,6 +976,8 @@ var __dv=document.getElementById("dayView"); if(__dv){
   __dv.addEventListener("dblclick", function(e){
     const tev=e.target.closest("[data-ev]");
     if(tev){ openEvent(tev.dataset.ev); return; }
+    const tto=e.target.closest("[data-task-open]");
+    if(tto){ const tt=S.todos.find(x=>x.id===tto.dataset.taskOpen); if(tt) openTodo(tt.id,"task"); return; }
   }, true);
   __dv.addEventListener("click", function(e){
     if(window.__dvDrag) return;
