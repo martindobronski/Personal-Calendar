@@ -651,13 +651,15 @@ function renderDayView(){
   }
   items.forEach(function(it){
     const top=it.start*PXM;
-    const hgt=Math.max((it.end-it.start)*PXM,20);
+    const hgt=Math.max((it.end-it.start)*PXM,26);
+    const short=hgt<40;
     const w=100/(it.lanes||1);
     const left=it.lane*w;
     const style="top:"+top+"px;height:"+hgt+"px;left:calc("+left+"% + 4px);width:calc("+w+"% - 6px)";
     if(it.kind==="ev"){
       const c=cat(it.ev.cat);
-      grid+='<div class="dv-ev dv-ev-term'+(it.ev.done?" done":"")+'" data-ev="'+it.ev.id+'" style="'+style+";background:"+c.color+'" title="'+esc(it.ev.title)+'">'
+      const tRange=(it.ev.start||"")+(it.ev.end?"–"+it.ev.end:"");
+      grid+='<div class="dv-ev dv-ev-term'+(it.ev.done?" done":"")+(short?" dv-ev-short":"")+'" data-ev="'+it.ev.id+'" style="'+style+";background:"+c.color+'" title="'+esc((tRange?tRange+" · ":"")+it.ev.title)+'">'
           + '<div class="dv-ev-t">'+esc(it.ev.start||"")+(it.ev.end?"–"+esc(it.ev.end):"")+"</div>"
           + '<div class="dv-ev-n">'+esc(it.ev.title)+"</div>"
           + '<div class="dv-ev-resize" style="position:absolute;left:0;right:0;bottom:0;height:6px;cursor:ns-resize"></div>'
@@ -665,7 +667,8 @@ function renderDayView(){
     } else {
       const c=cat(it.task.cat);
       const tStart=taskStartTime(it.task), tEnd=taskEndTime(it.task);
-      grid+='<div class="dv-ev dv-task'+(taskIsDone(it.task)?" done":"")+'" data-task-open="'+it.task.id+'" style="'+style+';--tc:'+c.color+'" title="Aufgabe: '+esc(it.task.title)+'">'
+      const tRange=(tStart?tStart+(tEnd?"–"+tEnd:""):"");
+      grid+='<div class="dv-ev dv-task'+(taskIsDone(it.task)?" done":"")+(short?" dv-ev-short":"")+'" data-task-open="'+it.task.id+'" style="'+style+';--tc:'+c.color+'" title="'+esc("Aufgabe: "+(tRange?tRange+" · ":"")+it.task.title)+'">'
           + '<button type="button" class="task-toggle task-check" data-task-toggle-id="'+it.task.id+'" title="Erledigt abhaken">✓</button>'
           + '<span class="dv-ev-t">'+esc(tStart)+(tEnd?"–"+esc(tEnd):"")+'</span>'
           + '<span class="dv-ev-n">'+esc(it.task.title)+"</span>"
