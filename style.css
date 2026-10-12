@@ -230,6 +230,17 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 }
 .ev:hover .ev-copy{display:grid}
 .ev .ev-copy:hover{background:var(--accent);color:#1a1200}
+.ev:not(.done),.task-chip:not(.done),.dv-ev:not(.done),.dv-ad:not(.done){cursor:grab}
+.ev:not(.done):active,.task-chip:not(.done):active,.dv-ev:not(.done):active,.dv-ad:not(.done):active{cursor:grabbing}
+.ev,.task-chip{touch-action:none}
+.chip-resize{position:absolute;right:0;top:0;bottom:0;width:8px;cursor:ew-resize;background:transparent}
+.chip-resize:hover{background:rgba(255,255,255,.18)}
+.drag-ghost{
+  position:fixed;z-index:220;pointer-events:none;white-space:nowrap;
+  font-size:12.5px;font-weight:650;color:#0c1220;padding:5px 11px;border-radius:9px;
+  box-shadow:0 8px 22px rgba(0,0,0,.5);max-width:280px;overflow:hidden;text-overflow:ellipsis;opacity:.94;
+}
+.day.drop-target{outline:2px dashed var(--accent);outline-offset:-2px;background:#1d2a4a;box-shadow:inset 0 0 0 2px rgba(245,165,36,.35)}
 .task-chip{
   display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
   padding:2px 6px;border-radius:7px;cursor:pointer;
@@ -241,6 +252,8 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .task-chip .t{opacity:.85;font-variant-numeric:tabular-nums;flex:0 0 auto;color:#cbd5e1}
 .task-chip .mark{flex:0 0 auto;font-size:10px;opacity:.7}
 .task-chip>span:last-child{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-chip{position:relative;overflow:hidden}
+.task-chip .dv-ev-t,.task-chip .t{flex:0 0 auto}
 .task-chip:hover{filter:brightness(1.2);border-color:var(--tc,#64748b)}
 .cal-grid.copy-mode{outline:2px dashed var(--accent);outline-offset:4px;border-radius:13px}
 .cal-grid.copy-mode .day{cursor:copy}
@@ -259,7 +272,9 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .dv-allday{display:flex;gap:10px;align-items:flex-start;padding-bottom:9px;border-bottom:1px solid var(--line)}
 .dv-allday-lbl{flex:0 0 76px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;padding-top:5px}
 .dv-allday-items{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
-.dv-ad{font-size:12.5px;font-weight:650;color:#0c1220;padding:3px 9px;border-radius:7px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dv-ad{font-size:12.5px;font-weight:650;color:#0c1220;padding:3px 9px;border-radius:7px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:relative}
+.dv-ad-resize{position:absolute;right:0;top:0;bottom:0;width:9px;cursor:ew-resize;border-left:1px solid rgba(255,255,255,.3)}
+.dv-ad-resize:hover{background:rgba(255,255,255,.22)}
 .dv-ad:hover{filter:brightness(1.08)}
 .dv-ad-empty{color:var(--muted);font-size:12.5px;padding:5px 0}
 .dv-ad-task .mark{opacity:.75;margin-right:4px}
@@ -280,7 +295,8 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .dv-ev-n{font-size:12.5px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dv-task{background:#1b2438;color:var(--txt);border:1px dashed var(--tc,#64748b);display:flex;gap:6px;align-items:center}
 .dv-task .mark{color:var(--tc,#64748b);font-size:11px;flex:0 0 auto}
-.dv-task .dv-ev-n{min-width:0}
+.dv-task .dv-ev-t{flex:0 0 auto}
+.dv-task .dv-ev-n{min-width:0;flex:1 1 auto}
 .dv-now{position:absolute;left:0;right:0;border-top:2px solid #f43f5e;z-index:6}
 .dv-now::before{content:"";position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:#f43f5e}
 body.cal-day .cal-side .side-top{display:none}

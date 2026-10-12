@@ -438,8 +438,13 @@ function renderDayView(){
           + '</div>';
     } else {
       const c=cat(it.task.cat);
+      const tStart=taskStartTime(it.task), tEnd=taskEndTime(it.task);
       grid+='<div class="dv-ev dv-task'+(taskIsDone(it.task)?" done":"")+'" data-task-open="'+it.task.id+'" style="'+style+";--tc:"+c.color+'" title="'+esc(it.task.title)+'">'
-          + '<span class="mark">✓</span><span class="dv-ev-n">'+esc(it.task.title)+"</span></div>";
+          + '<span class="mark">✓</span>'
+          + '<span class="dv-ev-t">'+esc(tStart)+(tEnd?"–"+esc(tEnd):"")+'</span>'
+          + '<span class="dv-ev-n">'+esc(it.task.title)+"</span>"
+          + '<div class="dv-ev-resize" style="position:absolute;left:0;right:0;bottom:0;height:6px;cursor:ns-resize"></div>'
+          + '</div>';
     }
   });
   grid+="</div>";
@@ -447,12 +452,16 @@ function renderDayView(){
   const bannerEvHtml = banner.map(function(e){
     const c=cat(e.cat);
     return '<div class="dv-ad'+(e.done?" done":"")+'" data-ev="'+e.id+'" style="background:'+c.color+'" title="'+esc(e.title)+'">'
-         + (evDays(e)>1?"⇥ ":"")+esc(e.title)+"</div>";
+         + (evDays(e)>1?"⇥ ":"")+esc(e.title)
+         + (!e.done ? '<span class="dv-ad-resize" title="Dauer ändern"></span>' : "")
+         + "</div>";
   });
   const bannerTaskHtml = tksBanner.map(function(t){
     const c=cat(t.cat);
     return '<div class="dv-ad dv-ad-task'+(taskIsDone(t)?" done":"")+'" data-task-open="'+t.id+'" style="background:'+c.color+'" title="'+esc(t.title)+'">'
-         + '<span class="mark">✓</span>'+esc(t.title)+"</div>";
+         + '<span class="mark">✓</span>'+esc(t.title)
+         + (!taskIsDone(t) ? '<span class="dv-ad-resize" title="Dauer ändern"></span>' : "")
+         + "</div>";
   });
   const bannerAll = bannerEvHtml.concat(bannerTaskHtml);
   const bannerHtml = bannerAll.length ? bannerAll.join("") : '<span class="dv-ad-empty">—</span>';
@@ -476,10 +485,16 @@ function renderDayView(){
   }
 }
 /* =========================================================
-   Tagesansicht: Termine per Drag verschieben / per Griff skalieren
+   Drag & Resize (Termine + Aufgaben)
+   Modi:
+     move-time   : Tagesansicht – Uhrzeit verschieben (auch über Tagesgrenze)
+     resize-end  : Tagesansicht – Ende skalieren
+     move-day    : Monatsraster / Ganztägig-Banner – auf anderen Tag ziehen
+     resize-span : Monatsraster / Banner – Dauer (Tage) skalieren
+   Erledigte Einträge sind gesperrt.
    ========================================================= */
 var DV_PXM = 48/60;   /* Pixel pro Minute (muss zu PXH in renderDayView passen) */
-var DV_SNAP = 5;      /* Raster in Minuten */
+var DV_SNAP = 5;      /* Raster für resize-end in Minuten */
 var dvDragState = null;
 
 function dvRoundMin(m){
@@ -489,66 +504,280 @@ function dvTimeLabel(start, end){
   const s = dvHM(start);
   return (end == null) ? s : s + "–" + dvHM(end >= 1440 ? 1439 : end);
 }
-function refreshDayDrag(){
-  const grid = document.querySelector("#dayView .dv-grid");
-  if(!grid) return;
-  grid.querySelectorAll(".dv-ev-term[data-ev]").forEach(function(el){
-    el.addEventListener("pointerdown", function(e){
-      if(e.button != null && e.button !== 0) return;
-      const ev = S.events.find(function(x){ return x.id === el.dataset.ev; });
-      if(!ev) return;
-      const startMin = ev.start ? hmToMin(ev.start) : 9*60;
-      let endMin = ev.end ? hmToMin(ev.end) : startMin + 60;
-      if(endMin <= startMin) endMin = startMin + 60;
-      dvDragState = {
-        el: el, ev: ev, grid: grid,
-        label: el.querySelector(".dv-ev-t"),
-        resizing: !!e.target.closest(".dv-ev-resize"),
-        hadEnd: !!ev.end,
-        startY: e.clientY, moved: false,
-        origStart: startMin, origEnd: endMin,
-        curStart: startMin, curEnd: endMin
-      };
-      el.classList.add("dragging");
-      if(dvDragState.resizing) el.classList.add("resize-bottom");
-      if(el.setPointerCapture){ try{ el.setPointerCapture(e.pointerId); }catch(err){} }
-    });
-  });
+function dvShortDate(key){ return key ? key.split("-").reverse().join(".") : ""; }
+function dvDragItem(el){
+  const ev = el.dataset.ev ? S.events.find(function(e){ return e.id === el.dataset.ev; }) : null;
+  const t = el.dataset.taskOpen
+    ? (Array.isArray(S.todos) ? S.todos.find(function(x){ return x.id === el.dataset.taskOpen; }) : null)
+    : null;
+  if(ev) return {kind:"ev", obj:ev};
+  if(t) return {kind:"task", obj:t};
+  return null;
+}
+function makeGhost(text, color){
+  const g = document.createElement("div");
+  g.className = "drag-ghost";
+  g.textContent = text;
+  if(color) g.style.background = color;
+  document.body.appendChild(g);
+  return g;
+}
+function clearDropTarget(){
+  document.querySelectorAll(".day.drop-target").forEach(function(x){ x.classList.remove("drop-target"); });
+}
+function positionGhost(d, e){
+  if(d.ghost){
+    d.ghost.style.left = (e.clientX + 12) + "px";
+    d.ghost.style.top = (e.clientY + 10) + "px";
+  }
+}
+function updateGhostText(d){
+  if(!d.ghost) return;
+  if(d.mode==="move-day"){
+    let key;
+    if(d.el.closest("#calGrid")){ key = d.dropKey || d.origKey; }
+    else { key = iso(addDays(parseISO(d.origKey), d.dayShift)); }
+    d.ghost.textContent = d.origTitle + " → " + dvShortDate(key);
+  }
+}
+function dropDayAt(x, y){
+  const el = document.elementFromPoint(x, y);
+  if(!el) return null;
+  const day = el.closest(".day[data-date]");
+  if(!day) return null;
+  const grid = document.getElementById("calGrid");
+  return (grid && grid.contains(day)) ? day : null;
+}
+function dvAutoScroll(sc, clientY){
+  if(!sc) return;
+  const r = sc.getBoundingClientRect();
+  if(clientY < r.top + 26) sc.scrollTop -= 16;
+  else if(clientY > r.bottom - 26) sc.scrollTop += 16;
+}
+function updateGridLabel(d){
+  if(!d.label) return;
+  let txt = dvTimeLabel(d.curStart, (d.mode==="resize-end" || d.hadEnd) ? d.curEnd : null);
+  if(d.dayShift){
+    txt += "  → " + dvShortDate(iso(addDays(parseISO(d.baseKey), d.dayShift)));
+  }
+  d.label.textContent = txt;
+  try{ if(d.el.title) d.el.title = (d.obj.title||"") + " · " + txt; }catch(err){}
+}
+function taskSpanDays(t){
+  const s = taskDate(t);
+  if(!s) return 1;
+  if(t.endDate && t.endDate > s) return Math.round((parseISO(t.endDate) - parseISO(s)) / 86400000) + 1;
+  return 1;
+}
+function setEventDate(ev, newDate){
+  const span = evDays(ev);
+  ev.date = newDate;
+  ev.endDate = span > 1 ? iso(addDays(parseISO(newDate), span - 1)) : "";
+}
+function setTaskDate(t, newDate){
+  const span = taskSpanDays(t);
+  t.startDate = newDate;
+  t.endDate = span > 1 ? iso(addDays(parseISO(newDate), span - 1)) : "";
+}
+function commitTime(d){
+  const startStr = dvHM(d.curStart);
+  const endStr = dvHM(d.curEnd >= 1440 ? 1439 : d.curEnd);
+  if(d.kind==="ev"){
+    d.obj.start = startStr;
+    if(d.mode==="resize-end" || d.hadEnd) d.obj.end = endStr;
+  } else {
+    d.obj.startTime = startStr;
+    d.obj.allDay = false;
+    if(d.mode==="resize-end" || d.hadEnd) d.obj.endTime = endStr;
+  }
+  if(d.dayShift && d.baseKey){
+    const nd = iso(addDays(parseISO(d.baseKey), d.dayShift));
+    if(d.kind==="ev") d.obj.date = nd;
+    else d.obj.startDate = nd;
+  }
+}
+function commitMoveDay(d){
+  if(d.kind==="ev") setEventDate(d.obj, d.dropKey);
+  else setTaskDate(d.obj, d.dropKey);
+}
+function commitSpan(d){
+  const endDate = d.curSpan <= 1 ? "" : iso(addDays(parseISO(d.origKey), d.curSpan - 1));
+  d.obj.endDate = endDate;
+}
+function refreshDayDrag(){ dvInitDrag(); }
+function dvInitDrag(){
+  const dv = document.getElementById("dayView");
+  if(dv && !dv.dataset.dragBound){
+    dv.dataset.dragBound = "1";
+    dv.addEventListener("pointerdown", function(e){ dayViewDragStart(e); });
+  }
+  const cg = document.getElementById("calGrid");
+  if(cg && !cg.dataset.dragBound){
+    cg.dataset.dragBound = "1";
+    cg.addEventListener("pointerdown", function(e){ monthViewDragStart(e); });
+  }
+}
+function dayViewDragStart(e){
+  if(e.button != null && e.button !== 0) return;
+  const grid = e.target.closest(".dv-ev");
+  const banner = e.target.closest(".dv-ad");
+  if(!grid && !banner) return;
+  const item = dvDragItem(grid || banner);
+  if(!item || !item.obj) return;
+  if(item.kind==="ev" && item.obj.done) return;
+  if(item.kind==="task" && taskIsDone(item.obj)) return;
+  const spanResizing = !!(banner && e.target.closest(".dv-ad-resize"));
+  const timeResizing = !!(grid && e.target.closest(".dv-ev-resize"));
+  const mode = spanResizing ? "resize-span" : (grid ? (timeResizing ? "resize-end" : "move-time") : "move-day");
+  const state = {
+    kind: item.kind, obj: item.obj,
+    el: grid || banner,
+    mode: mode,
+    origTitle: (item.kind==="ev" ? item.obj.title : (item.obj.title || item.obj.text || "")),
+    startX: e.clientX, startY: e.clientY,
+    moved: false, ghost: null
+  };
+  if(mode==="move-time" || mode==="resize-end"){
+    const g = e.target.closest(".dv-grid");
+    if(!g) return;
+    const startMin = (item.kind==="ev")
+      ? (item.obj.start ? hmToMin(item.obj.start) : 540)
+      : (item.obj.startTime ? hmToMin(item.obj.startTime) : 540);
+    let endMin;
+    if(item.kind==="ev") endMin = item.obj.end ? hmToMin(item.obj.end) : startMin + 60;
+    else endMin = item.obj.endTime ? hmToMin(item.obj.endTime) : startMin + 30;
+    if(endMin <= startMin) endMin = startMin + (item.kind==="ev" ? 60 : 30);
+    state.grid = g;
+    state.scroll = g.closest(".dv-scroll");
+    state.label = grid ? grid.querySelector(".dv-ev-t") : null;
+    state.hadEnd = (item.kind==="ev") ? !!item.obj.end : !!item.obj.endTime;
+    state.baseKey = g.dataset.date;
+    state.origStart = startMin; state.origEnd = endMin;
+    state.curStart = startMin; state.curEnd = endMin;
+    state.dayShift = 0;
+  } else {
+    const span = (item.kind==="ev") ? evDays(item.obj) : taskSpanDays(item.obj);
+    state.origSpan = span; state.origKey = (item.kind==="ev") ? item.obj.date : taskDate(item.obj);
+    state.curSpan = span; state.dayShift = 0; state.dropKey = state.origKey;
+    state.pxDay = 72;
+    state.ghost = makeGhost(state.origTitle + " → " + dvShortDate(state.origKey), cat(item.obj.cat).color);
+  }
+  state.el.classList.add("dragging");
+  if(state.el.setPointerCapture){ try{ state.el.setPointerCapture(e.pointerId); }catch(err){} }
+  e.preventDefault();
+  dvDragState = state;
+}
+function monthViewDragStart(e){
+  if(e.button != null && e.button !== 0) return;
+  if(copyEvId) return;
+  const chip = e.target.closest(".ev[data-ev]") || e.target.closest(".task-chip[data-task-open]");
+  if(!chip) return;
+  if(e.target.closest(".ev-copy")) return;
+  const item = dvDragItem(chip);
+  if(!item || !item.obj) return;
+  if(item.kind==="ev" && item.obj.done) return;
+  if(item.kind==="task" && taskIsDone(item.obj)) return;
+  const grid = document.getElementById("calGrid");
+  const cellW = (grid && grid.clientWidth > 0) ? grid.clientWidth / 7 : 96;
+  const resizing = !!e.target.closest(".chip-resize");
+  const span = (item.kind==="ev") ? evDays(item.obj) : taskSpanDays(item.obj);
+  if(resizing){
+    const canSpan = (item.kind==="ev") ? (item.obj.allDay || span > 1) : (taskIsAllDay(item.obj) || span > 1);
+    if(!canSpan) return;
+  }
+  const mode = resizing ? "resize-span" : "move-day";
+  const state = {
+    kind: item.kind, obj: item.obj, el: chip, mode: mode,
+    origTitle: (item.kind==="ev" ? item.obj.title : (item.obj.title || item.obj.text || "")),
+    origSpan: span, origKey: (item.kind==="ev") ? item.obj.date : taskDate(item.obj),
+    curSpan: span, pxDay: cellW,
+    startX: e.clientX, startY: e.clientY,
+    moved: false, ghost: null
+  };
+  if(mode==="move-day"){
+    state.dropKey = state.origKey;
+    state.ghost = makeGhost(state.origTitle + " → " + dvShortDate(state.origKey), cat(item.obj.cat).color);
+  } else {
+    state.ghost = makeGhost(span + " Tage", cat(item.obj.cat).color);
+  }
+  chip.classList.add("dragging");
+  if(chip.setPointerCapture){ try{ chip.setPointerCapture(e.pointerId); }catch(err){} }
+  e.preventDefault();
+  dvDragState = state;
 }
 window.addEventListener("pointermove", function(e){
   const d = dvDragState;
   if(!d) return;
-  const dy = e.clientY - d.startY;
-  if(Math.abs(dy) > 3) d.moved = true;
-  const dm = dy / DV_PXM;
-  if(d.resizing){
+  const dx = e.clientX - d.startX, dy = e.clientY - d.startY;
+  if(!d.moved){
+    if(Math.abs(dx) <= 3 && Math.abs(dy) <= 3) return;
+    d.moved = true;
+  }
+  if(d.mode==="move-time"){
+    const dm = dy / DV_PXM;
+    const dur = d.origEnd - d.origStart;
+    let raw = d.origStart + dm;
+    let dayShift = Math.floor(raw / 1440);
+    let s = raw - dayShift * 1440;
+    if(s < 0){ dayShift -= 1; s += 1440; }
+    s = Math.round(s);
+    if(s + dur > 1440) s = 1440 - dur;
+    d.dayShift = dayShift; d.curStart = s; d.curEnd = s + dur;
+    d.el.style.top = (s * DV_PXM) + "px";
+    if(d.scroll) dvAutoScroll(d.scroll, e.clientY);
+    updateGridLabel(d);
+  } else if(d.mode==="resize-end"){
+    const dm = dy / DV_PXM;
     let ende = dvRoundMin(d.origEnd + dm);
     if(ende < d.origStart + DV_SNAP) ende = d.origStart + DV_SNAP;
+    if(ende > 1440) ende = 1440;
     d.curEnd = ende;
-    d.el.style.height = Math.max((d.curEnd - d.curStart)*DV_PXM, 20) + "px";
-  } else {
-    const dur = d.origEnd - d.origStart;
-    let s = dvRoundMin(d.origStart + dm);
-    if(s + dur > 1440) s = 1440 - dur;
-    if(s < 0) s = 0;
-    d.curStart = s; d.curEnd = s + dur;
-    d.el.style.top = (d.curStart*DV_PXM) + "px";
+    d.el.style.height = Math.max((ende - d.curStart) * DV_PXM, 20) + "px";
+    updateGridLabel(d);
+  } else if(d.mode==="move-day"){
+    positionGhost(d, e);
+    if(d.el.closest("#calGrid")){
+      clearDropTarget();
+      const day = dropDayAt(e.clientX, e.clientY);
+      d.dropKey = day ? day.dataset.date : d.origKey;
+      if(day) day.classList.add("drop-target");
+    } else {
+      d.dayShift = Math.round(dx / d.pxDay);
+    }
+    updateGhostText(d);
+  } else if(d.mode==="resize-span"){
+    d.curSpan = Math.max(1, d.origSpan + Math.round(dx / d.pxDay));
+    positionGhost(d, e);
+    if(d.ghost) d.ghost.textContent = d.curSpan + (d.curSpan===1 ? " Tag" : " Tage");
   }
-  if(d.label) d.label.textContent = dvTimeLabel(d.curStart, (d.resizing || d.hadEnd) ? d.curEnd : null);
   e.preventDefault();
 });
 window.addEventListener("pointerup", function(){
   const d = dvDragState;
   if(!d) return;
   dvDragState = null;
-  d.el.classList.remove("dragging","resize-bottom");
+  if(d.ghost && d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
+  clearDropTarget();
+  d.el.classList.remove("dragging");
   if(!d.moved) return;
-  d.ev.start = dvHM(d.curStart);
-  if(d.resizing || d.hadEnd) d.ev.end = dvHM(d.curEnd >= 1440 ? 1439 : d.curEnd);
+  let changed = true;
+  if(d.mode==="move-time" || d.mode==="resize-end") commitTime(d);
+  else if(d.mode==="move-day"){
+    const key = d.el.closest("#calGrid") ? d.dropKey : iso(addDays(parseISO(d.origKey), d.dayShift));
+    changed = !!key && key !== d.origKey;
+    if(changed){ d.dropKey = key; commitMoveDay(d); }
+  } else if(d.mode==="resize-span"){
+    changed = d.curSpan !== d.origSpan;
+    if(changed) commitSpan(d);
+  } else { changed = false; }
+  if(!changed) return;
   window.__dvDrag = true;
   setTimeout(function(){ window.__dvDrag = false; }, 80);
   save();
   render();
+  if(d.mode==="move-day" && d.dropKey && d.dropKey !== d.origKey){
+    toast("Verschoben nach " + dvShortDate(d.dropKey));
+  }
 });
 
 function evEndKey(ev){
@@ -602,9 +831,12 @@ function chipHTML(ev){
   const n = evDays(ev);
   const marker = n>1 ? "<span>⇥</span>" : "";
   const tip = esc(ev.title) + (n>1 ? " ("+evSpanLabel(ev)+")" : "");
+  const canResize = !ev.done && (ev.allDay || n>1);
   return '<div class="ev'+(ev.id===copyEvId?" copysrc":"")+(ev.done?" done":"")+'" data-ev="'+ev.id+'" style="background:'+c.color+'" title="'+tip+'">'
        + '<button class="ev-copy" data-copy="'+ev.id+'" title="Termin kopieren">⧉</button>'
-       + t + marker + "<span>" + esc(ev.title) + "</span></div>";
+       + t + marker + "<span>" + esc(ev.title) + "</span>"
+       + (canResize ? '<span class="chip-resize" title="Dauer ändern"></span>' : "")
+       + "</div>";
 }
 function taskDate(t){ return (t && (t.startDate || t.due)) ? (t.startDate || t.due) : ""; }
 function taskStartTime(t){ return (t && !t.allDay && (t.startTime || t.dueTime)) ? (t.startTime || t.dueTime) : ""; }
@@ -628,10 +860,13 @@ function taskChipHTML(t){
   var c = cat(t.cat);
   var st = taskStartTime(t), en = taskEndTime(t);
   var tip = esc(t.title) + (st ? " · "+esc(st)+(en ? "–"+esc(en) : "") : " · ganztägig");
+  var canResize = !taskIsDone(t) && (taskIsAllDay(t) || taskSpanDays(t)>1);
   return '<div class="task-chip'+(taskIsDone(t)?" done":"")+'" data-task-open="'+t.id+'" style="--tc:'+c.color+'" title="'+tip+'">'
        + (st ? '<span class="t">'+esc(st)+'</span>' : '')
        + '<span class="mark" aria-hidden="true">✓</span>'
-       + '<span>'+esc(t.title)+'</span></div>';
+       + '<span>'+esc(t.title)+'</span>'
+       + (canResize ? '<span class="chip-resize" title="Dauer ändern"></span>' : "")
+       + '</div>';
 }
 function renderLegend(){
   document.getElementById("legend").innerHTML = S.categories.map(c=>
@@ -690,6 +925,7 @@ function renderAgenda(){
 }
 
 var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("click", e=>{
+  if(window.__dvDrag) return;
   const tOpen = e.target.closest("[data-task-open]");
   if(tOpen){ const tt=S.todos.find(x=>x.id===tOpen.dataset.taskOpen); if(tt){ openTodo(tt.id,"task"); return; } }
   const copy = e.target.closest("[data-copy]");
