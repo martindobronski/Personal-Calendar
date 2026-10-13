@@ -16,23 +16,26 @@ function defaults(){
       {id:uid(), name:"Kids",  color:"#22c55e"},
       {id:uid(), name:"Familie", color:"#f5a524"}
     ],
-    events:[], todos:[],tasks:[],routines:[], meals:{}, lists:null, rewards:[], points:0, history:[],
-    settings:{ weekStart:1, showDone:false, appTitle:"Familienkalender", paidBreakfastMin:0, showMoon:false, showZodiac:false, segTask:"open", segRoutine:"open", segCalTask:"all", segCalRoutine:"all" }
+    events:[], todos:[],tasks:[],routines:[], birthdays:[], meals:{}, lists:null, rewards:[], points:0, history:[],
+    settings:{ weekStart:1, showDone:false, appTitle:"Familienkalender", paidBreakfastMin:0, showMoon:false, showZodiac:false, dayStart:0, dayEnd:24, segTask:"open", segRoutine:"open", segCalTask:"all", segCalRoutine:"all" }
   };
 }
 
 let S;
 let activeProfile = null;
 let calMode = "month";
+let dvFullDay = false; // Tagesansicht: ganzen Tag (0–24) statt eingestelltem Zeitraum zeigen
 function inProfile(catId){ return !activeProfile || !catId || catId === activeProfile; }
 function renderProfiles(){
   try{
     const box = document.getElementById('profiles');
     if(!box) return;
-    let html = '<button class="avatar all'+(activeProfile?'':' active')+'" data-profile="" title="Alle Profile anzeigen">★</button>';
+    const selAll = !activeProfile;
+    let html = '<button class="avatar all'+(selAll?' active':'')+'" data-profile="" title="Alle" aria-pressed="'+selAll+'" aria-label="Alle Profile anzeigen">★</button>';
     html += S.categories.map(c=>{
       const ini = (c.name||'?').trim().charAt(0).toUpperCase();
-      return '<button class="avatar'+(activeProfile===c.id?' active':'')+'" data-profile="'+c.id+'" style="background:'+c.color+'" title="'+esc(c.name)+' anzeigen">'+esc(ini)+'</button>';
+      const active = activeProfile===c.id;
+      return '<button class="avatar av-cat'+(active?' active':'')+'" data-profile="'+c.id+'" style="--avc:'+c.color+'" title="'+esc(c.name)+'" aria-pressed="'+active+'" aria-label="Nur '+esc(c.name)+' anzeigen'+(active?' (aktiv)':'')+'">'+esc(ini)+'</button>';
     }).join('');
     box.innerHTML = html;
   }catch(e){}
@@ -52,6 +55,19 @@ function load(){
     S.lists = [{id:uid(), name:"Einkaufsliste", items:[]}];
   }
   if(!S.settings) S.settings = defaults().settings;
+  if(!Array.isArray(S.birthdays)) S.birthdays = [];
+  migrateCategoryColors();
+}
+function migrateCategoryColors(){
+  try{
+    if(!S || !Array.isArray(S.categories)) return;
+    // „Arbeit“ bleibt orange (#f5a524), nur „urlaub“ bekommt eine feste Farbe.
+    const map = { "urlaub":"#84cc16" };
+    S.categories.forEach(function(c){
+      const k = String(c.name||"").trim().toLowerCase();
+      if(map[k] && String(c.color||"").toLowerCase()==="#f5a524") c.color = map[k];
+    });
+  }catch(e){}
 }
 function save(){
   localStorage.setItem(KEY, JSON.stringify(S));
@@ -98,13 +114,35 @@ try{
   }
 }catch(e){}
 
+try{
+  // Robustheit: Termine ohne gültiges Datum (z. B. aus einer früheren Version)
+  // dürfen den Kalender nicht mehr zum Absturz bringen.
+  if(S && Array.isArray(S.events)){
+    var __emig=false;
+    S.events.forEach(function(e){
+      if(!e) return;
+      if(typeof e.date!=="string" || !e.date){
+        if(e.startDate){ e.date=e.startDate; __emig=true; }
+        else if(e.repeat && e.repeat!=="none"){ e.repeat="none"; __emig=true; }
+      }
+      if(e.endDate==null) e.endDate="";
+    });
+    if(__emig) save();
+  }
+}catch(e){}
+
 
 /* =========================================================
    Datum / Helfer
    ========================================================= */
 const pad = n => String(n).padStart(2,"0");
 const iso = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
-const parseISO = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const parseISO = s => {
+  if(typeof s!=="string" || !s) return new Date(NaN);
+  const [y,m,d] = s.slice(0,10).split("-").map(Number);
+  if(!y || !m || !d) return new Date(NaN);
+  return new Date(y,m-1,d);
+};
 const today = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
 const clone = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const addDays = (d,n) => { const c=clone(d); c.setDate(c.getDate()+n); return c; };
@@ -113,6 +151,11 @@ const sameDay = (a,b) => iso(a)===iso(b);
 const ICON_EDIT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
 const ICON_TRASH = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
 const ICON_MORE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>';
+const ICON_CAL = '<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M1.5 6.5h13M5 1v2.6M11 1v2.6"/></svg>';
+const ICON_TIME = '<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 4.5V8l2.5 1.8"/></svg>';
+const ICON_TIMER = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="15" y2="11"/><circle cx="12" cy="14" r="8"/></svg>';
+const ICON_STAR = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+const ICON_TASK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg>';
 
 function astroHTML(d){
   const s=S.settings||{};
@@ -147,9 +190,12 @@ function hideUndo(){
 }
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 const DOW_FULL = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 
 function weekStartDay(){ return Number(S.settings.weekStart ?? 1); }
+function dayRangeStart(){ var v=Number(S.settings && S.settings.dayStart); if(!isFinite(v)) v=0; return Math.max(0,Math.min(23,Math.round(v))); }
+function dayRangeEnd(){ var s=dayRangeStart(); var v=Number(S.settings && S.settings.dayEnd); if(!isFinite(v)) v=24; v=Math.max(1,Math.min(24,Math.round(v))); return v<=s?s+1:v; }
 function startOfWeek(d){
   const c = clone(d), ws = weekStartDay();
   const diff = (c.getDay() - ws + 7) % 7;
@@ -279,14 +325,32 @@ function render(){
 }
 function updateBadges(){
   try{
-    let n = 0;
-    if(S && Array.isArray(S.todos)) S.todos.forEach(t=>{ if(inProfile(t.cat) && !isDone(t)) n++; });
+    let n = 0, nOver = 0;
+    if(S && Array.isArray(S.todos)) S.todos.forEach(t=>{ if(inProfile(t.cat) && !isDone(t)){ n++; if(isTaskOverdue(t)) nOver++; } });
     const b = document.getElementById("todoBadge");
-    if(b){ b.textContent = n; b.style.display = n ? "grid" : "none"; }
-    let rn = 0;
-    if(S && Array.isArray(S.routines)) rn = S.routines.filter(r=>inProfile(r.cat) && !routineIsDone(r)).length;
+    if(b){
+      if(nOver>0){
+        b.textContent = nOver+"!"; b.classList.add("overdue");
+        b.title = nOver+" überfällig · "+n+" offen";
+      }else{
+        b.textContent = n; b.classList.remove("overdue");
+        b.title = n===1 ? "1 offene Aufgabe" : n+" offene Aufgaben";
+      }
+      b.style.display = n ? "grid" : "none";
+    }
+    let rn = 0, rOver = 0;
+    if(S && Array.isArray(S.routines)) S.routines.forEach(r=>{ if(inProfile(r.cat) && !routineIsDone(r)){ rn++; if(isRoutineOverdue(r)) rOver++; } });
     const rb = document.getElementById("routineBadge");
-    if(rb){ rb.textContent = rn; rb.style.display = rn ? "grid" : "none"; }
+    if(rb){
+      if(rOver>0){
+        rb.textContent = rOver+"!"; rb.classList.add("overdue");
+        rb.title = rOver+" überfällig · "+rn+" offen";
+      }else{
+        rb.textContent = rn; rb.classList.remove("overdue");
+        rb.title = rn===1 ? "1 offene Routine" : rn+" offene Routinen";
+      }
+      rb.style.display = rn ? "grid" : "none";
+    }
   }catch(e){}
 }
 
@@ -305,10 +369,24 @@ let calMonth = clone(today());
 let selDate = clone(today());
 let calSearchQuery = "";
 
+function reportRenderError(e){
+  try{ if(window.console && console.error) console.error(e); }catch(_){}
+  try{
+    if(typeof curView!=="undefined" && curView==="cal"){
+      const ad = document.getElementById("agendaDate");
+      const ag = document.getElementById("agenda");
+      if(ad) ad.textContent = "⚠ Anzeige-Fehler";
+      if(ag) ag.innerHTML = '<div class="empty"><span class="big">⚠️</span>'
+        + 'Ein Eintrag konnte nicht angezeigt werden.'
+        + '<br><span class="muted">'+esc(e && e.message ? e.message : e)+'</span></div>';
+    }
+  }catch(_){}
+}
 function renderCalendar(){
+  try{
   updateCalModeUI();
   const lg0 = document.getElementById("legend"); if(lg0) lg0.hidden = false;
-  if(calMode==="day"){ renderDayView(); refreshCalSearch(); return; }
+  if(calMode==="day"){ renderDayView(); try{ renderAgenda(); }catch(e){} refreshCalSearch(); return; }
   const y = calMonth.getFullYear(), m = calMonth.getMonth();
   document.getElementById("calTitle").textContent = MONTHS[m] + " " + y;
 
@@ -326,8 +404,10 @@ function renderCalendar(){
     const out = d.getMonth()!==m;
     const evs = eventsOn(key);
     const tks = tasksOn(key);
+    const bds = birthdaysOn(key);
     let chips = "";
-    const cellItems = evs.map(chipHTML).concat(tks.map(taskChipHTML));
+    const cellItems = bds.map(function(b){ return bdChipHTML(b,key); })
+                         .concat(evs.map(chipHTML)).concat(tks.map(taskChipHTML));
     cellItems.slice(0,3).forEach(h=>{ chips += h; });
     if(cellItems.length>3) chips += '<div class="more">+'+(cellItems.length-3)+" weitere</div>";
     const hol = (H[key] || Hnext[key] || Hprev[key]) || "";
@@ -347,6 +427,7 @@ function renderCalendar(){
   renderAgenda(); try{if(typeof updateWorkLive==="function") updateWorkLive();}catch(e){}
   try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
   refreshCalSearch();
+  }catch(e){ reportRenderError(e); }
 }
 function setCalMode(m){
   calMode = (m==="day") ? "day" : "month";
@@ -362,6 +443,15 @@ function updateCalModeUI(){
     if(mw) mw.hidden = calMode==="day";
     if(dv) dv.hidden = calMode!=="day";
     document.body.classList.toggle("cal-day", calMode==="day");
+    const dfb=document.getElementById("dayFullBtn");
+    if(dfb){
+      dfb.style.display = calMode==="day" ? "" : "none";
+      dfb.classList.toggle("active", !!dvFullDay);
+      dfb.setAttribute("aria-pressed", dvFullDay ? "true" : "false");
+      dfb.title = dvFullDay
+        ? "Zeigt den ganzen Tag (0–24 Uhr) – klicken für Zeitraum "+dayRangeStart()+":00–"+dayRangeEnd()+":00"
+        : "Ganzen Tag anzeigen (0–24 Uhr), um frühere/spätere Einträge zu sehen";
+    }
   }catch(e){}
 }
 function evResultHTML(ev){
@@ -371,11 +461,13 @@ function evResultHTML(ev){
   const dspan = (evDays(ev)>1 && ev.endDate)
     ? dshort+"–"+esc(ev.endDate.split("-").reverse().join("."))
     : dshort;
-  return '<div class="ag-item'+(ev.done?" done":"")+'" data-ev="'+ev.id+'" style="--c:'+c.color+'">'
+  const repL = eventRepLabel(ev);
+  return '<div class="ag-item'+(eventIsDone(ev)?" done":"")+'" data-ev="'+ev.id+'" style="--c:'+c.color+'">'
     + '<div class="when">'+when+'</div>'
     + '<div><div class="ttl">'+esc(ev.title)+'</div>'
     + '<div class="sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
-    + (dspan ? ' · 📅 '+dspan : '')
+    + (dspan ? ' · '+ICON_CAL+' '+dspan : '')
+    + (repL ? ' · 🔁 '+esc(repL) : '')
     + (ev.note ? ' · '+esc(ev.note) : '')+'</div></div>'
     + '<div class="ag-actions"><button type="button" class="linkbtn act" data-ev-edit="'+ev.id+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
     + '<button type="button" class="linkbtn act" data-copy="'+ev.id+'">⧉ Kopieren</button>'
@@ -388,9 +480,9 @@ function taskResultHTML(t){
   const d = taskDate(t);
   const dshort = d ? esc(d.split("-").reverse().join(".")) : "";
   const dspan = (d && t.endDate && t.endDate>d) ? dshort+"–"+esc(t.endDate.split("-").reverse().join(".")) : dshort;
-  let meta = dspan ? " · 📅 "+dspan : "";
+  let meta = dspan ? " · "+ICON_CAL+" "+dspan : "";
   if(repLabel(t.repeat)) meta += " · 🔁 "+esc(repLabel(t.repeat));
-  if(t.points) meta += " · "+t.points+" ⭐";
+  if(t.points) meta += " · "+t.points+" "+ICON_STAR;
   if(t.note) meta += " · "+esc(t.note);
   return '<div class="ag-item task'+(taskIsDone(t)?" done":"")+'" style="--c:'+c.color+'">'
     + '<div class="when">'+when+'</div>'
@@ -403,7 +495,7 @@ function routineResultHTML(r){
   const when = (r.time && r.time!=="any") ? esc(r.time) : "Flexibel";
   let meta = "";
   if(repLabel(r.freq)) meta += " · 🔁 "+esc(repLabel(r.freq));
-  if(r.points) meta += " · "+r.points+" ⭐";
+  if(r.points) meta += " · "+r.points+" "+ICON_STAR;
   if(r.note) meta += " · "+esc(r.note);
   return '<div class="ag-item'+(routineIsDone(r)?" done":"")+'" style="--c:'+c.color+';cursor:pointer" data-info-open="routine" data-info-id="'+r.id+'">'
     + '<div class="when">'+when+'</div>'
@@ -485,7 +577,7 @@ function renderCalSearch(){
       ev.title, ev.note, c.name, "termin",
       ev.date, dshort, ev.endDate || "",
       ev.allDay ? "ganztägig" : ((ev.start||"")+" "+(ev.end||"")),
-      ev.done ? "erledigt" : "offen"
+      eventIsDone(ev) ? "erledigt" : "offen"
     ].join(" ").toLowerCase();
     if(!srchTermsMatch(hay, terms)) return;
     items.push({ kind:"ev", date:ev.date||"", start:ev.allDay?"":ev.start||"", html:evResultHTML(ev) });
@@ -641,35 +733,51 @@ function renderDayView(){
   });
   layoutDayItems(items);
 
-  const PXH=64, PXM=PXH/60, totalH=24*PXH;
-  let grid='<div class="dv-grid" data-date="'+key+'" style="height:'+totalH+'px">';
-  for(let h=0;h<24;h++) grid+='<div class="dv-hour" style="top:'+(h*PXH)+'px"><span>'+pad(h)+":00</span></div>";
-  if(sameDay(selDate,today())){
-    const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
-    grid+='<div class="dv-past" style="height:'+(nowMin*PXM)+'px"></div>';
-    grid+='<div class="dv-now" style="top:'+(nowMin*PXM)+'px" title="Jetzt"></div>';
+  const PXH=64, PXM=PXH/60;
+  const BOTTOM_PAD=24; // Puffer unten, damit letzte Linie/Label nicht am Rahmen klebt
+  const cfgDs=dayRangeStart(), cfgDe=dayRangeEnd();
+  const ds=dvFullDay?0:cfgDs, de=dvFullDay?24:cfgDe;
+  const baseMin=ds*60, totalH=(de-ds)*PXH;
+  const isToday=sameDay(selDate,today());
+  const nowDate=new Date();
+  const nowMin=isToday ? (nowDate.getHours()*60+nowDate.getMinutes()) : -1;
+  const nowY = isToday ? (nowMin-baseMin)*PXM : -1;
+  const nowShown = nowY >= 0 && nowY <= totalH;
+  let grid='<div class="dv-grid" data-date="'+key+'" data-base="'+baseMin+'" style="height:'+(totalH+BOTTOM_PAD)+'px">';
+  for(let h=ds;h<de;h++){
+    const hideLbl = nowShown && Math.abs(nowMin - h*60) <= 15;
+    grid+='<div class="dv-hour" style="top:'+((h-ds)*PXH)+'px"><span'+(hideLbl?' style="visibility:hidden"':'')+'>'+pad(h)+":00</span></div>";
+  }
+  grid+='<div class="dv-end" style="top:'+totalH+'px"></div>';
+  if(nowShown){
+    if(nowY>0) grid+='<div class="dv-past" style="height:'+Math.min(nowY,totalH)+'px"></div>';
+    grid+='<div class="dv-now" style="top:'+nowY+'px" title="Jetzt"><span class="dv-now-lbl">'+pad(nowDate.getHours())+":"+pad(nowDate.getMinutes())+'</span></div>';
   }
   items.forEach(function(it){
-    const top=it.start*PXM;
+    const top=(it.start-baseMin)*PXM;
     const hgt=Math.max((it.end-it.start)*PXM,26);
     const short=hgt<40;
+    const past=(isToday && it.end<=nowMin) ? " past" : "";
     const w=100/(it.lanes||1);
     const left=it.lane*w;
     const style="top:"+top+"px;height:"+hgt+"px;left:calc("+left+"% + 4px);width:calc("+w+"% - 6px)";
     if(it.kind==="ev"){
       const c=cat(it.ev.cat);
       const tRange=(it.ev.start||"")+(it.ev.end?"–"+it.ev.end:"");
-      grid+='<div class="dv-ev dv-ev-term'+(it.ev.done?" done":"")+(short?" dv-ev-short":"")+'" data-ev="'+it.ev.id+'" style="'+style+";background:"+c.color+'" title="'+esc((tRange?tRange+" · ":"")+it.ev.title)+'">'
+      const repL=eventRepLabel(it.ev);
+      grid+='<div class="dv-ev dv-ev-term'+(eventIsDone(it.ev)?" done":"")+(short?" dv-ev-short":"")+past+'" data-ev="'+it.ev.id+'" style="'+style+';--c:'+c.color+'" title="'+esc((tRange?tRange+" · ":"")+it.ev.title+(repL?" · "+repL:""))+'">'
           + '<div class="dv-ev-t">'+esc(it.ev.start||"")+(it.ev.end?"–"+esc(it.ev.end):"")+"</div>"
-          + '<div class="dv-ev-n">'+esc(it.ev.title)+"</div>"
+          + '<div class="dv-ev-n">'+(repL?'<span class="rep">↻</span>':"")+esc(it.ev.title)+"</div>"
           + '<div class="dv-ev-resize" style="position:absolute;left:0;right:0;bottom:0;height:6px;cursor:ns-resize"></div>'
           + '</div>';
     } else {
       const c=cat(it.task.cat);
       const tStart=taskStartTime(it.task), tEnd=taskEndTime(it.task);
       const tRange=(tStart?tStart+(tEnd?"–"+tEnd:""):"");
-      grid+='<div class="dv-ev dv-task'+(taskIsDone(it.task)?" done":"")+(short?" dv-ev-short":"")+'" data-task-open="'+it.task.id+'" style="'+style+';--tc:'+c.color+'" title="'+esc("Aufgabe: "+(tRange?tRange+" · ":"")+it.task.title)+'">'
-          + '<button type="button" class="task-toggle task-check" data-task-toggle-id="'+it.task.id+'" title="Erledigt abhaken">✓</button>'
+      const tDone=taskIsDone(it.task);
+      const tOver=!tDone && isTaskOverdue(it.task);
+      grid+='<div class="dv-ev dv-task'+(tDone?" done":"")+(tOver?" overdue":"")+(short?" dv-ev-short":"")+past+'" data-task-open="'+it.task.id+'" style="'+style+';--c:'+c.color+'" title="'+esc("Aufgabe: "+(tRange?tRange+" · ":"")+it.task.title+(tDone?" · erledigt":(tOver?" · überfällig":"")))+'">'
+          + '<button type="button" class="task-toggle task-check'+(tDone?" on":"")+'" data-task-toggle-id="'+it.task.id+'" title="'+(tDone?"Wieder öffnen":"Erledigt abhaken")+'">'+(tDone?"✓":"")+'</button>'
           + '<span class="dv-ev-t">'+esc(tStart)+(tEnd?"–"+esc(tEnd):"")+'</span>'
           + '<span class="dv-ev-n">'+esc(it.task.title)+"</span>"
           + '<div class="dv-ev-resize" style="position:absolute;left:0;right:0;bottom:0;height:6px;cursor:ns-resize"></div>'
@@ -680,19 +788,22 @@ function renderDayView(){
 
   const bannerEvHtml = banner.map(function(e){
     const c=cat(e.cat);
-    return '<div class="dv-ad'+(e.done?" done":"")+'" data-ev="'+e.id+'" style="background:'+c.color+'" title="'+esc(e.title)+'">'
-         + (evDays(e)>1?"⇥ ":"")+esc(e.title)
-         + (!e.done ? '<span class="dv-ad-resize" title="Dauer ändern"></span>' : "")
+    const repL=eventRepLabel(e);
+    return '<div class="dv-ad'+(eventIsDone(e)?" done":"")+'" data-ev="'+e.id+'" style="background:'+c.color+'" title="'+esc(e.title+(repL?" · "+repL:""))+'">'
+         + (evDays(e)>1?"⇥ ":"")+(repL?'<span class="rep">↻</span>':"")+esc(e.title)
+         + (!eventIsDone(e) ? '<span class="dv-ad-resize" title="Dauer ändern"></span>' : "")
          + "</div>";
   });
   const bannerTaskHtml = tksBanner.map(function(t){
     const c=cat(t.cat);
-    return '<div class="dv-ad dv-ad-task'+(taskIsDone(t)?" done":"")+'" data-task-open="'+t.id+'" style="background:'+c.color+'" title="'+esc(t.title)+'">'
-         + '<span class="mark">✓</span>'+esc(t.title)
-         + (!taskIsDone(t) ? '<span class="dv-ad-resize" title="Dauer ändern"></span>' : "")
+    const tDone=taskIsDone(t);
+    return '<div class="dv-ad dv-ad-task'+(tDone?" done":"")+'" data-task-open="'+t.id+'" style="background:'+c.color+'" title="'+esc(t.title+(tDone?" · erledigt":" · offen"))+'">'
+         + (tDone?'<span class="mark">✓</span>':'')+esc(t.title)
+         + (!tDone ? '<span class="dv-ad-resize" title="Dauer ändern"></span>' : "")
          + "</div>";
   });
-  const bannerAll = bannerEvHtml.concat(bannerTaskHtml);
+  const bds=birthdaysOn(key);
+  const bannerAll = bds.map(function(b){ return bdBannerHTML(b, selDate.getFullYear()); }).concat(bannerEvHtml).concat(bannerTaskHtml);
   const bannerHtml = bannerAll.length ? bannerAll.join("") : '<span class="dv-ad-empty">—</span>';
 
   document.getElementById("dayView").innerHTML =
@@ -705,13 +816,13 @@ function renderDayView(){
   try{ if(typeof refreshDayDrag==="function") refreshDayDrag(); }catch(e){}
   const sc=document.querySelector("#dayView .dv-scroll");
   if(sc){
-    if(sameDay(selDate,today())){
-      const now=new Date();
-      const nowTop=(now.getHours()*60+now.getMinutes())*PXM;
+    const maxScroll = (sc.scrollHeight||0) - (sc.clientHeight||0);
+    if(isToday){
+      const nowTop=(nowMin-baseMin)*PXM;
       const third=(sc.clientHeight||560)/3;
-      sc.scrollTop=Math.max(0,nowTop-third);
+      sc.scrollTop=Math.max(0, Math.min(nowTop-third, maxScroll));
     } else {
-      sc.scrollTop=7*PXH;
+      sc.scrollTop=Math.max(0, Math.min((8*60-baseMin)*PXM, maxScroll));
     }
   }
 }
@@ -856,7 +967,7 @@ function dayViewDragStart(e){
   if(!grid && !banner) return;
   const item = dvDragItem(grid || banner);
   if(!item || !item.obj) return;
-  if(item.kind==="ev" && item.obj.done) return;
+  if(item.kind==="ev" && eventIsDone(item.obj)) return;
   if(item.kind==="task" && taskIsDone(item.obj)) return;
   const spanResizing = !!(banner && e.target.closest(".dv-ad-resize"));
   const timeResizing = !!(grid && e.target.closest(".dv-ev-resize"));
@@ -881,6 +992,7 @@ function dayViewDragStart(e){
     if(endMin <= startMin) endMin = startMin + (item.kind==="ev" ? 60 : 30);
     state.grid = g;
     state.scroll = g.closest(".dv-scroll");
+    state.baseMin = Number(g.dataset.base) || 0;
     state.label = grid ? grid.querySelector(".dv-ev-t") : null;
     state.hadEnd = (item.kind==="ev") ? !!item.obj.end : !!item.obj.endTime;
     state.baseKey = g.dataset.date;
@@ -907,7 +1019,7 @@ function monthViewDragStart(e){
   if(e.target.closest(".ev-copy")) return;
   const item = dvDragItem(chip);
   if(!item || !item.obj) return;
-  if(item.kind==="ev" && item.obj.done) return;
+  if(item.kind==="ev" && eventIsDone(item.obj)) return;
   if(item.kind==="task" && taskIsDone(item.obj)) return;
   const grid = document.getElementById("calGrid");
   const cellW = (grid && grid.clientWidth > 0) ? grid.clientWidth / 7 : 96;
@@ -955,7 +1067,7 @@ window.addEventListener("pointermove", function(e){
     s = dvRoundMin(s);
     if(s + dur > 1440) s = 1440 - dur;
     d.dayShift = dayShift; d.curStart = s; d.curEnd = s + dur;
-    d.el.style.top = (s * DV_PXM) + "px";
+    d.el.style.top = ((s - (d.baseMin||0)) * DV_PXM) + "px";
     if(d.scroll) dvAutoScroll(d.scroll, e.clientY);
     updateGridLabel(d);
   } else if(d.mode==="resize-end"){
@@ -1022,6 +1134,40 @@ function evSpanLabel(ev){
   const n = evDays(ev);
   return n===1 ? "1 Tag" : n+" Tage (bis "+evEndKey(ev).split("-").reverse().join(".")+")";
 }
+/* Wiederholende Termine */
+function eventIsDone(e){
+  if(!e || !e.repeat || e.repeat==="none") return !!e.done;
+  return taskIsDone(Object.assign({}, e));
+}
+function recurrenceStart(ev, key){
+  if(!ev.repeat || ev.repeat==="none") return "";
+  const start = parseISO(ev.date);
+  const k = parseISO(key);
+  if(k < start) return "";
+  if(ev.repeat==="daily" || ev.repeat==="weekly"){
+    const step = ev.repeat==="daily" ? 1 : 7;
+    const diff = Math.round((k - start) / 86400000);
+    return iso(addDays(start, Math.floor(diff/step)*step));
+  }
+  const stepM = ev.repeat==="monthly" ? 1 : ev.repeat==="quarterly" ? 3 : 12;
+  const sm = start.getFullYear()*12 + start.getMonth();
+  const km = k.getFullYear()*12 + k.getMonth();
+  return iso(new Date(start.getFullYear(), start.getMonth() + Math.floor((km-sm)/stepM)*stepM, start.getDate()));
+}
+function eventOccursOn(ev, key){
+  const occ = recurrenceStart(ev, key);
+  if(!occ) return false;
+  const span = Math.max(1, evDays(ev));
+  return key >= occ && key <= iso(addDays(parseISO(occ), span-1));
+}
+function eventCovers(ev, key){
+  if(!ev || typeof ev.date!=="string" || !ev.date) return false;
+  if(ev.repeat && ev.repeat!=="none") return eventOccursOn(ev, key);
+  return key >= ev.date && key <= evEndKey(ev);
+}
+function eventRepLabel(ev){
+  return (ev && ev.repeat && ev.repeat!=="none") ? repLabel(ev.repeat) : "";
+}
 let copyEvId = null;
 function setCopyEv(id){
   copyEvId = (copyEvId===id) ? null : id;
@@ -1044,13 +1190,13 @@ function copyEventTo(key){
     return;
   }
   const span = evDays(src);
-  S.events.push(Object.assign({}, src, {id:uid(), done:false, date:key,
+  S.events.push(Object.assign({}, src, {id:uid(), done:false, lastDone:null, date:key,
     endDate: span>1 ? iso(addDays(parseISO(key), span-1)) : ""}));
   save(); renderCalendar();
   toast("Kopiert nach "+key.split("-").reverse().join("."));
 }
 function eventsOn(key){
-  return S.events.filter(e=>inProfile(e.cat) && key >= e.date && key <= evEndKey(e))
+  return S.events.filter(e=>inProfile(e.cat) && eventCovers(e, key))
     .sort((a,b)=>{
       if(a.date!==b.date) return a.date.localeCompare(b.date);
       if(a.allDay!==b.allDay) return a.allDay?-1:1;
@@ -1062,11 +1208,13 @@ function chipHTML(ev){
   const t = ev.allDay ? "" : '<span class="t">'+esc(ev.start||"")+"</span>";
   const n = evDays(ev);
   const marker = n>1 ? "<span>⇥</span>" : "";
-  const tip = esc(ev.title) + (n>1 ? " ("+evSpanLabel(ev)+")" : "");
-  const canResize = !ev.done && (ev.allDay || n>1);
-  return '<div class="ev'+(ev.id===copyEvId?" copysrc":"")+(ev.done?" done":"")+'" data-ev="'+ev.id+'" style="background:'+c.color+'" title="'+tip+'">'
+  const repL = eventRepLabel(ev);
+  const rep = repL ? '<span class="rep" title="Wiederholt sich: '+esc(repL)+'">↻</span>' : "";
+  const tip = esc(ev.title) + (n>1 ? " ("+evSpanLabel(ev)+")" : "") + (repL ? " · "+esc(repL) : "");
+  const canResize = !eventIsDone(ev) && (ev.allDay || n>1);
+  return '<div class="ev'+(ev.id===copyEvId?" copysrc":"")+(eventIsDone(ev)?" done":"")+'" data-ev="'+ev.id+'" style="background:'+c.color+'" title="'+tip+'">'
        + '<button class="ev-copy" data-copy="'+ev.id+'" title="Termin kopieren">⧉</button>'
-       + t + marker + "<span>" + esc(ev.title) + "</span>"
+       + t + marker + rep + "<span>" + esc(ev.title) + "</span>"
        + (canResize ? '<span class="chip-resize" title="Dauer ändern"></span>' : "")
        + "</div>";
 }
@@ -1093,7 +1241,7 @@ function taskChipHTML(t){
   var st = taskStartTime(t), en = taskEndTime(t);
   var tip = esc(t.title) + (st ? " · "+esc(st)+(en ? "–"+esc(en) : "") : " · ganztägig");
   var canResize = !taskIsDone(t) && (taskIsAllDay(t) || taskSpanDays(t)>1);
-  return '<div class="task-chip'+(taskIsDone(t)?" done":"")+'" data-task-open="'+t.id+'" style="--tc:'+c.color+'" title="'+tip+'">'
+  return '<div class="task-chip'+(taskIsDone(t)?" done":"")+(isTaskOverdue(t)?" overdue":"")+'" data-task-open="'+t.id+'" style="--tc:'+c.color+'" title="'+tip+'">'
        + (st ? '<span class="t">'+esc(st)+'</span>' : '')
        + '<span class="mark" aria-hidden="true">✓</span>'
        + '<span>'+esc(t.title)+'</span>'
@@ -1128,11 +1276,13 @@ function renderAgenda(){
   }
   const evHtml = evs.map(ev=>{
     const c = cat(ev.cat);
-    return '<div class="ag-item'+(ev.done?" done":"")+'" data-ev="'+ev.id+'" style="--c:'+c.color+'">'
+    const repL = eventRepLabel(ev);
+    return '<div class="ag-item'+(eventIsDone(ev)?" done":"")+'" data-ev="'+ev.id+'" style="--c:'+c.color+'">'
       + '<div class="when">'+(ev.allDay?"ganztägig":esc((ev.start||"—")+"–"+(ev.end||"")))+"</div>"
       + "<div><div class=\"ttl\">"+esc(ev.title)+"</div>"
       + '<div class="sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+"</span>"
-      + (evDays(ev)>1 ? " · 📅 "+esc(ev.date.split("-").reverse().join("."))+"–"+esc(evEndKey(ev).split("-").reverse().join(".")) : "")
+      + (evDays(ev)>1 ? " · "+ICON_CAL+" "+esc(ev.date.split("-").reverse().join("."))+"–"+esc(evEndKey(ev).split("-").reverse().join(".")) : "")
+      + (repL ? " · 🔁 "+esc(repL) : "")
       + (ev.note ? " · "+esc(ev.note) : "") + "</div></div>"
       + '<div class="ag-actions"><button type="button" class="linkbtn act" data-ev-edit="'+ev.id+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
       + '<button type="button" class="linkbtn act" data-copy="'+ev.id+'">⧉ Kopieren</button>'
@@ -1142,18 +1292,22 @@ function renderAgenda(){
   const tkHtml = tks.map(t=>{
     const c = cat(t.cat);
     const idx = S.todos.indexOf(t);
-    return '<div class="ag-item task" style="--c:'+c.color+'">'
-      + '<button type="button" class="task-check" data-task-toggle="'+idx+'" title="Erledigt abhaken">✓</button>'
+    const tDone = taskIsDone(t);
+    const tOver = !tDone && isTaskOverdue(t);
+    return '<div class="ag-item task'+(tDone?" done":"")+(tOver?" overdue":"")+'" style="--c:'+c.color+'">'
+      + '<button type="button" class="task-check'+(tDone?" on":"")+'" data-task-toggle="'+idx+'" title="'+(tDone?"Wieder öffnen":"Erledigt abhaken")+'">'+(tDone?"✓":"")+'</button>'
       + '<div class="when">'+(taskIsAllDay(t)?"ganztägig":esc(taskStartTime(t))+(taskEndTime(t)?"–"+esc(taskEndTime(t)):""))+'</div>'
       + '<div class="tclick" data-task-open="'+t.id+'"><div class="ttl">'+esc(t.title)+'</div>'
       + '<div class="sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
-      + (spanTxt(t) ? " · 🗓 "+esc(spanTxt(t)) : "")
+      + (tOver ? " "+overdueBadge(t,false) : "")
+      + (!tOver && spanTxt(t) ? " · "+ICON_CAL+" "+esc(spanTxt(t)) : "")
       + (t.note ? " · "+esc(t.note) : "") + "</div></div>"
       + '<div class="ag-actions"><button type="button" class="linkbtn act" data-task-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
       + '<button type="button" class="linkbtn act del" data-task-del="'+idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'
       + "</div>";
   }).join("");
   box.innerHTML = evHtml + tkHtml;
+  clampTitles(box);
 }
 
 var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("click", e=>{
@@ -1210,6 +1364,9 @@ var __cms=document.getElementById("calModeSeg"); if(__cms)__cms.addEventListener
   const b=e.target.closest("[data-calmode]");
   if(b) setCalMode(b.dataset.calmode);
 });
+var __dfb=document.getElementById("dayFullBtn"); if(__dfb)__dfb.addEventListener("click", ()=>{
+  dvFullDay=!dvFullDay; renderDayView(); updateCalModeUI();
+});
 var __dv=document.getElementById("dayView"); if(__dv){
   __dv.addEventListener("dblclick", function(e){
     const tev=e.target.closest("[data-ev]");
@@ -1240,7 +1397,8 @@ var __dv=document.getElementById("dayView"); if(__dv){
     const grid=e.target.closest(".dv-grid");
     if(grid){
       const rect=grid.getBoundingClientRect();
-      let min=Math.round(((e.clientY-rect.top)/DV_PXM)/30)*30;
+      const baseMin=Number(grid.dataset.base)||0;
+      let min=Math.round((((e.clientY-rect.top)/DV_PXM)+baseMin)/30)*30;
       if(isNaN(min)) return;
       min=Math.max(0,Math.min(min,1440-30));
       openEvent(null, grid.dataset.date, dvHM(min));
@@ -1310,17 +1468,19 @@ function openEvent(id, date, start){
     ? (Math.round((parseISO(e.endDate) - parseISO(e.date)) / 86400000) + 1)
     : 1;
   fillCatSelect(document.getElementById("evCat"), e ? e.cat : (S.categories[0]||{}).id);
-  document.getElementById("evAllDay").checked = e ? !!e.allDay : !start;
+  document.getElementById("evAllDay").checked = e ? !!e.allDay : false;
   document.getElementById("evStart").value = e && e.start ? e.start : (start || "09:00");
   document.getElementById("evEnd").value = e && e.end ? e.end
-    : (start ? dvHM(Math.min(hmToMin(start)+60, 1439)) : "10:00");
+    : (start ? dvHM(Math.min(hmToMin(start)+30, 1439)) : "09:30");
   document.getElementById("evDur").value = "";
   document.getElementById("evDurUnit").value = "60";
   if(e && !e.allDay && e.start && e.end) evSetDurFromTimes();
   document.getElementById("evNote").value = e ? (e.note||"") : "";
   document.getElementById("evDelete").style.display = e ? "" : "none";
   document.getElementById("evDoneField").style.display = e ? "" : "none";
-  document.getElementById("evDone").checked = e ? !!e.done : false;
+  document.getElementById("evDone").checked = e ? eventIsDone(e) : false;
+  const evRep = document.getElementById("evRepeat");
+  if(evRep) evRep.value = e ? (e.repeat || "none") : "none";
   toggleTimeFields();
   updateSpan();
   openModal("evModal");
@@ -1401,6 +1561,8 @@ document.getElementById("evSave").onclick = ()=>{
   if(endDate && endDate < date){ toast("Das Enddatum liegt vor dem Beginn."); return; }
   if(endDate === date) endDate = "";
   const allDay = document.getElementById("evAllDay").checked;
+  const repeat = document.getElementById("evRepeat").value;
+  const done = document.getElementById("evDone").checked;
   const data = {
     title, date, endDate,
     cat: document.getElementById("evCat").value,
@@ -1408,10 +1570,17 @@ document.getElementById("evSave").onclick = ()=>{
     start: allDay ? "" : document.getElementById("evStart").value,
     end: allDay ? "" : document.getElementById("evEnd").value,
     note: document.getElementById("evNote").value.trim(),
-    done: document.getElementById("evDone").checked
+    repeat, done
   };
   if(editingEvent) Object.assign(editingEvent, data);
   else S.events.push(Object.assign({id:uid()}, data));
+  const saved = editingEvent || S.events[S.events.length-1];
+  if(repeat && repeat!=="none"){
+    if(done){ saved.lastDone = iso(today()); saved.completedAt = new Date().toISOString(); delete saved.done; }
+    else { saved.lastDone = null; delete saved.completedAt; }
+  } else {
+    delete saved.lastDone; delete saved.completedAt;
+  }
   save(); closeModals();
   selDate = parseISO(date); calMonth = new Date(selDate.getFullYear(), selDate.getMonth(), 1);
   render();
@@ -1468,13 +1637,14 @@ function openInfo(kind, id){
       body += infoRow("Datum", esc(infoDateLong(obj.date)));
     }
     body += infoRow("Uhrzeit", obj.allDay ? "Ganztägig" : infoTimeRange(obj.start, obj.end));
+    body += infoRow("Wiederholung", repLabel(obj.repeat));
     body += infoRow("Bereich", esc(c.name));
     body += infoRow("Notiz", infoNote(obj.note));
   } else if(kind==="routine"){
     body += infoRow("Wiederholung", repLabel(obj.freq));
     body += infoRow("Uhrzeit", (obj.time && obj.time!=="any") ? esc(obj.time) : "Flexibel");
     body += infoRow("Bereich", esc(c.name));
-    body += infoRow("Punkte", obj.points ? String(obj.points)+" ⭐" : "");
+    body += infoRow("Punkte", obj.points ? String(obj.points)+" "+ICON_STAR : "");
     body += infoRow("Notiz", infoNote(obj.note));
   } else {
     const s = taskDate(obj);
@@ -1484,12 +1654,12 @@ function openInfo(kind, id){
     body += infoRow("Uhrzeit", taskIsAllDay(obj) ? "Ganztägig" : infoTimeRange(taskStartTime(obj), taskEndTime(obj)));
     body += infoRow("Bereich", esc(c.name));
     body += infoRow("Wiederholung", repLabel(obj.repeat));
-    body += infoRow("Punkte", obj.points ? String(obj.points)+" ⭐" : "");
+    body += infoRow("Punkte", obj.points ? String(obj.points)+" "+ICON_STAR : "");
     body += infoRow("Notiz", infoNote(obj.note));
   }
   document.getElementById("infoBody").innerHTML = body;
 
-  const doneNow = (kind==="ev") ? !!obj.done : (kind==="routine") ? routineIsDone(obj) : taskIsDone(obj);
+  const doneNow = (kind==="ev") ? eventIsDone(obj) : (kind==="routine") ? routineIsDone(obj) : taskIsDone(obj);
   document.getElementById("infoDone").checked = doneNow;
   document.getElementById("infoDoneAt").textContent = (doneNow && obj.completedAt) ? fmtCompletedAt(obj.completedAt) : "";
   openModal("infoModal");
@@ -1582,8 +1752,8 @@ function todoHTML(t){
     + '<div><div class="it-title">'+esc(t.title)+"</div>"
     + '<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+"</span>"
     + (rep ? "<span>↻ "+rep+"</span>" : "")
-    + (due ? "<span>📅 "+due+"</span>" : "")
-    + (t.points ? '<span class="plus-points">+'+t.points+" ⭐</span>" : "")
+    + (due ? "<span>"+ICON_CAL+" "+due+"</span>" : "")
+    + (t.points ? '<span class="plus-points">+'+t.points+" "+ICON_STAR+'</span>' : "")
     + "</div></div>"
     + '<div class="it-actions"><button class="linkbtn" data-td-edit="'+t.id+'">Bearbeiten</button></div>'
     + "</div>";
@@ -1641,12 +1811,13 @@ function openTodo(id, mode){
   document.getElementById("tdTime").value = (e && e.time && e.time!=="any") ? e.time : "";
   document.getElementById("tdStart").value = (e && e.startDate) ? e.startDate : "";
   document.getElementById("tdEnd").value = (e && e.endDate) ? e.endDate : "";
-  const tdAllDay = e ? (e.allDay !== false) : true;
+  const tdAllDay = e ? (e.allDay !== false) : false;
   document.getElementById("tdAllDay").checked = tdAllDay;
+  const newTask = !e && !isR;
   document.getElementById("tdStartTime").value = (e && e.startTime) ? e.startTime : "";
   document.getElementById("tdEndTime").value = (e && e.endTime) ? e.endTime : "";
-  document.getElementById("tdDur").value = "";
-  document.getElementById("tdDurUnit").value = "60";
+  document.getElementById("tdDur").value = newTask ? "30" : "";
+  document.getElementById("tdDurUnit").value = newTask ? "1" : "60";
   if(!tdAllDay && e && e.startTime && e.endTime) setDurFromTimes();
   updateTdSpan();
   document.getElementById("tdRoutineTimeField").style.display = isR ? "" : "none";
@@ -1681,7 +1852,12 @@ document.getElementById("tdSave").onclick = ()=>{
     const time = document.getElementById("tdTime").value || "";
     const data = {name:title, freq:repeat, cat, note, points, time};
     if(editingRoutine) Object.assign(editingRoutine, data);
-    else S.routines.push(Object.assign({id:uid(), done:false, lastDone:null, completedAt:null}, data));
+    else {
+      if(Array.isArray(S.routines) && S.routines.some(function(r){ return routineIdentity(r)===routineIdentity(data); })){
+        toast("Diese Routine gibt es schon."); return;
+      }
+      S.routines.push(Object.assign({id:uid(), done:false, lastDone:null, completedAt:null}, data));
+    }
   }else{
     const allDay = document.getElementById("tdAllDay").checked;
     let startDate = document.getElementById("tdStart").value || "";
@@ -1844,13 +2020,26 @@ document.getElementById("mealDelete").onclick = ()=>{
    Listen (Einkaufsliste & Co.)
    ========================================================= */
 let curList = null;
-function activeList(){ return S.lists.find(l=>l.id===curList) || S.lists[0]; }
+function activeList(){ var ls=Array.isArray(S.lists)?S.lists:[]; return ls.find(l=>l.id===curList) || ls[0]; }
 function renderLists(){
+  if(!Array.isArray(S.lists)) S.lists = [];
   if(!activeList()) curList = S.lists[0] && S.lists[0].id;
+  const act = activeList();
   document.getElementById("listTabs").innerHTML = S.lists.map(l=>
-    '<button class="btn sm'+(l.id===activeList().id?" primary":"")+'" data-list="'+l.id+'">'+esc(l.name)+"</button>"
+    '<span class="list-tab">'
+    + '<button class="btn sm'+(act && l.id===act.id?" primary":"")+'" data-list="'+l.id+'">'+esc(l.name)+"</button>"
+    + (act && l.id===act.id ? '<button type="button" class="list-tab-edit" data-list-edit="'+l.id+'" title="Liste umbenennen / löschen" aria-label="Liste bearbeiten">'+ICON_EDIT+"</button>" : "")
+    + "</span>"
   ).join("");
-  const L = activeList();
+  const L = act;
+  if(!L){
+    document.getElementById("shopProgress").textContent = "0%";
+    document.getElementById("shopBar").style.width = "0%";
+    document.getElementById("shopList").innerHTML = '<div class="empty"><span class="big">📝</span>Noch keine Liste – lege mit „+ Neue Liste“ eine an.</div>';
+    try{ renderBirthdays(); }catch(e){}
+    return;
+  }
+  if(!Array.isArray(L.items)) L.items = [];
   const done = L.items.filter(i=>i.done).length;
   const pct = L.items.length ? Math.round(done/L.items.length*100) : 0;
   document.getElementById("shopProgress").textContent = pct+"%";
@@ -1869,8 +2058,11 @@ function renderLists(){
       + '<div class="it-actions"><button type="button" class="linkbtn act del" data-li-del="'+i.id+'" title="Löschen">'+ICON_TRASH+'</button></div>'
       + "</div>").join("");
   }
+  try{ renderBirthdays(); }catch(e){}
 }
 var __el=document.getElementById("view-lists"); if(__el)__el.addEventListener("click", e=>{
+  const le = e.target.closest("[data-list-edit]");
+  if(le){ openListEdit(le.dataset.listEdit); return; }
   const lt = e.target.closest("[data-list]");
   if(lt){ curList = lt.dataset.list; renderLists(); return; }
   const tg = e.target.closest("[data-li-tog]");
@@ -1896,7 +2088,10 @@ function addItem(){
   const inp = document.getElementById("shopInput");
   const q = document.getElementById("shopQty");
   const name = inp.value.trim(); if(!name) return;
-  activeList().items.push({id:uid(), name, qty:q.value.trim(), done:false});
+  const L = activeList();
+  if(!L){ toast("Bitte zuerst eine Liste anlegen."); return; }
+  if(!Array.isArray(L.items)) L.items = [];
+  L.items.push({id:uid(), name, qty:q.value.trim(), done:false});
   inp.value=""; q.value=""; save(); renderLists(); inp.focus();
 }
 document.getElementById("shopAdd").onclick = addItem;
@@ -1904,20 +2099,259 @@ document.getElementById("btnNewShopItem").onclick = ()=>document.getElementById(
 var __el=document.getElementById("shopInput"); if(__el)__el.addEventListener("keydown", e=>{ if(e.key==="Enter") addItem(); });
 var __el=document.getElementById("shopQty"); if(__el)__el.addEventListener("keydown", e=>{ if(e.key==="Enter") addItem(); });
 document.getElementById("btnClearDone").onclick = ()=>{
-  const L = activeList();
+  const L = activeList(); if(!L) return;
+  if(!Array.isArray(L.items)) L.items = [];
   L.items = L.items.filter(i=>!i.done); save(); renderLists();
 };
-document.getElementById("btnNewList").onclick = ()=>{
-  document.getElementById("listName").value = ""; openModal("listModal");
-  document.getElementById("listName").focus();
-};
+/* Liste anlegen / umbenennen / löschen */
+var editingList = null;
+function openListEdit(id){
+  const l = id ? (Array.isArray(S.lists)?S.lists:[]).find(x=>x.id===id) : null;
+  editingList = l || null;
+  const ttl = document.getElementById("listModalTitle");
+  if(ttl) ttl.textContent = l ? "Liste bearbeiten" : "Neue Liste";
+  document.getElementById("listName").value = l ? (l.name||"") : "";
+  const del = document.getElementById("listDelete");
+  if(del) del.style.display = l ? "" : "none";
+  const sv = document.getElementById("listSave");
+  if(sv) sv.textContent = l ? "Speichern" : "Anlegen";
+  openModal("listModal");
+  setTimeout(()=>{ try{ const f=document.getElementById("listName"); f.focus(); f.select(); }catch(e){} }, 30);
+}
+function deleteList(id){
+  if(!Array.isArray(S.lists)) return;
+  const idx = S.lists.findIndex(x=>x.id===id);
+  if(idx<0) return;
+  const removed = S.lists.splice(idx,1)[0];
+  if(curList===id) curList = S.lists[0] ? S.lists[0].id : null;
+  editingList = null;
+  save(); closeModals(); renderLists();
+  showUndo("Liste gelöscht", function(){
+    S.lists.splice(Math.min(idx, S.lists.length), 0, removed);
+    curList = removed.id;
+    save(); renderLists();
+  });
+}
+document.getElementById("btnNewList").onclick = ()=> openListEdit(null);
 document.getElementById("listSave").onclick = ()=>{
   const n = document.getElementById("listName").value.trim();
   if(!n){ toast("Bitte einen Namen eingeben."); return; }
-  const l = {id:uid(), name:n, items:[]};
-  S.lists.push(l); curList = l.id;
-  save(); closeModals(); renderLists(); toast("Liste angelegt.");
+  if(editingList){
+    editingList.name = n;
+    editingList = null;
+    save(); closeModals(); renderLists(); toast("Liste umbenannt.");
+  }else{
+    const l = {id:uid(), name:n, items:[]};
+    S.lists.push(l); curList = l.id;
+    save(); closeModals(); renderLists(); toast("Liste angelegt.");
+  }
 };
+var __listDelBtn = document.getElementById("listDelete");
+if(__listDelBtn) __listDelBtn.onclick = ()=>{ if(editingList) deleteList(editingList.id); };
+var __listNameInp = document.getElementById("listName");
+if(__listNameInp) __listNameInp.addEventListener("keydown", e=>{ if(e.key==="Enter") document.getElementById("listSave").click(); });
+
+/* =========================================================
+   Geburtstage (unter „Listen“)
+   ========================================================= */
+function birthdaySortKey(b){ return ((b&&b.month)||0)*100 + ((b&&b.day)||0); }
+/* Anzeige-Sortierung: aufsteigend im Verlauf des Jahres (Januar → Dezember). */
+function birthdaysSorted(){
+  return (Array.isArray(S.birthdays)?S.birthdays:[]).slice().sort(function(a,b){
+    var ka=birthdaySortKey(a), kb=birthdaySortKey(b);
+    if(ka!==kb) return ka-kb;
+    return String(a.name||"").localeCompare(String(b.name||""),"de");
+  });
+}
+function bdDaysInMonth(month, year){ return new Date(year||2000, month, 0).getDate(); }
+function nextBirthdayDate(b){
+  if(!b || !b.day || !b.month) return null;
+  var t=today();
+  var d=new Date(t.getFullYear(), b.month-1, b.day);
+  if(d.getTime() < t.getTime()) d=new Date(t.getFullYear()+1, b.month-1, b.day);
+  return d;
+}
+function daysUntilBirthday(b){
+  var d=nextBirthdayDate(b); if(!d) return null;
+  return Math.round((d.getTime()-today().getTime())/86400000);
+}
+function birthdayPassedThisYear(b){
+  if(!b || !b.day || !b.month) return false;
+  var t=today(), d=new Date(t.getFullYear(), b.month-1, b.day);
+  return d.getTime() < t.getTime();
+}
+function birthdayAgeThisYear(b){
+  if(!b || !b.year) return null;
+  return today().getFullYear() - Number(b.year);
+}
+function bdDateText(b){ return b.day+"."+(b.month<10?"0":"")+b.month+"."; }
+function bdCountdownText(d){
+  if(d==null) return "";
+  if(d===0) return "heute 🎉";
+  if(d===1) return "morgen";
+  return "in "+d+" Tagen";
+}
+/* Geburtstage im Kalender (Monatsraster) und in der Tagesansicht */
+function birthdaysOn(key){
+  var m=parseInt(String(key).slice(5,7),10), d=parseInt(String(key).slice(8,10),10);
+  return (Array.isArray(S.birthdays)?S.birthdays:[]).filter(function(b){
+    return b && b.month===m && b.day===d;
+  }).sort(function(a,b){ return String(a.name||"").localeCompare(String(b.name||""),"de"); });
+}
+function bdAgeAt(b, year){
+  if(!b || !b.year || !year) return null;
+  return year - Number(b.year);
+}
+function bdChipHTML(b, key){
+  var age=bdAgeAt(b, parseInt(String(key).slice(0,4),10));
+  var tip="Geburtstag: "+esc(b.name)+(age!=null?" · wird "+age:"");
+  return '<div class="ev bd-cal" title="'+tip+'">'
+    + '<span class="bd-ico" aria-hidden="true">🎂</span>'
+    + "<span>"+esc(b.name)+"</span>"
+    + (age!=null ? '<span class="bd-age">· '+age+'</span>' : '')
+    + "</div>";
+}
+function bdBannerHTML(b, year){
+  var age=bdAgeAt(b, year);
+  var tip="Geburtstag: "+esc(b.name)+(age!=null?" · wird "+age:"");
+  return '<div class="dv-ad dv-ad-bd" title="'+tip+'">'
+    + '<span class="bd-ico" aria-hidden="true">🎂</span>'
+    + "<span>"+esc(b.name)+"</span>"
+    + (age!=null ? '<span class="bd-age">wird '+age+'</span>' : '')
+    + "</div>";
+}
+function bdRowHTML(b, isNext){
+  var d=daysUntilBirthday(b), passed=birthdayPassedThisYear(b), age=birthdayAgeThisYear(b);
+  var chip="";
+  if(d!=null){
+    if(d===0) chip='<span class="bd-chip hot">Heute 🎉</span>';
+    else if(d===1) chip='<span class="bd-chip hot">Morgen</span>';
+    else if(!passed) chip='<span class="bd-chip">in '+d+' Tagen</span>';
+  }
+  var sp=[];
+  if(b.year) sp.push("Jg. "+esc(String(b.year)));
+  if(age!=null) sp.push((passed?"wurde ":"wird ")+age);
+  var sub=sp.length ? '<div class="it-sub">'+sp.join(" · ")+'</div>' : "";
+  return '<div class="item bd-item'+(isNext?" next":"")+(passed?" past":"")+'">'
+    + '<div class="bd-date"><b>'+b.day+'</b><span>'+esc(MONTHS_SHORT[b.month-1]||"")+'</span></div>'
+    + '<div class="bd-main" data-bd-edit="'+b.id+'" role="button" tabindex="0" title="Bearbeiten">'
+    +   '<div class="it-title">'+esc(b.name)+'</div>'+sub
+    + '</div>'
+    + chip
+    + '<div class="it-actions">'
+    +   '<button type="button" class="linkbtn act" data-bd-edit="'+b.id+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+    +   '<button type="button" class="linkbtn act del" data-bd-del="'+b.id+'" title="Löschen">'+ICON_TRASH+'</button>'
+    + '</div>'
+    + '</div>';
+}
+function renderBirthdays(){
+  var box=document.getElementById("bdList"); if(!box) return;
+  var list=birthdaysSorted();
+  var cnt=document.getElementById("bdCount"); if(cnt) cnt.textContent=list.length;
+  var sub=document.getElementById("bdNext");
+  if(!list.length){
+    box.innerHTML='<div class="empty"><span class="big">🎂</span>Noch keine Geburtstage erfasst.</div>';
+    if(sub) sub.textContent="";
+    return;
+  }
+  var next=null, nDays=null;
+  list.forEach(function(b){ var d=daysUntilBirthday(b); if(d!=null && (nDays==null || d<nDays)){ next=b; nDays=d; } });
+  if(sub){
+    if(next) sub.innerHTML='Nächster: <b>'+esc(next.name)+'</b> · '+bdDateText(next)+' · '+bdCountdownText(nDays);
+    else sub.textContent="";
+  }
+  box.innerHTML=list.map(function(b){ return bdRowHTML(b, next && b.id===next.id); }).join("");
+  clampTitles(box);
+}
+var editingBirthday=null;
+function openBirthday(id){
+  var b = id ? (Array.isArray(S.birthdays)?S.birthdays:[]).find(function(x){ return x.id===id; }) : null;
+  editingBirthday = b || null;
+  var ttl=document.getElementById("bdModalTitle"); if(ttl) ttl.textContent = b ? "Geburtstag bearbeiten" : "Neuer Geburtstag";
+  document.getElementById("bdName").value = b ? (b.name||"") : "";
+  document.getElementById("bdDay").value = b && b.day ? b.day : "";
+  document.getElementById("bdMonth").value = b && b.month ? b.month : 1;
+  document.getElementById("bdYear").value = b && b.year ? b.year : "";
+  var del=document.getElementById("bdDelete"); if(del) del.style.display = b ? "" : "none";
+  openModal("bdModal");
+  setTimeout(function(){ try{ document.getElementById("bdName").focus(); }catch(e){} },30);
+}
+function saveBirthday(){
+  var name=document.getElementById("bdName").value.trim();
+  var day=parseInt(document.getElementById("bdDay").value,10);
+  var month=parseInt(document.getElementById("bdMonth").value,10);
+  var yearRaw=document.getElementById("bdYear").value.trim();
+  var year=yearRaw ? parseInt(yearRaw,10) : null;
+  if(!name){ toast("Bitte einen Namen eingeben."); return; }
+  if(!month || month<1 || month>12){ toast("Bitte einen Monat wählen."); return; }
+  if(yearRaw!=="" && isNaN(year)){ toast("Bitte ein gültiges Jahr angeben."); return; }
+  if(year!=null && (year<1900 || year>2100)){ toast("Bitte ein Jahr zwischen 1900 und 2100 angeben."); return; }
+  if(!day || day<1 || day>bdDaysInMonth(month, year||2000)){ toast("Bitte einen gültigen Tag angeben."); return; }
+  var wasEdit=!!editingBirthday;
+  var data={name:name, day:day, month:month, year:year};
+  if(wasEdit) Object.assign(editingBirthday, data);
+  else { if(!Array.isArray(S.birthdays)) S.birthdays=[]; S.birthdays.push(Object.assign({id:uid()}, data)); }
+  editingBirthday=null;
+  save(); closeModals(); renderBirthdays();
+  toast(wasEdit ? "Geburtstag gespeichert." : "Geburtstag hinzugefügt.");
+}
+function deleteBirthday(id){
+  if(!Array.isArray(S.birthdays)) return;
+  var idx=S.birthdays.findIndex(function(x){ return x.id===id; });
+  if(idx<0) return;
+  var removed=S.birthdays.splice(idx,1)[0];
+  editingBirthday=null;
+  save(); closeModals(); renderBirthdays();
+  showUndo("Geburtstag gelöscht", function(){
+    S.birthdays.splice(Math.min(idx,S.birthdays.length),0,removed);
+    save(); renderBirthdays();
+  });
+}
+/* Warn-Dialog einen Tag vor dem Geburtstag (einmal pro Tag und Geburtstag). */
+function checkBirthdayWarnings(){
+  if(typeof S==="undefined" || !S) return;
+  if(!Array.isArray(S.birthdays) || !S.birthdays.length) return;
+  if(!S.settings) S.settings={};
+  var t=today();
+  var tm=new Date(t.getFullYear(), t.getMonth(), t.getDate()+1);
+  var due=S.birthdays.filter(function(b){ return b && b.month===tm.getMonth()+1 && b.day===tm.getDate(); });
+  if(!due.length) return;
+  if(!S.settings.bdWarned || typeof S.settings.bdWarned!=="object") S.settings.bdWarned={};
+  var warned=S.settings.bdWarned, tkey=iso(t);
+  Object.keys(warned).forEach(function(k){ var dt=String(k).split("@")[1]; if(dt && dt<tkey) delete warned[k]; });
+  var fresh=due.filter(function(b){ return !warned[b.id+"@"+tkey]; });
+  if(!fresh.length) return;
+  if(document.querySelector(".overlay.open")) return; /* nicht über einen offenen Dialog legen – nächster Tick */
+  fresh.forEach(function(b){ warned[b.id+"@"+tkey]=1; });
+  try{ save(); }catch(e){}
+  var body=document.getElementById("bdWarnBody");
+  if(body){
+    body.innerHTML=fresh.map(function(b){
+      var age=(b.year ? " · wird "+((tm.getFullYear())-Number(b.year)) : "");
+      return '<div class="bd-warn-item"><span class="bd-warn-emoji">🎂</span><div>'
+        + '<div class="bd-warn-name">'+esc(b.name)+'</div>'
+        + '<div class="muted">Geburtstag morgen · '+bdDateText(b)+age+'</div></div></div>';
+    }).join("");
+  }
+  openModal("bdWarnModal");
+}
+var __bdMonthSel=document.getElementById("bdMonth");
+if(__bdMonthSel && !__bdMonthSel.options.length){
+  __bdMonthSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+(i+1)+'">'+esc(m)+"</option>"; }).join("");
+  __bdMonthSel.value="1";
+}
+var __bdNew=document.getElementById("btnNewBirthday"); if(__bdNew) __bdNew.onclick=function(){ openBirthday(null); };
+var __bdSave=document.getElementById("bdSave"); if(__bdSave) __bdSave.onclick=saveBirthday;
+var __bdDel=document.getElementById("bdDelete"); if(__bdDel) __bdDel.onclick=function(){ if(editingBirthday) deleteBirthday(editingBirthday.id); };
+var __bdNameInp=document.getElementById("bdName"); if(__bdNameInp) __bdNameInp.addEventListener("keydown", function(e){ if(e.key==="Enter") saveBirthday(); });
+var __bdYearInp=document.getElementById("bdYear"); if(__bdYearInp) __bdYearInp.addEventListener("keydown", function(e){ if(e.key==="Enter") saveBirthday(); });
+var __bdList=document.getElementById("view-lists");
+if(__bdList) __bdList.addEventListener("click", function(e){
+  var ed=e.target.closest("[data-bd-edit]");
+  if(ed){ openBirthday(ed.getAttribute("data-bd-edit")); return; }
+  var dl=e.target.closest("[data-bd-del]");
+  if(dl){ deleteBirthday(dl.getAttribute("data-bd-del")); return; }
+});
 
 /* =========================================================
    Punkte & Belohnungen
@@ -2026,6 +2460,15 @@ function renderSettings(){
     + '<button class="btn sm danger" data-cat-del="'+c.id+'">×</button></div>'
   ).join("");
   document.getElementById("weekStart").value = String(S.settings.weekStart ?? 1);
+  var dsEl=document.getElementById("dayStart"), deEl=document.getElementById("dayEnd");
+  if(dsEl && !dsEl.options.length){
+    for(var hh=0;hh<=23;hh++){ var o=document.createElement("option"); o.value=String(hh); o.textContent=pad(hh)+":00"; dsEl.appendChild(o); }
+  }
+  if(deEl && !deEl.options.length){
+    for(var he=1;he<=24;he++){ var oe=document.createElement("option"); oe.value=String(he); oe.textContent=pad(he)+":00"; deEl.appendChild(oe); }
+  }
+  if(dsEl) dsEl.value = String(dayRangeStart());
+  if(deEl) deEl.value = String(dayRangeEnd());
   var pb=document.getElementById("paidBreakfastMin"); if(pb) pb.value = (S.settings && S.settings.paidBreakfastMin) || 0;
   var at=document.getElementById("appTitle");
   if(at) at.value = (S.settings && S.settings.appTitle) || "Familienkalender";
@@ -2044,6 +2487,14 @@ var __el=document.getElementById("view-settings"); if(__el)__el.addEventListener
   const n = e.target.dataset.catName;
   if(n){ cat(n).name = e.target.value.trim() || "Ohne Name"; save(); renderSettings(); return; }
   if(e.target.id==="weekStart"){ S.settings.weekStart = Number(e.target.value); save(); renderSettings(); }
+  if(e.target.id==="dayStart" || e.target.id==="dayEnd"){
+    if(!S.settings) S.settings={};
+    var a=Number(document.getElementById("dayStart").value), b=Number(document.getElementById("dayEnd").value);
+    if(isNaN(a)) a=0; if(isNaN(b)) b=24;
+    if(b<=a) b=a+1;
+    S.settings.dayStart=a; S.settings.dayEnd=b;
+    save(); renderSettings(); renderCalendar();
+  }
   if(e.target.id==="appTitle"){ if(!S.settings) S.settings={}; S.settings.appTitle = e.target.value.trim()||"Familienkalender"; save(); renderSettings(); }
   if(e.target.id==="paidBreakfastMin"){ if(!S.settings) S.settings={}; var v=parseInt(e.target.value)||0; if(v<0) v=0; S.settings.paidBreakfastMin=v; save(); renderSettings(); }
   if(e.target.id==="showMoon"){ if(!S.settings) S.settings={}; S.settings.showMoon=e.target.checked; save(); renderSettings(); renderCalendar(); }
@@ -2226,7 +2677,7 @@ function renderWorkHead(){
   if(sd){ sd.classList.toggle("pos", c.saldoMin>0); sd.classList.toggle("neg", c.saldoMin<0); }
   var chip=document.getElementById("workChip");
   if(chip){
-    chip.innerHTML = "⏱️ <b>"+minToHM(c.arbeitsMin)+"</b>";
+    chip.innerHTML = ICON_TIMER+" <b>"+minToHM(c.arbeitsMin)+"</b>";
     chip.title = "Arbeitszeit heute – netto "+minToHM(c.arbeitsMin)+(o?" (laufend)":"");
   }
   var wl=document.getElementById("calWorkLive");
@@ -2472,7 +2923,7 @@ function remindMoment(dateStr, timeStr){
   return d;
 }
 function eventRemindMoment(e){
-  if(!e || !e.date || e.done) return null;
+  if(!e || !e.date || eventIsDone(e)) return null;
   return remindMoment(e.date, e.allDay ? REMIND_ALLDAY_TIME : (e.start || REMIND_ALLDAY_TIME));
 }
 function taskRemindMoment(t){
@@ -2518,7 +2969,13 @@ function checkReminders(){
 function toggleEventDone(id, done){
   var e = S.events.find(function(x){ return x.id===id; });
   if(!e) return;
-  if(done) e.done = true; else delete e.done;
+  if(!e.repeat || e.repeat==="none"){
+    if(done) e.done = true; else delete e.done;
+  } else if(!done){
+    e.lastDone = null; delete e.completedAt;
+  } else {
+    e.lastDone = iso(today()); e.completedAt = new Date().toISOString();
+  }
   try{ save(); }catch(err){}
   try{ render(); }catch(err){}
 }
@@ -2526,7 +2983,7 @@ function showReminder(items){
   var body = document.getElementById("remindBody");
   if(!body) return;
   body.innerHTML = items.map(function(it){
-    var ico = it.kind==="Termin" ? "📅" : "✅";
+    var ico = it.kind==="Termin" ? ICON_CAL : ICON_TASK;
     var when = it.when==="ganztägig" ? "ganztägig"
       : pad(it.moment.getHours())+":"+pad(it.moment.getMinutes());
     var head = '<label class="rm-chk"><input type="checkbox" data-rem-done="'+esc(it.uid)+'">'
@@ -2594,7 +3051,7 @@ if(__remindOk) __remindOk.onclick = function(){ var m=document.getElementById("r
 function tick(){
   const now = new Date();
   document.getElementById("clockChip").innerHTML =
-    "<b>"+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds())+"</b>&nbsp; "
+    "<b>"+pad(now.getHours())+":"+pad(now.getMinutes())+"</b>&nbsp; "
     + DOW_FULL[now.getDay()].slice(0,2) + ". " + now.getDate() + ". " + MONTHS[now.getMonth()].slice(0,3);
   var ld=document.getElementById("logoDay");
   if(ld){
@@ -2603,11 +3060,28 @@ function tick(){
   }
   try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
   try{ checkReminders(); }catch(e){}
+  try{ checkBirthdayWarnings(); }catch(e){}
 }
 setInterval(tick, 1000); tick();
 
 /* Init */
+try{
+  window.addEventListener("error", function(ev){
+    try{
+      if(window.__calShownErr) return;
+      if(typeof curView==="undefined" || curView!=="cal") return;
+      window.__calShownErr = true;
+      reportRenderError(ev.error || ev.message || "Unbekannter Fehler");
+    }catch(_){}
+  });
+}catch(_){}
+/* Echte Doppel-Routinen aus alten Daten einmalig zusammenführen (läuft nach Init, damit alle Helfer bereit stehen). */
+var __dupRoutines = dedupeRoutines();
+if(__dupRoutines){
+  try{ toast(__dupRoutines===1 ? "Doppelte Routine zusammengeführt." : __dupRoutines+" doppelte Routinen zusammengeführt."); }catch(e){}
+}
 render();
+try{ checkBirthdayWarnings(); }catch(e){}
 
 
 function taskIsDone(t){
@@ -2680,6 +3154,44 @@ function isTaskOverdue(t){
   var dt=dueDateTime(t);
   return dt ? dt < new Date() : false;
 }
+/* Routinen haben keinen Wochentag, nur eine Uhrzeit (r.time) – die fällige Zeit ist
+   also heute um r.time. Überfällig = im laufenden Zeitraum noch offen und Uhrzeit vorbei. */
+function routineDueAt(r){
+  if(!r || !r.time || r.time==="any") return null;
+  var p=String(r.time).split(":");
+  var d=today();
+  d.setHours(parseInt(p[0],10)||0, parseInt(p[1],10)||0, 0, 0);
+  return d;
+}
+function isRoutineOverdue(r){
+  if(!r || routineIsDone(r)) return false;
+  var dt=routineDueAt(r);
+  return dt ? dt < new Date() : false;
+}
+function routineOverdueBadge(r){
+  if(!isRoutineOverdue(r)) return "";
+  return '<span class="due-soft">Seit '+esc(r.time)+'</span>';
+}
+/* Identität einer Routine (ohne Zustand): gleicher Name + Plan + Kategorie = dieselbe Routine */
+function routineIdentity(r){
+  r=r||{};
+  return [String(r.name||r.title||"").trim().toLowerCase(), (r.freq||r.repeat||"none"), r.time||"", r.cat||""].join("\u0001");
+}
+/* Führt echte Doppel-Einträge zusammen (Behalten: erster Eintrag, Erledigt-Status wird übernommen). Liefert die Anzahl entfernter Duplikate. */
+function dedupeRoutines(){
+  if(!S || !Array.isArray(S.routines) || S.routines.length<2) return 0;
+  var seen={}, out=[], removed=0;
+  S.routines.forEach(function(r){
+    var k=routineIdentity(r), keep=seen[k];
+    if(!keep){ seen[k]=r; out.push(r); return; }
+    if(!keep.note && r.note) keep.note=r.note;
+    if((keep.points===undefined||keep.points===null) && r.points!=null) keep.points=r.points;
+    if(routineIsDone(r) && !routineIsDone(keep)){ keep.done=r.done; keep.lastDone=r.lastDone; keep.completedAt=r.completedAt; }
+    removed++;
+  });
+  if(removed){ S.routines=out; save(); }
+  return removed;
+}
 function spanTxt(t){
   if(!t || !t.startDate) return "";
   var a=t.startDate.split("-").reverse().join(".");
@@ -2699,15 +3211,145 @@ function relDayTxt(dateStr){
   if(d.getFullYear()!==td.getFullYear()) s+=" "+d.getFullYear();
   return s;
 }
+function overdueBadge(t, done){
+  if(done || !t || !taskDate(t) || !isTaskOverdue(t)) return "";
+  var en = taskEndTime(t) || taskStartTime(t) || "";
+  var due = dueDateTime(t);
+  if(en && due && (new Date() - due) < 86400000){
+    // gleicher Tag, nur wenige Stunden überzogen → dezent, nur roter Text
+    return '<span class="due-soft">Seit '+esc(en)+'</span>';
+  }
+  // mehrere Tage überfällig → roter Chip mit Tagesanzahl statt Datum
+  var a=parseISO(taskDate(t)), b=today();
+  var days=Math.round((new Date(b.getFullYear(),b.getMonth(),b.getDate())-new Date(a.getFullYear(),a.getMonth(),a.getDate()))/86400000);
+  days=Math.max(1,days);
+  return '<span class="due-chip due-overdue">'+(days===1?"1 Tag überfällig":days+" Tage überfällig")+'</span>';
+}
 function fmtDue(t,done){
   if(!t || !taskDate(t)) return "";
-  var od = !done && isTaskOverdue(t);
+  var od = overdueBadge(t, done);
+  if(od) return od; // Überfällig ersetzt das Datum → alles bleibt in einer Zeile
   var st = taskStartTime(t), en = taskEndTime(t);
   var time = st ? " "+esc(st)+(en?"–"+esc(en):"") : "";
-  var chip = od ? '<span class="due-chip due-overdue">Überfällig</span>' : "";
-  return chip+'<span class="due-when">🗓 '+esc(relDayTxt(taskDate(t)))+time+"</span>";
+  var tag=relDayTxt(taskDate(t));
+  return '<span class="due-when">'+(tag==="Heute"?"":ICON_CAL+" ")+esc(tag)+time+"</span>";
 }
-function updateTaskBadge(){ try{ var b=document.getElementById('todoBadge'); if(!b) return; var n=0; if(typeof S!=="undefined"&&S&&Array.isArray(S.todos)) n=S.todos.filter(function(t){return inProfile(t.cat) && !taskIsDone(t)}).length; b.textContent=n; b.style.display=n?"grid":"none"; }catch(e){} }
+
+/* ---------- Gemeinsame Zeilen-Bausteine (Panels + Aufgaben-/Routinen-Seiten) ----------
+   Feste Meta-Regel: Kategorie · Zeit · Wiederholung · Status.
+   Icons in der Meta-Zeile: „nirgends“ (kein Kalender-/Uhr-SVG) – nur der ↻-Glyph für Wiederholung.
+   Kategorie: nur eine kleine Farbmarke vor dem Titel (kein Text-Pill). */
+function catOf(x){ var c=(typeof cat==="function")?cat(x&&x.cat):null; return c||{name:"",color:"#64748b"}; }
+function taskMetaHTML(t, done, opt){
+  opt=opt||{};
+  var out="";
+  var st=taskStartTime(t), en=taskEndTime(t);
+  var time=st?esc(st)+(en?"–"+esc(en):""):"";
+  var od=overdueBadge(t,done);
+  if(!od && taskDate(t)){
+    if(opt.omitDay){ if(time) out+='<span class="due-when">'+time+'</span>'; }
+    else{ var tag=relDayTxt(taskDate(t)); out+='<span class="due-when">'+esc(tag)+(time?" "+time:"")+'</span>'; }
+  }else if(!od && time){
+    out+='<span class="due-when">'+time+'</span>';
+  }
+  var rep=(t.repeat&&t.repeat!=="none")?repLabel(t.repeat):"";
+  if(rep) out+='<span class="meta-rep">↻ '+esc(rep)+'</span>';
+  if(od) out+=od;
+  if(t.completedAt) out+='<span class="meta-done">'+esc(fmtCompletedAt(t.completedAt))+'</span>';
+  if(done&&rep&&nextDue(t)) out+='<span class="meta-next">↻ Nächste: '+esc(fmtDate(nextDue(t)))+'</span>';
+  return out;
+}
+function taskRowHTML(t, opt){
+  opt=opt||{};
+  var idx=S.todos.indexOf(t);
+  var done=taskIsDone(t);
+  var c=catOf(t);
+  var meta=taskMetaHTML(t,done,opt);
+  if(opt.showNote && t.note) meta+='<span class="meta-note">'+esc(t.note)+'</span>';
+  return '<div class="item'+(done?" done":"")+'">'
+    +'<button type="button" class="check'+(done?" on":"")+'" data-task-toggle="'+idx+'" title="Erledigt abhaken">✓</button>'
+    +'<div'+(opt.infoOpen?' data-info-open="task" data-info-id="'+esc(t.id)+'"':'')+'>'
+    +'<div class="it-title"><span class="cat-dot" style="background:'+c.color+'"></span>'+esc(t.title||t.text||"")+'</div>'
+    +(meta?'<div class="it-sub">'+meta+'</div>':'')
+    +'</div>'
+    +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
+    +'<button type="button" class="btn sm act" data-task-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+    +'<button type="button" class="btn sm act del" data-task-del="'+idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'
+    +'</div>';
+}
+function taskGroups(items){
+  var g={ueberfaellig:[],heute:[],morgen:[],demnaechst:[],ohne:[],erledigt:[]};
+  var td=today(), tm=new Date(td.getFullYear(),td.getMonth(),td.getDate()+1);
+  (items||[]).forEach(function(t){
+    if(taskIsDone(t)){ g.erledigt.push(t); return; }
+    var td0=taskDate(t);
+    if(!td0){ g.ohne.push(t); return; }
+    if(isTaskOverdue(t)){ g.ueberfaellig.push(t); return; }
+    var d=parseISO(td0);
+    if(sameDay(d,td)){ g.heute.push(t); return; }
+    if(sameDay(d,tm)){ g.morgen.push(t); return; }
+    g.demnaechst.push(t);
+  });
+  return g;
+}
+function taskGroupsHTML(items, rowOpt){
+  var g=taskGroups(items);
+  function grp(title, arr, opt){
+    if(!arr.length) return "";
+    var out='<div class="tgroup">'+esc(title)+" ("+arr.length+")</div>";
+    out+=arr.map(function(t){
+      return taskRowHTML(t, Object.assign({}, rowOpt, opt));
+    }).join("");
+    return out;
+  }
+  var html="";
+  html+=grp("Überfällig", g.ueberfaellig, {});
+  html+=grp("Heute", g.heute, {omitDay:true});
+  html+=grp("Morgen", g.morgen, {omitDay:true});
+  html+=grp("Demnächst", g.demnaechst, {});
+  html+=grp("Ohne Datum", g.ohne, {});
+  html+=grp("Erledigt", g.erledigt, {});
+  return html;
+}
+function routineMetaHTML(r, done, opt){
+  opt=opt||{};
+  var out="";
+  var od=routineOverdueBadge(r);
+  if(!od && r.time&&r.time!=="any") out+='<span class="due-when">'+esc(r.time)+'</span>';
+  var rep=(r.freq&&r.freq!=="none")?repLabel(r.freq):"";
+  if(rep) out+='<span class="meta-rep">↻ '+esc(rep)+'</span>';
+  if(od) out+=od;
+  if(done&&rep){ var nd=nextDue(Object.assign({},r,{repeat:r.freq})); if(nd) out+='<span class="meta-next">↻ Nächste: '+esc(fmtDate(nd))+'</span>'; }
+  if(done&&r.completedAt) out+='<span class="meta-done">'+esc(fmtCompletedAt(r.completedAt))+'</span>';
+  return out;
+}
+function routineRowHTML(r, opt){
+  opt=opt||{};
+  var idx=S.routines.indexOf(r);
+  var done=routineIsDone(r);
+  var c=catOf(r);
+  var meta=routineMetaHTML(r,done,opt);
+  return '<div class="item'+(done?" done":"")+'">'
+    +'<button type="button" class="check'+(done?" on":"")+'" data-routine-toggle="'+idx+'" title="Erledigt abhaken">✓</button>'
+    +'<div'+(opt.infoOpen?' data-info-open="routine" data-info-id="'+esc(r.id)+'"':'')+'>'
+    +'<div class="it-title"><span class="cat-dot" style="background:'+c.color+'"></span>'+esc(r.name||"")+'</div>'
+    +(meta?'<div class="it-sub">'+meta+'</div>':'')
+    +(r.note?'<div class="it-note">'+esc(r.note)+'</div>':'')
+    +'</div>'
+    +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
+    +'<button type="button" class="btn sm act" data-routine-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
+    +'<button type="button" class="btn sm act del" data-routine-del="'+idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'
+    +'</div>';
+}
+function updateTaskBadge(){ if(typeof updateBadges==="function"){ updateBadges(); return; } try{ var b=document.getElementById('todoBadge'); if(!b) return; var n=0,no=0; if(typeof S!=="undefined"&&S&&Array.isArray(S.todos)) S.todos.forEach(function(t){ if(inProfile(t.cat)&&!taskIsDone(t)){ n++; if(isTaskOverdue(t)) no++; } }); b.textContent=n; b.style.display=n?"grid":"none"; b.classList.toggle("overdue",no>0); }catch(e){} }
+function clampTitles(root){
+  if(!root || !root.querySelectorAll) return;
+  var els=root.querySelectorAll(".it-title, .ag-item .ttl");
+  for(var i=0;i<els.length;i++){
+    var el=els[i];
+    if(el.scrollHeight>el.clientHeight+1 && !el.hasAttribute("title")) el.title=el.textContent;
+  }
+}
 function renderTasks(){
   try{
     if(typeof S==="undefined"||!S) S=defaults();
@@ -2733,50 +3375,9 @@ function renderTasks(){
     });
     if(!items.length){ list.innerHTML='<div class="empty"><span class="big">🗒️</span>Keine Aufgaben vorhanden.</div>'; }
     else {
-      var groups={ueberfaellig:[],heute:[],demnaechst:[],ohne:[],erledigt:[]};
-      var td=today();
-      items.forEach(function(t){
-        var done=taskIsDone(t);
-        if(done){ groups.erledigt.push(t); return; }
-        var tdat=taskDate(t);
-        if(!tdat){ groups.ohne.push(t); return; }
-        if(isTaskOverdue(t)){ groups.ueberfaellig.push(t); return; }
-        var d=parseISO(tdat);
-        if(sameDay(d,td)){ groups.heute.push(t); return; }
-        groups.demnaechst.push(t);
-      });
-      var html="";
-      function renderGroup(title,arr){
-        if(!arr.length) return "";
-        var out='<div class="tgroup">'+esc(title)+" ("+arr.length+")</div>";
-        out+=arr.map(function(t){
-          var idx=S.todos.indexOf(t);
-          var done=taskIsDone(t);
-          var c=(typeof cat==="function")?cat(t.cat):{name:"",color:"#64748b"};
-          var rep=repLabel(t.repeat);
-          return '<div class="item'+(done?" done":"")+'">'
-            + '<button class="check'+(done?" on":"")+'" data-task-toggle="'+idx+'">✓</button>'
-            + '<div><div class="it-title">'+esc(t.title||t.text||"")+'</div>'
-            + '<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
-            + (rep?'<span>↻ '+esc(rep)+'</span>':'')
-            + fmtDue(t,done)
-            + (t.completedAt?'<span>'+esc(fmtCompletedAt(t.completedAt))+'</span>':'')
-            + (done&&t.repeat&&t.repeat!=="none"&&nextDue(t)?'<span style="color:#7dd3fc">↻ Nächste: '+esc(fmtDate(nextDue(t)))+'</span>':'')
-            + (t.note?'<span> '+esc(t.note)+'</span>':'')+'</div></div>'
-            + '<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
-            + '<button type="button" class="btn sm act" data-task-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
-            + '<button type="button" class="btn sm act del" data-task-del="'+idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'
-            + '</div>';
-        }).join("");
-        return out;
-      }
-      html += renderGroup("Überfällig", groups.ueberfaellig);
-      html += renderGroup("Heute", groups.heute);
-      html += renderGroup("Demnächst", groups.demnaechst);
-      html += renderGroup("Ohne Datum", groups.ohne);
-      html += renderGroup("Erledigt", groups.erledigt);
-      list.innerHTML=html;
+      list.innerHTML=taskGroupsHTML(items, {showNote:true});
     }
+    clampTitles(list);
     updateTaskBadge();
     try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
   }catch(e){}
@@ -2804,26 +3405,14 @@ function renderRoutines(){
         if(ad!==bd) return ad?1:-1;
         var ta=a.name||"", tb=b.name||""; if(ta<tb) return -1; if(ta>tb) return 1; return 0;
       });
-      list.innerHTML=items.map(function(r){
-        var i=S.routines.indexOf(r);
-        var c=(typeof cat==="function")?cat(r.cat):null;
-        var rep=repLabel(r.freq);
-        var done=routineIsDone(r);
-        return '<div class="item'+(done?' done':'')+'">'
-          +'<button type="button" class="check'+(done?' on':'')+'" data-routine-toggle="'+i+'" title="Erledigt abhaken">✓</button>'
-          +'<div><div class="it-title">'+esc(r.name||'')+'</div><div class="it-sub">'
-          +(c?'<span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>':'')
-          +(rep?'<span>↻ '+esc(rep)+'</span>':'')
-          +(r.time&&r.time!=="any"?'<span>🕒 '+esc(r.time)+'</span>':'')
-          +(done&&r.freq&&r.freq!=="none"&&nextDue(Object.assign({},r,{repeat:r.freq}))?'<span style="color:#7dd3fc">↻ Nächste: '+esc(fmtDate(nextDue(Object.assign({},r,{repeat:r.freq}))))+'</span>':'')
-          +(done&&r.completedAt?'<span>'+esc(fmtCompletedAt(r.completedAt))+'</span>':'')
-          +(r.note?'<span> '+esc(r.note)+'</span>':'')
-          +'</div></div><div class="it-actions">'
-          +'<button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
-          +'<button type="button" class="btn sm act" data-routine-edit="'+i+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
-          +'<button type="button" class="btn sm act del" data-routine-del="'+i+'" title="Löschen">'+ICON_TRASH+'</button></div></div>';
-      }).join('');
+      items.sort(function(a,b){
+        var ao=isRoutineOverdue(a), bo=isRoutineOverdue(b);
+        if(ao!==bo) return ao?-1:1;
+        return 0;
+      });
+      list.innerHTML=items.map(function(r){ return routineRowHTML(r); }).join('');
     }
+    clampTitles(list);
   }catch(e){}
   try{ updateBadges(); }catch(e){}
 }
@@ -2859,42 +3448,6 @@ function renderRoutines(){
         });
         renderTasks(); updateBadges();
         try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
-        try{ if(typeof renderCalendar==="function") renderCalendar(); }catch(e){}
-      }
-      return;
-    }
-    if(t.closest&&t.closest('[data-task-toggle]')){
-      var elT=t.closest('[data-task-toggle]');
-      var ti=parseInt(elT.getAttribute('data-task-toggle'));
-      var tid=elT.getAttribute('data-task-toggle-id');
-      if(isNaN(ti) && tid){
-        ti = S.todos.findIndex(function(x){return x&&x.id===tid});
-      } else if(!isNaN(ti) && ti>=S.todos.length){ ti = -1; }
-      if(ti>=0&&Array.isArray(S.todos)&&S.todos[ti]){
-        var tk=S.todos[ti];
-        if(tk.repeat&&tk.repeat!=="none"){
-          var was=taskIsDone(tk);
-          if(was){
-            tk.lastDone=null;
-            delete tk.completedAt;
-            removePoints(tk.points||1, tk.title);
-          } else {
-            tk.lastDone=iso(today());
-            var nowd=new Date(); tk.completedAt=nowd.toISOString();
-            addPoints(tk.points||1, tk.title);
-          }
-        }
-        else {
-          var wasd=tk.done; tk.done=!tk.done;
-          if(!wasd){
-            var nowd2=new Date(); tk.completedAt=nowd2.toISOString();
-            addPoints(tk.points||1, tk.title);
-          } else {
-            delete tk.completedAt;
-            removePoints(tk.points||1, tk.title);
-          }
-        }
-        save(); renderTasks(); updateBadges();
         try{ if(typeof renderCalendar==="function") renderCalendar(); }catch(e){}
       }
       return;
@@ -3002,6 +3555,18 @@ function renderRoutines(){
     }
   });
 })();
+/* Blendet das Listenende sanft aus, solange darunter noch weitere Einträge folgen. */
+function updateScrollHints(){
+  try{
+    var panels=document.querySelectorAll('.cal-side .side-panel');
+    for(var i=0;i<panels.length;i++){
+      var p=panels[i], l=p.querySelector('.list');
+      if(!l) continue;
+      var more=(l.scrollHeight - Math.round(l.scrollTop) - l.clientHeight) > 4;
+      if(more) p.classList.add('scroll-more'); else p.classList.remove('scroll-more');
+    }
+  }catch(e){}
+}
 function renderCalSide(){
   try{
     if(typeof S==="undefined"||!S) return;
@@ -3035,22 +3600,9 @@ function renderCalSide(){
       if(!todos.length){
         tBox.innerHTML='<div class="empty"><span class="big">🎉</span>Noch keine Aufgaben.</div>';
       }else{
-        tBox.innerHTML=todos.map(function(t){
-          var idx=S.todos.indexOf(t);
-          var done=taskIsDone(t);
-          var c=(typeof cat==='function')?cat(t.cat):{name:'',color:'#64748b'};
-          return '<div class="item'+(done?' done':'')+'">'
-            +'<button class="check'+(done?' on':'')+'" data-task-toggle="'+idx+'">✓</button>'
-            +'<div data-info-open="task" data-info-id="'+t.id+'"><div class="it-title">'+esc(t.title||t.text||'')+'</div>'
-            +'<div class="it-sub"><span class="pill" style="background:'+c.color+'">'+esc(c.name)+'</span>'
-            +(t.repeat&&t.repeat!=='none'?'<span>↻ '+esc(repLabel(t.repeat))+'</span>':'')
-            + fmtDue(t,done)+'</div></div>'
-            +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
-            +'<button type="button" class="btn sm act" data-task-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
-            +'<button type="button" class="btn sm act del" data-task-del="'+idx+'" title="Löschen">'+ICON_TRASH+'</button></div>'
-            +'</div>';
-        }).join('');
+        tBox.innerHTML=taskGroupsHTML(todos, {infoOpen:true});
       }
+      clampTitles(tBox);
       var cnt=document.getElementById('calTaskCount');
       if(cnt){
         cnt.textContent=todos.length;
@@ -3075,29 +3627,23 @@ function renderCalSide(){
         if(ad!==bd) return ad?1:-1;
         return 0;
       });
+      routines.sort(function(a,b){
+        var ao=isRoutineOverdue(a), bo=isRoutineOverdue(b);
+        if(ao!==bo) return ao?-1:1;
+        return 0;
+      });
       if(!routines.length){
         rBox.innerHTML='<div class="empty"><span class="big">🗓️</span>Noch keine Routinen.</div>';
       }else{
-        rBox.innerHTML=routines.map(function(r){
-          var i=S.routines.indexOf(r);
-          var rdone=routineIsDone(r);
-          return '<div class="item'+(rdone?' done':'')+'">'
-            +'<button type="button" class="check'+(rdone?' on':'')+'" data-routine-toggle="'+i+'" title="Erledigt abhaken">✓</button>'
-            +'<div data-info-open="routine" data-info-id="'+r.id+'"><div class="it-title">'+esc(r.name||'')+'</div>'
-            +'<div class="it-sub"><span>↻ '+esc(repLabel(r.freq))+'</span>'
-            +(r.time&&r.time!=="any"?'<span>🕒 '+esc(r.time)+'</span>':'')
-            +(rdone&&r.completedAt?'<span>'+esc(fmtCompletedAt(r.completedAt))+'</span>':'')
-            +(r.note?' · '+esc(r.note):'')+'</div></div>'
-            +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
-            +'<button type="button" class="btn sm act" data-routine-edit="'+i+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
-            +'<button type="button" class="btn sm act del" data-routine-del="'+i+'" title="Löschen">'+ICON_TRASH+'</button></div></div>';
-        }).join('');
+        rBox.innerHTML=routines.map(function(r){ return routineRowHTML(r,{infoOpen:true}); }).join('');
       }
+      clampTitles(rBox);
       var rcnt=document.getElementById('calRoutineCount');
       if(rcnt) rcnt.textContent=routines.length;
     }
   }catch(e){}
   try{ updateBadges(); }catch(e){}
+  try{ updateScrollHints(); }catch(e){}
 }
 
 var __whs=document.getElementById("workHistSearch");
@@ -3180,3 +3726,9 @@ if(__addWd) __addWd.onclick=function(){
     });
   });
 })();
+/* Fade-Hinweis aktualisieren, wenn in einer Seiten-Liste gescrollt oder das Fenster geändert wird. */
+document.addEventListener("scroll", function(e){
+  var t=e.target;
+  if(t && t.classList && t.classList.contains("list")) updateScrollHints();
+}, true);
+window.addEventListener("resize", function(){ updateScrollHints(); });
