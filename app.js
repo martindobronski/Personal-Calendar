@@ -3259,18 +3259,26 @@ function taskMetaHTML(t, done, opt){
   if(done&&rep&&nextDue(t)) out+='<span class="meta-next">↻ Nächste: '+esc(fmtDate(nextDue(t)))+'</span>';
   return out;
 }
+/* Tooltip nur bei langen Texten – kurze Titel/Beschreibungen brauchen keinen */
+function titleAttr(txt){
+  txt=String(txt==null?"":txt);
+  return txt.length>26 ? ' title="'+esc(txt)+'"' : "";
+}
 function taskRowHTML(t, opt){
   opt=opt||{};
   var idx=S.todos.indexOf(t);
   var done=taskIsDone(t);
   var c=catOf(t);
+  var ttl=String(t.title||t.text||"");
   var meta=taskMetaHTML(t,done,opt);
-  if(opt.showNote && t.note) meta+='<span class="meta-note">'+esc(t.note)+'</span>';
+  var note=(opt.showNote && t.note)?('<div class="it-note"'+titleAttr(t.note)+'>'+esc(t.note)+'</div>'):"";
+  var noteTip=(t.note && opt.noteTooltip)?(' title="'+esc(t.note)+'"'):"";
   return '<div class="item'+(done?" done":"")+'">'
     +'<button type="button" class="check'+(done?" on":"")+'" data-task-toggle="'+idx+'" title="Erledigt abhaken">✓</button>'
-    +'<div'+(opt.infoOpen?' data-info-open="task" data-info-id="'+esc(t.id)+'"':'')+'>'
-    +'<div class="it-title"><span class="cat-dot" style="background:'+c.color+'"></span>'+esc(t.title||t.text||"")+'</div>'
-    +(meta?'<div class="it-sub">'+meta+'</div>':'')
+    +'<div'+(opt.infoOpen?' data-info-open="task" data-info-id="'+esc(t.id)+'"':'')+noteTip+'>'
+    +'<div class="it-title"'+titleAttr(ttl)+'><span class="cat-dot" style="background:'+c.color+'"></span>'+esc(ttl)+'</div>'
+    +(meta?'<div class="it-sub meta">'+meta+'</div>':'')
+    +note
     +'</div>'
     +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
     +'<button type="button" class="btn sm act" data-task-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
@@ -3294,16 +3302,16 @@ function taskGroups(items){
 }
 function taskGroupsHTML(items, rowOpt){
   var g=taskGroups(items);
-  function grp(title, arr, opt){
+  function grp(title, arr, opt, cls){
     if(!arr.length) return "";
-    var out='<div class="tgroup">'+esc(title)+" ("+arr.length+")</div>";
+    var out='<div class="tgroup'+(cls?" "+cls:"")+'">'+esc(title)+" ("+arr.length+")</div>";
     out+=arr.map(function(t){
       return taskRowHTML(t, Object.assign({}, rowOpt, opt));
     }).join("");
     return out;
   }
   var html="";
-  html+=grp("Überfällig", g.ueberfaellig, {});
+  html+=grp("Überfällig", g.ueberfaellig, {}, "overdue");
   html+=grp("Heute", g.heute, {omitDay:true});
   html+=grp("Morgen", g.morgen, {omitDay:true});
   html+=grp("Demnächst", g.demnaechst, {});
@@ -3328,13 +3336,16 @@ function routineRowHTML(r, opt){
   var idx=S.routines.indexOf(r);
   var done=routineIsDone(r);
   var c=catOf(r);
+  var rname=String(r.name||"");
   var meta=routineMetaHTML(r,done,opt);
+  var noteLine=(r.note && !opt.noteTooltip)?('<div class="it-note"'+titleAttr(r.note)+'>'+esc(r.note)+'</div>'):"";
+  var noteTip=(r.note && opt.noteTooltip)?(' title="'+esc(r.note)+'"'):"";
   return '<div class="item'+(done?" done":"")+'">'
     +'<button type="button" class="check'+(done?" on":"")+'" data-routine-toggle="'+idx+'" title="Erledigt abhaken">✓</button>'
-    +'<div'+(opt.infoOpen?' data-info-open="routine" data-info-id="'+esc(r.id)+'"':'')+'>'
-    +'<div class="it-title"><span class="cat-dot" style="background:'+c.color+'"></span>'+esc(r.name||"")+'</div>'
-    +(meta?'<div class="it-sub">'+meta+'</div>':'')
-    +(r.note?'<div class="it-note">'+esc(r.note)+'</div>':'')
+    +'<div'+(opt.infoOpen?' data-info-open="routine" data-info-id="'+esc(r.id)+'"':'')+noteTip+'>'
+    +'<div class="it-title"'+titleAttr(rname)+'><span class="cat-dot" style="background:'+c.color+'"></span>'+esc(rname)+'</div>'
+    +(meta?'<div class="it-sub meta">'+meta+'</div>':'')
+    +noteLine
     +'</div>'
     +'<div class="it-actions"><button type="button" class="menu-toggle" title="Aktionen" aria-label="Aktionen">'+ICON_MORE+'</button>'
     +'<button type="button" class="btn sm act" data-routine-edit="'+idx+'" title="Bearbeiten">'+ICON_EDIT+'</button>'
@@ -3600,7 +3611,7 @@ function renderCalSide(){
       if(!todos.length){
         tBox.innerHTML='<div class="empty"><span class="big">🎉</span>Noch keine Aufgaben.</div>';
       }else{
-        tBox.innerHTML=taskGroupsHTML(todos, {infoOpen:true});
+        tBox.innerHTML=taskGroupsHTML(todos, {infoOpen:true, noteTooltip:true});
       }
       clampTitles(tBox);
       var cnt=document.getElementById('calTaskCount');
@@ -3635,7 +3646,7 @@ function renderCalSide(){
       if(!routines.length){
         rBox.innerHTML='<div class="empty"><span class="big">🗓️</span>Noch keine Routinen.</div>';
       }else{
-        rBox.innerHTML=routines.map(function(r){ return routineRowHTML(r,{infoOpen:true}); }).join('');
+        rBox.innerHTML=routines.map(function(r){ return routineRowHTML(r,{infoOpen:true, noteTooltip:true}); }).join('');
       }
       clampTitles(rBox);
       var rcnt=document.getElementById('calRoutineCount');
