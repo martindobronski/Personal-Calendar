@@ -844,7 +844,13 @@ function renderDayView(){
       const third=(sc.clientHeight||560)/3;
       sc.scrollTop=Math.max(0, Math.min(nowTop-third, maxScroll));
     } else {
-      sc.scrollTop=Math.max(0, Math.min((8*60-baseMin)*PXM, maxScroll));
+      /* Nicht heute: an den ersten Eintrag des Tages scrollen (Termin/Aufgabe mit Uhrzeit).
+         Gibt es keinen Eintrag, wird die 6:00-Uhr-Zeile als erstes sichtbar (oben). */
+      let firstMin=null;
+      items.forEach(function(it){ if(firstMin===null || it.start<firstMin) firstMin=it.start; });
+      const TOP_GAP=16; /* etwas Luft, damit der erste Eintrag nicht am oberen Rand klebt */
+      const targetY=(firstMin===null) ? (6*60-baseMin)*PXM : (firstMin-baseMin)*PXM-TOP_GAP;
+      sc.scrollTop=Math.max(0, Math.min(targetY, maxScroll));
     }
   }
 }
@@ -1809,6 +1815,7 @@ let editingRoutine = null;
 let tdMode = "task";
 var __btnNewTodo=document.getElementById("btnNewTodo"); if(__btnNewTodo) __btnNewTodo.onclick = ()=>openTodo(null);
 var __btnNewTask=document.getElementById("btnNewTask"); if(__btnNewTask) __btnNewTask.onclick = ()=>openTodo(null, "task");
+var __btnNewTaskCal=document.getElementById("btnNewTaskCal"); if(__btnNewTaskCal) __btnNewTaskCal.onclick = ()=>openTodo(null, "task");
 var __btnNewRoutine=document.getElementById("btnNewRoutine"); if(__btnNewRoutine) __btnNewRoutine.onclick = ()=>openTodo(null, "routine");
 function openTodo(id, mode){
   tdMode = mode || "task";
@@ -2735,7 +2742,8 @@ function renderWorkHead(){
     var isWeekend=(wday===0 || wday===6);
     var saldo=c.saldoMin;
     wsv.textContent = (saldo>=0?"+":"") + minToHM(saldo);
-    ws.style.display = isWeekend ? "none" : "inline-flex";
+    /* Saldo nur an normalen Arbeitstagen zeigen – nicht Sa/So, Urlaubs-, Freizeit- oder Krankheitstag */
+    ws.style.display = (isWeekend || !!c.dayType) ? "none" : "inline-flex";
     ws.classList.toggle("neg", saldo<0);
     ws.classList.toggle("pos", saldo>0);
     wsv.style.color = saldo<0 ? "#fca5a5" : saldo>0 ? "#86efac" : "#e2e8f0";
