@@ -56,6 +56,16 @@ function load(){
   }
   if(!S.settings) S.settings = defaults().settings;
   if(!Array.isArray(S.birthdays)) S.birthdays = [];
+  /* Robustheit: Tag/Monat (und Jahr) immer als Zahl. Sonst scheitert der strikte
+     Vergleich in birthdaysOn()/checkBirthdayWarnings() und im Kalender erschiene kein
+     Geburtstags-Chip, obwohl die Geburtstagsliste den Termin korrekt anzeigt. */
+  else S.birthdays.forEach(function(b){
+    if(!b) return;
+    var dd=Number(b.day), mm=Number(b.month);
+    if(isFinite(dd) && dd>0) b.day=dd;
+    if(isFinite(mm) && mm>0) b.month=mm;
+    if(b.year!=null && b.year!==""){ var yy=Number(b.year); if(isFinite(yy)) b.year=yy; }
+  });
   migrateCategoryColors();
 }
 function migrateCategoryColors(){
@@ -406,8 +416,14 @@ function renderCalendar(){
     const tks = tasksOn(key);
     const bds = birthdaysOn(key);
     let chips = "";
-    const cellItems = bds.map(function(b){ return bdChipHTML(b,key); })
+    let cellItems = bds.map(function(b){ return bdChipHTML(b,key); })
                          .concat(evs.map(chipHTML)).concat(tks.map(taskChipHTML));
+    /* Geburtstag morgen → heute eine dezente Vorwarnung (analog zum Warn-Dialog) */
+    if(sameDay(d,today())){
+      const tom=addDays(today(),1);
+      const eve=birthdaysOn(iso(tom)).map(function(b){ return bdEveChipHTML(b, tom.getFullYear()); });
+      if(eve.length) cellItems=eve.concat(cellItems);
+    }
     cellItems.slice(0,3).forEach(h=>{ chips += h; });
     if(cellItems.length>3) chips += '<div class="more">+'+(cellItems.length-3)+" weitere</div>";
     const hol = (H[key] || Hnext[key] || Hprev[key]) || "";
@@ -803,7 +819,13 @@ function renderDayView(){
          + "</div>";
   });
   const bds=birthdaysOn(key);
-  const bannerAll = bds.map(function(b){ return bdBannerHTML(b, selDate.getFullYear()); }).concat(bannerEvHtml).concat(bannerTaskHtml);
+  /* Geburtstag morgen → heute auch in der Ganztägig-Zeile eine dezente Vorwarnung */
+  let eveBanner=[];
+  if(isToday){
+    const tom=addDays(today(),1);
+    eveBanner=birthdaysOn(iso(tom)).map(function(b){ return bdEveBannerHTML(b, tom.getFullYear()); });
+  }
+  const bannerAll = eveBanner.concat(bds.map(function(b){ return bdBannerHTML(b, selDate.getFullYear()); })).concat(bannerEvHtml).concat(bannerTaskHtml);
   const bannerHtml = bannerAll.length ? bannerAll.join("") : '<span class="dv-ad-empty">—</span>';
 
   document.getElementById("dayView").innerHTML =
@@ -2195,7 +2217,7 @@ function bdCountdownText(d){
 function birthdaysOn(key){
   var m=parseInt(String(key).slice(5,7),10), d=parseInt(String(key).slice(8,10),10);
   return (Array.isArray(S.birthdays)?S.birthdays:[]).filter(function(b){
-    return b && b.month===m && b.day===d;
+    return b && Number(b.month)===m && Number(b.day)===d;
   }).sort(function(a,b){ return String(a.name||"").localeCompare(String(b.name||""),"de"); });
 }
 function bdAgeAt(b, year){
@@ -2211,6 +2233,15 @@ function bdChipHTML(b, key){
     + (age!=null ? '<span class="bd-age">· '+age+'</span>' : '')
     + "</div>";
 }
+/* Vorwarnung am Tag vor dem Geburtstag – dezent, passend zum Warn-Dialog („Geburtstag morgen“) */
+function bdEveChipHTML(b, year){
+  var age=bdAgeAt(b, year);
+  var tip="Geburtstag morgen: "+esc(b.name)+(age!=null?" · wird "+age:"");
+  return '<div class="ev bd-cal bd-eve" title="'+tip+'">'
+    + '<span class="bd-ico" aria-hidden="true">🎂</span>'
+    + '<span>Morgen: '+esc(b.name)+(age!=null?" wird "+age:"")+'</span>'
+    + "</div>";
+}
 function bdBannerHTML(b, year){
   var age=bdAgeAt(b, year);
   var tip="Geburtstag: "+esc(b.name)+(age!=null?" · wird "+age:"");
@@ -2218,6 +2249,15 @@ function bdBannerHTML(b, year){
     + '<span class="bd-ico" aria-hidden="true">🎂</span>'
     + "<span>"+esc(b.name)+"</span>"
     + (age!=null ? '<span class="bd-age">wird '+age+'</span>' : '')
+    + "</div>";
+}
+/* Vorwarnung am Tag vor dem Geburtstag – dezent, auch in der Ganztägig-Zeile der Tagesansicht */
+function bdEveBannerHTML(b, year){
+  var age=bdAgeAt(b, year);
+  var tip="Geburtstag morgen: "+esc(b.name)+(age!=null?" · wird "+age:"");
+  return '<div class="dv-ad dv-ad-bd dv-ad-eve" title="'+tip+'">'
+    + '<span class="bd-ico" aria-hidden="true">🎂</span>'
+    + "<span>Morgen: "+esc(b.name)+(age!=null?" wird "+age:"")+"</span>"
     + "</div>";
 }
 function bdRowHTML(b, isNext){
@@ -2292,7 +2332,7 @@ function saveBirthday(){
   if(wasEdit) Object.assign(editingBirthday, data);
   else { if(!Array.isArray(S.birthdays)) S.birthdays=[]; S.birthdays.push(Object.assign({id:uid()}, data)); }
   editingBirthday=null;
-  save(); closeModals(); renderBirthdays();
+  save(); closeModals(); renderBirthdays(); try{ renderCalendar(); }catch(e){}
   toast(wasEdit ? "Geburtstag gespeichert." : "Geburtstag hinzugefügt.");
 }
 function deleteBirthday(id){
@@ -2301,10 +2341,10 @@ function deleteBirthday(id){
   if(idx<0) return;
   var removed=S.birthdays.splice(idx,1)[0];
   editingBirthday=null;
-  save(); closeModals(); renderBirthdays();
+  save(); closeModals(); renderBirthdays(); try{ renderCalendar(); }catch(e){}
   showUndo("Geburtstag gelöscht", function(){
     S.birthdays.splice(Math.min(idx,S.birthdays.length),0,removed);
-    save(); renderBirthdays();
+    save(); renderBirthdays(); try{ renderCalendar(); }catch(e){}
   });
 }
 /* Warn-Dialog einen Tag vor dem Geburtstag (einmal pro Tag und Geburtstag). */
@@ -2314,7 +2354,7 @@ function checkBirthdayWarnings(){
   if(!S.settings) S.settings={};
   var t=today();
   var tm=new Date(t.getFullYear(), t.getMonth(), t.getDate()+1);
-  var due=S.birthdays.filter(function(b){ return b && b.month===tm.getMonth()+1 && b.day===tm.getDate(); });
+  var due=S.birthdays.filter(function(b){ return b && Number(b.month)===tm.getMonth()+1 && Number(b.day)===tm.getDate(); });
   if(!due.length) return;
   if(!S.settings.bdWarned || typeof S.settings.bdWarned!=="object") S.settings.bdWarned={};
   var warned=S.settings.bdWarned, tkey=iso(t);

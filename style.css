@@ -585,12 +585,26 @@ body.cal-day #view-cal .cal-side .side-top{display:none}
 .ev.bd-cal:hover{filter:brightness(1.06)}
 .ev.bd-cal .bd-ico{flex:0 0 auto;overflow:visible}
 .ev.bd-cal .bd-age{flex:0 0 auto;opacity:.7}
+/* Vorwarnung am Vortag: dezent (transparent, gestrichelter Goldrand, goldener Text) */
+.ev.bd-cal.bd-eve{
+  background:rgba(245,165,36,.08);color:rgba(245,165,36,.95);font-weight:600;
+  border:1px dashed rgba(245,165,36,.45);
+}
+.ev.bd-cal.bd-eve .bd-ico{opacity:.8}
+.ev.bd-cal.bd-eve:hover{filter:brightness(1.1);background:rgba(245,165,36,.14)}
 .dv-ad.dv-ad-bd{
   background:linear-gradient(90deg,#f5a524,#fbbf24);color:#241a00;font-weight:700;
   display:inline-flex;align-items:center;gap:6px;
 }
 .dv-ad.dv-ad-bd,.dv-ad.dv-ad-bd:active{cursor:default}
 .dv-ad.dv-ad-bd .bd-age{font-weight:600;opacity:.72}
+/* Vorwarnung am Vortag: dezent (transparenter Grund, gestrichelter Goldrand, goldener Text) */
+.dv-ad.dv-ad-bd.dv-ad-eve{
+  background:rgba(245,165,36,.10);color:rgba(245,165,36,.95);
+  border:1px dashed rgba(245,165,36,.45);font-weight:600;
+}
+.dv-ad.dv-ad-bd.dv-ad-eve .bd-ico{opacity:.8}
+.dv-ad.dv-ad-bd.dv-ad-eve:hover{filter:brightness(1.1);background:rgba(245,165,36,.16)}
 
 /* ---------- Meals ---------- */
 .meals-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:6px;min-width:800px}
