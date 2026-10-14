@@ -682,13 +682,15 @@ body.cal-day #view-cal .cal-side .side-top{display:none}
 /* ---------- Anzeige-Dialog (Info) ---------- */
 .info-modal{width:min(460px,100%)}
 .info-head{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
-.info-head-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .info-head h3{margin:0;font-size:20px;line-height:1.25}
 .info-cat{align-self:flex-start;font-size:11.5px;font-weight:700;color:#0c1220;padding:3px 10px;border-radius:999px;background:#64748b}
 .info-body{display:flex;flex-direction:column;gap:9px}
 .info-row{display:flex;gap:12px;font-size:14px;align-items:flex-start;line-height:1.45}
 .info-lbl{flex:0 0 108px;color:var(--muted);font-weight:600}
 .info-val{flex:1 1 auto;min-width:0;word-break:break-word}
+/* Uhrzeit-Zeile mit Aktions-Symbol rechts („Neu planen“) */
+.info-val-act{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.info-val-act .icon-act-row{width:32px;height:32px;border-radius:9px}
 .info-done{
   display:flex;align-items:center;gap:9px;margin-top:18px;padding-top:14px;
   border-top:1px solid var(--line);font-size:14px;font-weight:600;cursor:pointer;

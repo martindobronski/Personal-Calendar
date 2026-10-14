@@ -166,6 +166,7 @@ const ICON_TIME = '<svg viewBox="0 0 16 16" width="11" height="11" fill="none" s
 const ICON_TIMER = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="15" y2="11"/><circle cx="12" cy="14" r="8"/></svg>';
 const ICON_STAR = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
 const ICON_TASK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg>';
+const ICON_RESCHED = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 8 16 8"/><path d="M12 7.5V12l3 1.8"/></svg>';
 
 function astroHTML(d){
   const s=S.settings||{};
@@ -1770,8 +1771,10 @@ var __er = document.getElementById("evResched");
 if(__er) __er.addEventListener("click", function(){ openResched("ev"); });
 var __tr = document.getElementById("tdResched");
 if(__tr) __tr.addEventListener("click", function(){ openResched("td"); });
-var __ir = document.getElementById("infoResched");
-if(__ir) __ir.addEventListener("click", function(){ if(infoRef) openReschedInfo(infoRef.kind, infoRef.id); });
+var __ib = document.getElementById("infoBody");
+if(__ib) __ib.addEventListener("click", function(e){
+  if(e.target.closest("[data-info-resched]")){ if(infoRef) openReschedInfo(infoRef.kind, infoRef.id); }
+});
 
 /* =========================================================
    Anzeige-Dialog (Info) – Einzelklick auf Termin/Aufgabe
@@ -1793,6 +1796,13 @@ function infoTimeRange(s, e){
 function infoNote(note){
   return note ? esc(note).replace(/\n/g,"<br>") : "";
 }
+/* Uhrzeit-Zeile; optional mit Symbol „Neu planen“ rechts. */
+function infoTimeRow(value, withBtn){
+  var btn = withBtn
+    ? '<button type="button" class="icon-act icon-act-row" data-info-resched title="Neu planen" aria-label="Neu planen">'+ICON_RESCHED+'</button>'
+    : "";
+  return '<div class="info-row"><span class="info-lbl">Uhrzeit</span><span class="info-val info-val-act"><span>'+value+'</span>'+btn+'</span></div>';
+}
 function openInfo(kind, id){
   let obj;
   if(kind==="ev") obj = S.events.find(e=>e.id===id);
@@ -1813,7 +1823,7 @@ function openInfo(kind, id){
     } else {
       body += infoRow("Datum", esc(infoDateLong(obj.date)));
     }
-    body += infoRow("Uhrzeit", obj.allDay ? "Ganztägig" : infoTimeRange(obj.start, obj.end));
+    body += infoTimeRow(obj.allDay ? "Ganztägig" : infoTimeRange(obj.start, obj.end), true);
     body += infoRow("Wiederholung", repLabel(obj.repeat));
     body += infoRow("Bereich", esc(c.name));
     body += infoRow("Notiz", infoNote(obj.note));
@@ -1828,14 +1838,13 @@ function openInfo(kind, id){
     const en = (obj.endDate && obj.endDate>s) ? obj.endDate : "";
     if(en) body += infoRow("Zeitraum", esc(infoDateLong(s))+" – "+esc(infoDateLong(en)));
     else if(s) body += infoRow("Datum", esc(infoDateLong(s)));
-    body += infoRow("Uhrzeit", taskIsAllDay(obj) ? "Ganztägig" : infoTimeRange(taskStartTime(obj), taskEndTime(obj)));
+    body += infoTimeRow(taskIsAllDay(obj) ? "Ganztägig" : infoTimeRange(taskStartTime(obj), taskEndTime(obj)), true);
     body += infoRow("Bereich", esc(c.name));
     body += infoRow("Wiederholung", repLabel(obj.repeat));
     body += infoRow("Punkte", obj.points ? String(obj.points)+" "+ICON_STAR : "");
     body += infoRow("Notiz", infoNote(obj.note));
   }
   document.getElementById("infoBody").innerHTML = body;
-  document.getElementById("infoResched").style.display = (kind==="routine") ? "none" : "";
 
   const doneNow = (kind==="ev") ? eventIsDone(obj) : (kind==="routine") ? routineIsDone(obj) : taskIsDone(obj);
   document.getElementById("infoDone").checked = doneNow;
