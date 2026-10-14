@@ -926,14 +926,18 @@ function renderFourView(){
     if(hol) chips+='<div class="dv-ad dv-ad-hol" title="'+esc(hol)+'">'+esc(hol)+'</div>';
     day.bds.forEach(function(b){ chips+=bdBannerHTML(b, day.date.getFullYear()); });
     day.eventsAll.forEach(function(e){
-      const c=cat(e.cat), repL=eventRepLabel(e);
-      chips+='<div class="dv-ad'+(eventIsDone(e)?" done":"")+'" data-ev="'+e.id+'" style="background:'+c.color+'" title="'+esc(e.title)+'">'
-        + (evDays(e)>1?"⇥ ":"")+(repL?'<span class="rep">↻</span>':"")+esc(e.title)+'</div>';
+      const c=cat(e.cat), repL=eventRepLabel(e), eDone=eventIsDone(e);
+      chips+='<div class="dv-ad'+(eDone?" done":"")+'" data-ev="'+e.id+'" style="background:'+c.color+'" title="'+esc(e.title)+'">'
+        + (evDays(e)>1?"⇥ ":"")+(repL?'<span class="rep">↻</span>':"")+esc(e.title)
+        + (!eDone ? '<span class="dv-ad-resize" title="Dauer ändern"></span>' : "")
+        + '</div>';
     });
     day.tasksAll.forEach(function(t){
       const c=cat(t.cat), tDone=taskIsDone(t);
       chips+='<div class="dv-ad dv-ad-task'+(tDone?" done":"")+'" data-task-open="'+t.id+'" style="background:'+c.color+'" title="'+esc(t.title)+'">'
-        + (tDone?'<span class="mark">✓</span>':'')+esc(t.title)+'</div>';
+        + (tDone?'<span class="mark">✓</span>':'')+esc(t.title)
+        + (!tDone ? '<span class="dv-ad-resize" title="Dauer ändern"></span>' : "")
+        + '</div>';
     });
     ad+='<div class="four-ad-col" data-date="'+day.key+'">'+(chips||'<span class="four-ad-empty">–</span>')+'</div>';
   });
@@ -959,6 +963,7 @@ function renderFourView(){
         colHtml+='<div class="dv-ev'+(done?" done":"")+(short?" dv-ev-short":"")+past+'" data-ev="'+it.ev.id+'" style="'+st+';--c:'+c.color+'" title="'+esc(it.ev.title)+'">'
           + '<div class="dv-ev-t">'+esc(it.ev.start||"")+(it.ev.end?"–"+esc(it.ev.end):"")+'</div>'
           + '<div class="dv-ev-n">'+(repL?'<span class="rep" title="Wiederholt sich">↻</span>':"")+esc(it.ev.title)+'</div>'
+          + (!done ? '<div class="dv-ev-resize" title="Dauer ändern"></div>' : "")
           + '</div>';
       }else{
         const t=it.task, c=cat(t.cat);
@@ -968,6 +973,7 @@ function renderFourView(){
           + '<button type="button" class="task-toggle task-check'+(tDone?" on":"")+'" data-task-toggle-id="'+t.id+'" title="'+(tDone?"Wieder öffnen":"Erledigt abhaken")+'">'+(tDone?"✓":"")+'</button>'
           + '<span class="dv-ev-t">'+esc(tStart)+(tEnd?"–"+esc(tEnd):"")+'</span>'
           + '<span class="dv-ev-n">'+esc(t.title)+'</span>'
+          + (!tDone ? '<div class="dv-ev-resize" title="Dauer ändern"></div>' : "")
           + '</div>';
       }
     });
@@ -988,6 +994,7 @@ function renderFourView(){
       + '</div></div>';
   }
   renderLegend();
+  try{ if(typeof refreshDayDrag==="function") refreshDayDrag(); }catch(e){}
   try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
   try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
 
@@ -1126,6 +1133,155 @@ function commitSpan(d){
   d.obj.endDate = endDate;
 }
 function refreshDayDrag(){ dvInitDrag(); }
+
+/* =========================================================
+   Drag & Drop in der 4-Tage-Ansicht
+   – Termine/Aufgaben im Raster vertikal (Uhrzeit) und
+     horizontal (anderer Tag) verschieben, unten skalieren
+   – ganztägige Chips horizontal auf andere Tage schieben
+   ========================================================= */
+function fourColKeyFromX(x){
+  const cols=document.querySelectorAll("#fourGrid .four-cols .four-col");
+  if(!cols.length) return null;
+  const first=cols[0].getBoundingClientRect();
+  if(x<first.left) return cols[0].dataset.date;
+  for(let i=0;i<cols.length;i++){
+    const r=cols[i].getBoundingClientRect();
+    if(x>=r.left && x<r.right) return cols[i].dataset.date;
+  }
+  return cols[cols.length-1].dataset.date;
+}
+function fourClearDropTarget(){
+  document.querySelectorAll("#fourGrid .drop-target").forEach(function(x){ x.classList.remove("drop-target"); });
+}
+function fourSetDropTarget(key){
+  fourClearDropTarget();
+  if(!key) return;
+  document.querySelectorAll('#fourGrid .four-col[data-date="'+key+'"], #fourGrid .four-ad-col[data-date="'+key+'"]')
+    .forEach(function(x){ x.classList.add("drop-target"); });
+}
+function fourDragLabel(d){
+  if(!d.label) return;
+  let txt=dvTimeLabel(d.curStart, (d.mode==="resize" || d.hadEnd) ? d.curEnd : null);
+  if(d.dropKey && d.dropKey!==d.baseKey) txt+="  → "+dvShortDate(d.dropKey);
+  d.label.textContent=txt;
+}
+function fourViewDragStart(e){
+  if(e.button != null && e.button !== 0) return;
+  if(e.target.closest(".task-toggle")) return;
+  const timed=e.target.closest(".four-col .dv-ev");
+  const chip=e.target.closest(".four-ad-col .dv-ad");
+  if(!timed && !chip) return;
+  const item=dvDragItem(timed || chip);
+  if(!item || !item.obj) return;
+  if(item.kind==="ev" && eventIsDone(item.obj)) return;
+  if(item.kind==="task" && taskIsDone(item.obj)) return;
+  const el=timed || chip;
+  const st={
+    scope:"four", kind:item.kind, obj:item.obj, el:el,
+    origTitle:(item.kind==="ev" ? item.obj.title : (item.obj.title || item.obj.text || "")),
+    startX:e.clientX, startY:e.clientY, moved:false, ghost:null
+  };
+  if(timed){
+    const col=timed.closest(".four-col");
+    const startMin=(item.kind==="ev")
+      ? (item.obj.start ? hmToMin(item.obj.start) : 540)
+      : (item.obj.startTime ? hmToMin(item.obj.startTime) : 540);
+    let endMin;
+    if(item.kind==="ev") endMin = item.obj.end ? hmToMin(item.obj.end) : startMin + 60;
+    else endMin = item.obj.endTime ? hmToMin(item.obj.endTime) : startMin + 30;
+    if(endMin <= startMin) endMin = startMin + (item.kind==="ev" ? 60 : 30);
+    st.mode = e.target.closest(".dv-ev-resize") ? "resize" : "time";
+    st.col = col;
+    st.baseMin = Number(col.dataset.base) || 0;
+    st.baseKey = col.dataset.date;
+    st.dropKey = st.baseKey;
+    st.hadEnd = (item.kind==="ev") ? !!item.obj.end : !!item.obj.endTime;
+    st.origStart = startMin; st.origEnd = endMin;
+    st.curStart = startMin; st.curEnd = endMin;
+    st.label = timed.querySelector(".dv-ev-t");
+    st.scroll = document.querySelector("#fourWrap .four-scroll");
+    st.ghost = makeGhost(dvTimeLabel(st.curStart, st.hadEnd ? st.curEnd : null), cat(item.obj.cat).color);
+  } else {
+    st.baseKey = (item.kind==="ev") ? item.obj.date : taskDate(item.obj);
+    st.origDate = st.baseKey;
+    st.origSpan = (item.kind==="ev") ? evDays(item.obj) : taskSpanDays(item.obj);
+    st.curSpan = st.origSpan;
+    st.dropKey = st.baseKey;
+    st.mode = e.target.closest(".dv-ad-resize") ? "span" : "day";
+    st.ghost = makeGhost(st.mode==="span"
+      ? (st.curSpan + (st.curSpan===1 ? " Tag" : " Tage"))
+      : (st.origTitle + " → " + dvShortDate(st.baseKey)), cat(item.obj.cat).color);
+  }
+  el.classList.add("dragging");
+  dvDragState = st;
+  e.preventDefault();
+}
+function fourDragMove(d, e){
+  if(d.mode==="time"){
+    const dur = d.origEnd - d.origStart;
+    let s = dvRoundMin(d.origStart + (e.clientY - d.startY) / DV_PXM);
+    s = Math.max(0, Math.min(s, 1440 - dur));
+    d.curStart = s; d.curEnd = s + dur;
+    d.el.style.top = ((s - (d.baseMin||0)) * DV_PXM) + "px";
+    d.dropKey = fourColKeyFromX(e.clientX) || d.baseKey;
+    fourSetDropTarget(d.dropKey !== d.baseKey ? d.dropKey : null);
+    fourDragLabel(d);
+    if(d.scroll) dvAutoScroll(d.scroll, e.clientY);
+  } else if(d.mode==="resize"){
+    let ende = dvRoundMin(d.origEnd + (e.clientY - d.startY) / DV_PXM);
+    if(ende < d.origStart + DV_SNAP) ende = d.origStart + DV_SNAP;
+    if(ende > 1440) ende = 1440;
+    d.curEnd = ende;
+    d.el.style.height = Math.max((ende - d.curStart) * DV_PXM, 20) + "px";
+    fourDragLabel(d);
+  } else if(d.mode==="day"){
+    const key = fourColKeyFromX(e.clientX) || d.baseKey;
+    d.dropKey = key;
+    fourSetDropTarget(key);
+    if(d.ghost) d.ghost.textContent = d.origTitle + " → " + dvShortDate(key);
+  } else if(d.mode==="span"){
+    const cols = document.querySelectorAll("#fourGrid .four-cols .four-col");
+    const keys = [].map.call(cols, function(c){ return c.dataset.date; });
+    const key = fourColKeyFromX(e.clientX) || d.baseKey;
+    const bi = keys.indexOf(d.origDate), ti = keys.indexOf(key);
+    d.curSpan = (bi >= 0 && ti >= 0) ? Math.max(1, ti - bi + 1) : d.origSpan;
+    if(d.ghost) d.ghost.textContent = d.curSpan + (d.curSpan === 1 ? " Tag" : " Tage");
+  }
+  positionGhost(d, e);
+}
+function fourDragCommit(d){
+  let changed = false;
+  if(d.mode==="time" || d.mode==="resize"){
+    const timeChanged = d.curStart !== d.origStart || d.curEnd !== d.origEnd;
+    const dayChanged = !!(d.dropKey && d.dropKey !== d.baseKey);
+    const startStr = dvHM(d.curStart);
+    const endStr = dvHM(d.curEnd >= 1440 ? 1439 : d.curEnd);
+    if(d.kind==="ev"){
+      if(timeChanged){ d.obj.start = startStr; if(d.mode==="resize" || d.hadEnd) d.obj.end = endStr; changed = true; }
+      if(dayChanged){ d.obj.date = d.dropKey; changed = true; }
+    } else {
+      if(timeChanged){ d.obj.startTime = startStr; d.obj.allDay = false; if(d.mode==="resize" || d.hadEnd) d.obj.endTime = endStr; changed = true; }
+      if(dayChanged){ setTaskDate(d.obj, d.dropKey); changed = true; }
+    }
+  } else if(d.mode==="day"){
+    changed = !!(d.dropKey && d.dropKey !== d.baseKey);
+    if(changed){ if(d.kind==="ev") setEventDate(d.obj, d.dropKey); else setTaskDate(d.obj, d.dropKey); }
+  } else if(d.mode==="span"){
+    changed = d.curSpan !== d.origSpan;
+    if(changed) d.obj.endDate = d.curSpan <= 1 ? "" : iso(addDays(parseISO(d.origDate), d.curSpan - 1));
+  }
+  if(!changed) return;
+  window.__dvDrag = true;
+  setTimeout(function(){ window.__dvDrag = false; }, 80);
+  save();
+  render();
+  if(d.mode==="span") toast(d.curSpan <= 1 ? "Dauer: 1 Tag" : "Dauer: " + d.curSpan + " Tage");
+  else if(d.mode==="resize") toast("Ende " + dvHM(d.curEnd >= 1440 ? 1439 : d.curEnd));
+  else if(d.kind==="ev" || d.kind==="task"){
+    toast(d.mode==="time" ? "Zeit geändert" : "Verschoben nach " + dvShortDate(d.dropKey));
+  }
+}
 function dvInitDrag(){
   const dv = document.getElementById("dayView");
   if(dv && !dv.dataset.dragBound){
@@ -1136,6 +1292,11 @@ function dvInitDrag(){
   if(cg && !cg.dataset.dragBound){
     cg.dataset.dragBound = "1";
     cg.addEventListener("pointerdown", function(e){ monthViewDragStart(e); });
+  }
+  const fg = document.getElementById("fourGrid");
+  if(fg && !fg.dataset.dragBound){
+    fg.dataset.dragBound = "1";
+    fg.addEventListener("pointerdown", function(e){ fourViewDragStart(e); });
   }
 }
 function dayViewDragStart(e){
@@ -1236,6 +1397,7 @@ window.addEventListener("pointermove", function(e){
     if(Math.abs(dx) <= 3 && Math.abs(dy) <= 3) return;
     d.moved = true;
   }
+  if(d.scope==="four"){ fourDragMove(d, e); e.preventDefault(); return; }
   if(d.mode==="move-time"){
     const dm = dy / DV_PXM;
     const dur = d.origEnd - d.origStart;
@@ -1281,8 +1443,10 @@ window.addEventListener("pointerup", function(){
   dvDragState = null;
   if(d.ghost && d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
   clearDropTarget();
+  fourClearDropTarget();
   d.el.classList.remove("dragging");
   if(!d.moved) return;
+  if(d.scope==="four"){ fourDragCommit(d); return; }
   let changed = true;
   if(d.mode==="move-time" || d.mode==="resize-end") commitTime(d);
   else if(d.mode==="move-day"){
