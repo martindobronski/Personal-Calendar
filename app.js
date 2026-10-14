@@ -340,7 +340,7 @@ function updateBadges(){
     const b = document.getElementById("todoBadge");
     if(b){
       if(nOver>0){
-        b.textContent = nOver+"!"; b.classList.add("overdue");
+        b.textContent = nOver; b.classList.add("overdue");
         b.title = nOver+" überfällig · "+n+" offen";
       }else{
         b.textContent = n; b.classList.remove("overdue");
@@ -353,7 +353,7 @@ function updateBadges(){
     const rb = document.getElementById("routineBadge");
     if(rb){
       if(rOver>0){
-        rb.textContent = rOver+"!"; rb.classList.add("overdue");
+        rb.textContent = rOver; rb.classList.add("overdue");
         rb.title = rOver+" überfällig · "+rn+" offen";
       }else{
         rb.textContent = rn; rb.classList.remove("overdue");

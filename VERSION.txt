@@ -1,3 +1,4 @@
+v1.5.39 (14.10.2026): Aufgaben & Routinen — der Kreis-Zähler (Badge) im Reiter zeigt bei überfälligen Einträgen kein Ausrufezeichen mehr, sondern wird stattdessen rot dargestellt
 v1.5.38 (13.10.2026): Tagesansicht — beim Auswählen eines anderen Tages (nicht heute) wird jetzt automatisch an den ersten Eintrag des Tages gescrollt (Termin/Aufgabe mit Uhrzeit); gibt es keinen Eintrag, steht die 6:00-Uhr-Zeile als erstes sichtbar oben
 v1.5.37 (13.10.2026): Kalender — neuer Button „+ Aufgabe“ in der Kopfleiste (neben „+ Termin“), um direkt eine neue Aufgabe anzulegen, ohne zur Aufgabenseite zu wechseln
 v1.5.36 (13.10.2026): Kalender/Tagesansicht — Saldo-Chip wird zusätzlich zu Sa/So auch an Urlaubs-, Freizeit- und Krankheitstagen ausgeblendet (Tagesart aus der Arbeitszeit)
