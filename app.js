@@ -23,7 +23,7 @@ function defaults(){
 
 let S;
 let activeProfile = null;
-let calMode = "month";
+let calMode = "four"; // Standard-Ansicht: 4-Tage (Auswahl Tag/4-Tage/Monat)
 let dvFullDay = false; // Tagesansicht: ganzen Tag (0–24) statt eingestelltem Zeitraum zeigen
 function inProfile(catId){ return !activeProfile || !catId || catId === activeProfile; }
 function renderProfiles(){
@@ -107,7 +107,7 @@ try{
   var bt=document.getElementById("brandTitle"); if(bt) bt.textContent=t;
 }catch(e){}
 try{ applySegState(); }catch(e){}
-try{ if(S.settings && (S.settings.calMode==="day" || S.settings.calMode==="four")) calMode=S.settings.calMode; }catch(e){}
+try{ var _cm=S.settings && S.settings.calMode; if(_cm==="day"||_cm==="four"||_cm==="month") calMode=_cm; }catch(e){}
 try{
   if(S && Array.isArray(S.todos)){
     var __mig=false;
@@ -454,8 +454,8 @@ function setCalMode(m){
 }
 function updateCalModeUI(){
   try{
-    const seg=document.getElementById("calModeSeg");
-    if(seg) seg.querySelectorAll(".segbtn").forEach(b=>b.classList.toggle("active", (b.dataset.calmode||"")===calMode));
+    const sel=document.getElementById("calModeSel");
+    if(sel && sel.value!==calMode) sel.value=calMode;
     const mw=document.getElementById("monthWrap");
     const dv=document.getElementById("dayView");
     const fw=document.getElementById("fourWrap");
@@ -466,7 +466,8 @@ function updateCalModeUI(){
     document.body.classList.toggle("cal-four", calMode==="four");
     const dfb=document.getElementById("dayFullBtn");
     if(dfb){
-      dfb.style.display = calMode==="day" ? "" : "none";
+      /* „Ganzer Tag“ nur bei Tag und 4-Tage (nicht im Monat) */
+      dfb.style.display = (calMode==="day"||calMode==="four") ? "" : "none";
       dfb.classList.toggle("active", !!dvFullDay);
       dfb.setAttribute("aria-pressed", dvFullDay ? "true" : "false");
       dfb.title = dvFullDay
@@ -903,7 +904,8 @@ function renderFourView(){
   document.getElementById("calTitle").innerHTML = esc(title)+"<span>4-Tage-Ansicht</span>";
 
   const PXH=64, PXM=PXH/60, BOTTOM=24;
-  const ds=dayRangeStart(), de=dayRangeEnd();
+  const cfgDs=dayRangeStart(), cfgDe=dayRangeEnd();
+  const ds=dvFullDay?0:cfgDs, de=dvFullDay?24:cfgDe;
   const baseMin=ds*60, totalMin=(de-ds)*60, totalH=(de-ds)*PXH;
   const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
   const cols=days.map(fourDayCollect);
@@ -1703,12 +1705,13 @@ var __el=document.getElementById("calGrid"); if(__el)__el.addEventListener("dblc
   const day=e.target.closest(".day");
   if(day){ selDate=parseISO(day.dataset.date); setCalMode("day"); }
 });
-var __cms=document.getElementById("calModeSeg"); if(__cms)__cms.addEventListener("click", e=>{
-  const b=e.target.closest("[data-calmode]");
-  if(b) setCalMode(b.dataset.calmode);
+var __cms=document.getElementById("calModeSel"); if(__cms)__cms.addEventListener("change", function(){
+  setCalMode(__cms.value);
 });
 var __dfb=document.getElementById("dayFullBtn"); if(__dfb)__dfb.addEventListener("click", ()=>{
-  dvFullDay=!dvFullDay; renderDayView(); updateCalModeUI();
+  dvFullDay=!dvFullDay;
+  if(calMode==="four") renderFourView(); else renderDayView();
+  updateCalModeUI();
 });
 var __dv=document.getElementById("dayView"); if(__dv){
   __dv.addEventListener("dblclick", function(e){
