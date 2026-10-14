@@ -107,7 +107,7 @@ try{
   var bt=document.getElementById("brandTitle"); if(bt) bt.textContent=t;
 }catch(e){}
 try{ applySegState(); }catch(e){}
-try{ if(S.settings && S.settings.calMode==="day") calMode="day"; }catch(e){}
+try{ if(S.settings && (S.settings.calMode==="day" || S.settings.calMode==="four")) calMode=S.settings.calMode; }catch(e){}
 try{
   if(S && Array.isArray(S.todos)){
     var __mig=false;
@@ -398,6 +398,7 @@ function renderCalendar(){
   updateCalModeUI();
   const lg0 = document.getElementById("legend"); if(lg0) lg0.hidden = false;
   if(calMode==="day"){ renderDayView(); try{ renderAgenda(); }catch(e){} refreshCalSearch(); return; }
+  if(calMode==="four"){ renderFourView(); try{ renderAgenda(); }catch(e){} refreshCalSearch(); return; }
   const y = calMonth.getFullYear(), m = calMonth.getMonth();
   document.getElementById("calTitle").textContent = MONTHS[m] + " " + y;
 
@@ -447,7 +448,7 @@ function renderCalendar(){
   }catch(e){ reportRenderError(e); }
 }
 function setCalMode(m){
-  calMode = (m==="day") ? "day" : "month";
+  calMode = (m==="day") ? "day" : (m==="four" ? "four" : "month");
   try{ if(!S.settings) S.settings={}; S.settings.calMode=calMode; save(); }catch(e){}
   renderCalendar();
 }
@@ -457,9 +458,12 @@ function updateCalModeUI(){
     if(seg) seg.querySelectorAll(".segbtn").forEach(b=>b.classList.toggle("active", (b.dataset.calmode||"")===calMode));
     const mw=document.getElementById("monthWrap");
     const dv=document.getElementById("dayView");
-    if(mw) mw.hidden = calMode==="day";
+    const fw=document.getElementById("fourWrap");
+    if(mw) mw.hidden = calMode!=="month";
     if(dv) dv.hidden = calMode!=="day";
+    if(fw) fw.hidden = calMode!=="four";
     document.body.classList.toggle("cal-day", calMode==="day");
+    document.body.classList.toggle("cal-four", calMode==="four");
     const dfb=document.getElementById("dayFullBtn");
     if(dfb){
       dfb.style.display = calMode==="day" ? "" : "none";
@@ -854,6 +858,73 @@ function renderDayView(){
       sc.scrollTop=Math.max(0, Math.min(targetY, maxScroll));
     }
   }
+}
+/* =========================================================
+   4-Tage-Ansicht (heute und die nächsten 3 Tage)
+   ========================================================= */
+function fourDayHTML(d){
+  const key=iso(d);
+  const isToday=sameDay(d,today());
+  const isSel=sameDay(d,selDate);
+  const hol=(holidays(d.getFullYear())[key])||"";
+  const evs=eventsOn(key);
+  const tks=tasksOn(key);
+  const bds=birthdaysOn(key);
+  const allDay=[], timed=[];
+  bds.forEach(function(b){
+    const age=bdAgeAt(b, d.getFullYear());
+    allDay.push('<div class="four-item bd" title="Geburtstag: '+esc(b.name)+'">🎂 <span class="four-title">'+esc(b.name||"")
+      +(age!=null?' <span class="four-age">'+age+'</span>':"")+'</span></div>');
+  });
+  evs.forEach(function(e){
+    const c=cat(e.cat);
+    const span=(e.allDay || evEndKey(e)!==e.date);
+    const done=eventIsDone(e)?" done":"";
+    if(span){
+      allDay.push('<div class="four-item allday'+done+'" data-ev="'+e.id+'" style="--c:'+c.color+'" title="'+esc(e.title)+'">'
+        + '<span class="four-dot"></span><span class="four-title">'+esc(e.title)+'</span><span class="four-tag">ganztägig</span></div>');
+    }else{
+      timed.push({m:hmToMin(e.start), html:'<div class="four-item'+done+'" data-ev="'+e.id+'" style="--c:'+c.color+'" title="'+esc(e.title)+'">'
+        + '<span class="four-dot"></span><span class="four-time">'+esc(e.start||"")+(e.end?"–"+esc(e.end):"")+'</span>'
+        + '<span class="four-title">'+esc(e.title)+'</span></div>'});
+    }
+  });
+  tks.forEach(function(t){
+    const c=cat(t.cat);
+    const done=taskIsDone(t)?" done":"";
+    if(taskIsAllDay(t)){
+      allDay.push('<div class="four-item allday task'+done+'" data-task-open="'+t.id+'" style="--c:'+c.color+'" title="'+esc(t.title)+'">'
+        + '<span class="four-dot"></span><span class="four-title">'+esc(t.title)+'</span><span class="four-tag">ganztägig</span></div>');
+    }else{
+      timed.push({m:hmToMin(taskStartTime(t)), html:'<div class="four-item task'+done+(isTaskOverdue(t)?" overdue":"")+'" data-task-open="'+t.id+'" style="--c:'+c.color+'" title="'+esc(t.title)+'">'
+        + '<span class="four-dot"></span><span class="four-time">'+esc(taskStartTime(t))+(taskEndTime(t)?"–"+esc(taskEndTime(t)):"")+'</span>'
+        + '<span class="four-title">'+esc(t.title)+'</span></div>'});
+    }
+  });
+  timed.sort(function(a,b){ return a.m-b.m; });
+  const items=allDay.concat(timed.map(function(x){ return x.html; }));
+  return '<div class="four-col'+(isToday?" today":"")+(isSel?" sel":"")+'" data-date="'+key+'">'
+    + '<div class="four-head">'
+    +   '<span class="four-dow">'+esc(DOW_FULL[d.getDay()].slice(0,2))+'</span>'
+    +   '<span class="four-date">'+esc(pad(d.getDate())+"."+pad(d.getMonth()+1)+".")+'</span>'
+    +   (isToday?'<span class="four-today">Heute</span>':"")
+    +   '<button type="button" class="four-add" data-four-new="'+key+'" title="Termin anlegen">+</button>'
+    + '</div>'
+    + (hol?'<div class="four-hol">🎉 '+esc(hol)+'</div>':"")
+    + '<div class="four-list">'+(items.length?items.join(""):'<div class="four-empty">—</div>')+'</div>'
+    + '</div>';
+}
+function renderFourView(){
+  const base=addDays(selDate||today(), 0);
+  const days=[addDays(base,0),addDays(base,1),addDays(base,2),addDays(base,3)];
+  const title=DOW_FULL[days[0].getDay()].slice(0,2)+" "+pad(days[0].getDate())+"."+pad(days[0].getMonth()+1)+"."
+    +" – "+DOW_FULL[days[3].getDay()].slice(0,2)+" "+pad(days[3].getDate())+"."+pad(days[3].getMonth()+1)+".";
+  document.getElementById("calTitle").innerHTML = esc(title)+"<span>4-Tage-Ansicht</span>";
+  const grid=document.getElementById("fourGrid");
+  if(grid) grid.innerHTML = days.map(fourDayHTML).join("");
+  renderLegend();
+  try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+  try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
 }
 /* =========================================================
    Drag & Resize (Termine + Aufgaben)
@@ -1434,13 +1505,44 @@ var __dv=document.getElementById("dayView"); if(__dv){
     }
   }, true);
 }
+var __fg=document.getElementById("fourGrid"); if(__fg){
+  __fg.addEventListener("click", function(e){
+    if(window.__dvDrag) return;
+    const plus=e.target.closest("[data-four-new]");
+    if(plus){ openEvent(null, plus.getAttribute("data-four-new")); return; }
+    const tOpen=e.target.closest("[data-task-open]");
+    if(tOpen){ openInfo("task", tOpen.dataset.taskOpen); return; }
+    const evBtn=e.target.closest("[data-ev]");
+    if(evBtn){ openInfo("ev", evBtn.dataset.ev); return; }
+    const col=e.target.closest(".four-col");
+    if(col){
+      selDate=parseISO(col.dataset.date);
+      __fg.querySelectorAll(".four-col.sel").forEach(function(x){ x.classList.remove("sel"); });
+      col.classList.add("sel");
+      renderAgenda();
+      try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
+      try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
+    }
+  });
+  __fg.addEventListener("dblclick", function(e){
+    const tOpen=e.target.closest("[data-task-open]");
+    if(tOpen){ closeModals(); const tk=S.todos.find(function(x){return x.id===tOpen.dataset.taskOpen;}); if(tk) openTodo(tk.id,"task"); return; }
+    const evBtn=e.target.closest("[data-ev]");
+    if(evBtn){ closeModals(); openEvent(evBtn.dataset.ev); return; }
+    if(e.target.closest("[data-four-new]")) return;
+    const col=e.target.closest(".four-col");
+    if(col){ selDate=parseISO(col.dataset.date); setCalMode("day"); }
+  });
+}
 document.getElementById("btnPrev").onclick = ()=>{
   if(calMode==="day"){ selDate=addDays(selDate,-1); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
+  else if(calMode==="four"){ selDate=addDays(selDate,-4); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
   else { calMonth.setMonth(calMonth.getMonth()-1); }
   renderCalendar();
 };
 document.getElementById("btnNext").onclick = ()=>{
   if(calMode==="day"){ selDate=addDays(selDate,1); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
+  else if(calMode==="four"){ selDate=addDays(selDate,4); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
   else { calMonth.setMonth(calMonth.getMonth()+1); }
   renderCalendar();
 };
@@ -2897,11 +2999,13 @@ document.addEventListener("keydown", e=>{
   if(curView==="cal"){
     if(e.key==="ArrowLeft"){
       if(calMode==="day"){ selDate=addDays(selDate,-1); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
+      else if(calMode==="four"){ selDate=addDays(selDate,-4); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
       else { calMonth.setMonth(calMonth.getMonth()-1); }
       renderCalendar();
     }
     if(e.key==="ArrowRight"){
       if(calMode==="day"){ selDate=addDays(selDate,1); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
+      else if(calMode==="four"){ selDate=addDays(selDate,4); calMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1); }
       else { calMonth.setMonth(calMonth.getMonth()+1); }
       renderCalendar();
     }

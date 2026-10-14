@@ -174,6 +174,9 @@ h2.sec{font-size:15px;text-transform:uppercase;letter-spacing:.12em;color:var(--
   /* Tagesansicht: Zeitraster scrollt intern */
   #view-cal #dayView{flex:1 1 auto;min-height:0;overflow:hidden}
   #view-cal #dayView .dv-scroll{flex:1 1 auto;min-height:0;max-height:none}
+  /* 4-Tage-Ansicht: Spalten scrollen intern */
+  #view-cal #fourWrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  #view-cal #fourWrap .four-grid{flex:1 1 auto;min-height:0;overflow-y:auto;align-content:start}
   /* Rechte Spalte (Monatsansicht): die drei Panels Termine/Aufgaben/Routinen teilen sich die verfügbare Höhe zu gleichen Dritteln; Inhalte scrollen intern */
   #view-cal .cal-side{min-height:0}
   #view-cal .cal-side>.side-top{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
@@ -329,6 +332,43 @@ label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-wei
 .cal-grid.copy-mode .day{cursor:copy}
 .cal-grid.copy-mode .ev{opacity:.4}
 .cal-grid.copy-mode .ev.copysrc{opacity:1;outline:2px solid #fff}
+/* ============ 4-Tage-Ansicht ============ */
+.four-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.four-col{
+  background:#131b2c;border:1px solid var(--line);border-radius:12px;
+  padding:9px 9px 11px;display:flex;flex-direction:column;gap:6px;min-width:0;min-height:120px;
+}
+.four-col.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.four-col.sel{border-color:var(--accent2)}
+.four-col.today.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent2) inset}
+.four-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.four-dow{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.four-date{font-size:14px;font-weight:700}
+.four-today{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1a1200;background:var(--accent);border-radius:999px;padding:2px 6px}
+.four-add{margin-left:auto;width:22px;height:22px;flex:none;border:1px solid var(--line);background:transparent;color:var(--muted);
+  font-size:15px;line-height:1;cursor:pointer;border-radius:7px;display:grid;place-items:center;padding:0}
+.four-add:hover{border-color:var(--accent);color:var(--accent)}
+.four-hol{font-size:11.5px;color:#fca5a5}
+.four-list{display:flex;flex-direction:column;gap:5px;min-width:0}
+.four-item{
+  display:flex;align-items:baseline;gap:6px;font-size:12.5px;line-height:1.35;
+  padding:4px 7px;border-radius:8px;border-left:3px solid var(--c,#64748b);
+  background:rgba(255,255,255,.035);cursor:pointer;min-width:0;transition:.12s;
+}
+.four-item:hover{background:rgba(255,255,255,.08)}
+.four-dot{width:8px;height:8px;border-radius:2px;background:var(--c,#64748b);flex:none;transform:translateY(-1px)}
+.four-time{font-size:11px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;flex:none;white-space:nowrap}
+.four-title{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.four-tag{flex:none;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.four-item.done .four-title{text-decoration:line-through;opacity:.6}
+.four-item.bd{border-left-color:#f5c542;background:color-mix(in srgb,#f5c542 12%,transparent);cursor:default}
+.four-item.bd:hover{background:color-mix(in srgb,#f5c542 16%,transparent)}
+.four-item.overdue{border-left-color:#f43f5e;background:rgba(244,63,94,.1)}
+.four-item.overdue .four-time{color:#f87171}
+.four-age{color:var(--muted);font-size:11px}
+.four-empty{color:var(--muted);font-size:12px;padding:2px 0}
+@media(max-width:760px){ .four-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media(max-width:460px){ .four-grid{grid-template-columns:1fr} }
 .copybar{
   display:flex;align-items:center;gap:8px;margin-bottom:9px;flex-wrap:wrap;
   background:#212c44;border:1px solid var(--accent);border-radius:11px;padding:8px 12px;font-size:13px;
