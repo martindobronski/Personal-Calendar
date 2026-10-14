@@ -2752,18 +2752,105 @@ function download(name, text, type){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
 }
-document.getElementById("btnExportJson").onclick = ()=>{
-  download("familienkalender-"+iso(today())+".json", JSON.stringify(S,null,2));
-  toast("JSON-Backup erstellt.");
+/* ---- Backup-Ordner (File System Access API; nur Chrome/Edge am Computer) ----
+   Der Download-Ordner lässt sich im Browser nicht fest vorgeben. Wo die API
+   verfügbar ist, kann hier ein fester Ordner gewählt werden, in den die
+   Backups direkt geschrieben werden – sonst bleibt es beim normalen Download. */
+var fsDirSupported = (typeof window!=="undefined") && (typeof window.showDirectoryPicker === "function");
+var backupDirHandle = null;
+function idbFsOpen(){
+  return new Promise(function(res,rej){
+    try{
+      var r = indexedDB.open("familienkalender.fs", 1);
+      r.onupgradeneeded = function(){ try{ r.result.createObjectStore("kv"); }catch(e){} };
+      r.onsuccess = function(){ res(r.result); };
+      r.onerror = function(){ rej(r.error); };
+    }catch(e){ rej(e); }
+  });
+}
+function idbFsSet(k,v){ return idbFsOpen().then(function(db){ return new Promise(function(res,rej){ var tx=db.transaction("kv","readwrite"); tx.objectStore("kv").put(v,k); tx.oncomplete=function(){res();}; tx.onerror=function(){rej(tx.error);}; }); }); }
+function idbFsGet(k){ return idbFsOpen().then(function(db){ return new Promise(function(res,rej){ var tx=db.transaction("kv","readonly"); var q=tx.objectStore("kv").get(k); q.onsuccess=function(){res(q.result);}; q.onerror=function(){rej(q.error);}; }); }); }
+function idbFsDel(k){ return idbFsOpen().then(function(db){ return new Promise(function(res,rej){ var tx=db.transaction("kv","readwrite"); tx.objectStore("kv").delete(k); tx.oncomplete=function(){res();}; tx.onerror=function(){rej(tx.error);}; }); }); }
+function updateBackupDirUI(){
+  var note = document.getElementById("backupDirNote");
+  var clr = document.getElementById("btnClearBackupDir");
+  var actions = document.getElementById("backupDirActions");
+  if(!fsDirSupported){
+    if(actions) actions.style.display = "none";
+    if(note) note.textContent = "In diesem Browser nicht verfügbar (nur Chrome/Edge am Computer). Der Export landet dann im normalen Download-Ordner.";
+    return;
+  }
+  if(backupDirHandle){
+    if(note) note.textContent = "Backups werden direkt in den Ordner „"+backupDirHandle.name+"“ gespeichert.";
+    if(clr) clr.style.display = "";
+  }else{
+    if(note) note.textContent = "Kein Ordner gewählt – Backups landen im normalen Download-Ordner. Hier kannst du einen festen Backup-Ordner wählen.";
+    if(clr) clr.style.display = "none";
+  }
+}
+updateBackupDirUI();
+if(fsDirSupported && typeof indexedDB!=="undefined"){
+  idbFsGet("backupDir").then(function(h){ if(h){ backupDirHandle = h; updateBackupDirUI(); } }).catch(function(){});
+}
+/* Datei in den gewählten Ordner schreiben. Löst mit true auf, wenn erfolgreich. */
+function writeBackupFile(name, text){
+  if(!backupDirHandle) return Promise.resolve(false);
+  var ensure = backupDirHandle.queryPermission
+    ? backupDirHandle.queryPermission({mode:"readwrite"}).then(function(perm){
+        if(perm==="granted") return "granted";
+        if(backupDirHandle.requestPermission) return backupDirHandle.requestPermission({mode:"readwrite"});
+        return "denied";
+      })
+    : Promise.resolve("granted");
+  return ensure.then(function(perm){
+    if(perm!=="granted") return false;
+    return backupDirHandle.getFileHandle(name, {create:true}).then(function(fh){
+      return fh.createWritable();
+    }).then(function(w){
+      return w.write(text).then(function(){ return w.close(); }).then(function(){ return true; });
+    }).catch(function(){ return false; });
+  }).catch(function(){ return false; });
+}
+var __pickDir = document.getElementById("btnPickBackupDir");
+if(__pickDir) __pickDir.onclick = function(){
+  if(!fsDirSupported) return;
+  window.showDirectoryPicker({mode:"readwrite"}).then(function(h){
+    if(!h) return;
+    backupDirHandle = h;
+    updateBackupDirUI();
+    try{ idbFsSet("backupDir", h).catch(function(){}); }catch(e){}
+    toast("Backup-Ordner gesetzt: „"+h.name+"“.");
+  }).catch(function(){ /* Auswahl abgebrochen */ });
 };
-document.getElementById("btnExportCsv").onclick = ()=>{
+var __clrDir = document.getElementById("btnClearBackupDir");
+if(__clrDir) __clrDir.onclick = function(){
+  backupDirHandle = null;
+  updateBackupDirUI();
+  try{ idbFsDel("backupDir").catch(function(){}); }catch(e){}
+  toast("Backup-Ordner entfernt.");
+};
+document.getElementById("btnExportJson").onclick = function(){
+  var name = "familienkalender-"+iso(today())+".json";
+  var data = JSON.stringify(S,null,2);
+  if(!backupDirHandle){ download(name, data); toast("JSON-Backup erstellt."); return; }
+  writeBackupFile(name, data).then(function(ok){
+    if(ok){ toast("Backup gespeichert in „"+backupDirHandle.name+"“."); }
+    else { download(name, data); toast("Backup-Ordner nicht verfügbar – im Download gespeichert."); }
+  });
+};
+document.getElementById("btnExportCsv").onclick = function(){
   const head = ["Datum","Enddatum","Von","Bis","Ganztägig","Titel","Bereich","Notiz"];
   const rows = S.events.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(e=>[
     e.date, e.endDate||"", e.start||"", e.end||"", e.allDay?"ja":"nein", e.title, cat(e.cat).name, e.note||""
   ]);
   const csv = [head, ...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\r\n");
-  download("termine-"+iso(today())+".csv", "﻿"+csv, "text/csv;charset=utf-8");
-  toast("CSV exportiert (Semikolon, für Excel).");
+  var name = "termine-"+iso(today())+".csv";
+  var data = "\ufeff"+csv;
+  if(!backupDirHandle){ download(name, data, "text/csv;charset=utf-8"); toast("CSV exportiert (Semikolon, für Excel)."); return; }
+  writeBackupFile(name, data).then(function(ok){
+    if(ok){ toast("CSV gespeichert in „"+backupDirHandle.name+"“."); }
+    else { download(name, data, "text/csv;charset=utf-8"); toast("Backup-Ordner nicht verfügbar – im Download gespeichert."); }
+  });
 };
 document.getElementById("btnImport").onclick = ()=>document.getElementById("fileImport").click();
 document.getElementById("fileImport").onchange = e=>{

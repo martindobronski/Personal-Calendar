@@ -1,3 +1,4 @@
+v1.5.47 (14.10.2026): Einstellungen → Daten — neuer Bereich „Backup-Ordner“: In Chrome/Edge (Computer) lässt sich ein fester Ordner wählen, in den JSON-Backup und CSV direkt gespeichert werden (ohne Download-Ordner). Der Ordner wird gemerkt und beim Export mit einem Klick beschrieben; ohne gewählten Ordner oder in anderen Browsern bleibt es beim normalen Download
 v1.5.46 (14.10.2026): Mahlzeiten – irreführenden Hinweis korrigiert (verwies auf nicht vorhandenen Button „Zutaten übernehmen“); jetzt korrekt: Gericht und Zutaten werden beim Eintrag gespeichert, Button „🧺 Einkaufsliste“ führt zur Einkaufsliste
 v1.5.45 (14.10.2026): „Neu planen“ – bei „Morgen“ und „Nächste Woche“ bleibt jetzt die ursprüngliche Von/Bis-Zeit erhalten (nur das Datum ändert sich); ganztägige Einträge bleiben ganztägig. Anleitung entsprechend aktualisiert
 v1.5.44 (14.10.2026): Fußzeile über die volle Fensterbreite – Link „Bedienungsanleitung“ ganz unten links, Versionsnummer ganz unten rechts
