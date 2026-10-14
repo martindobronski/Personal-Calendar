@@ -3287,30 +3287,72 @@ function toggleEventDone(id, done){
   try{ save(); }catch(err){}
   try{ render(); }catch(err){}
 }
+/* Verschiebt einen erinnerten Eintrag. mode = 15|30|60 (Minuten ab jetzt) oder "tomorrow".
+   Bei Minuten wird die Startzeit auf jetzt+N gesetzt (Dauer bleibt); "tomorrow" behält die Uhrzeit. */
+function moveReminderItem(uid, mode){
+  var isEv = uid.indexOf("ev:")===0;
+  var obj = isEv ? S.events.find(function(x){ return "ev:"+x.id===uid; })
+                 : S.todos.find(function(x){ return "td:"+x.id===uid; });
+  if(!obj) return false;
+  var oldIso = isEv ? obj.date : taskDate(obj);
+  if(!oldIso) return false;
+  var oldDate = parseISO(oldIso);
+  var newIso, newHM = null;
+  if(mode === "tomorrow"){
+    newIso = iso(addDays(oldDate, 1));
+  }else{
+    var nd = new Date(Date.now() + (parseInt(mode,10)||0)*60000);
+    newIso = iso(nd);
+    newHM = pad(nd.getHours())+":"+pad(nd.getMinutes());
+  }
+  var delta = Math.round((parseISO(newIso) - oldDate) / 86400000);
+  if(isEv){
+    if(obj.endDate) obj.endDate = iso(addDays(parseISO(obj.endDate), delta));
+    obj.date = newIso;
+    if(newHM && !obj.allDay){
+      var dur = reschedKeepDur(obj.start, obj.end);
+      obj.start = newHM; obj.end = reschedEndHM(newHM, dur);
+    }
+  }else{
+    if(obj.endDate) obj.endDate = iso(addDays(parseISO(obj.endDate), delta));
+    obj.startDate = newIso;
+    if(newHM && !obj.allDay){
+      var dur2 = reschedKeepDur(obj.startTime, obj.endTime);
+      obj.startTime = newHM; obj.endTime = reschedEndHM(newHM, dur2);
+    }
+  }
+  Object.keys(S.reminded||{}).forEach(function(k){ if(k.indexOf(uid+"@")===0) delete S.reminded[k]; });
+  try{ save(); }catch(err){}
+  try{ render(); }catch(err){}
+  return true;
+}
 function showReminder(items){
   var body = document.getElementById("remindBody");
   if(!body) return;
   body.innerHTML = items.map(function(it){
     var ico = it.kind==="Termin" ? ICON_CAL : ICON_TASK;
-    var when = it.when==="ganztägig" ? "ganztägig"
+    var allDay = it.when==="ganztägig";
+    var when = allDay ? "ganztägig"
       : pad(it.moment.getHours())+":"+pad(it.moment.getMinutes());
-    var head = '<label class="rm-chk"><input type="checkbox" data-rem-done="'+esc(it.uid)+'">'
+    var uid = esc(it.uid);
+    var head = '<label class="rm-chk"><input type="checkbox" data-rem-done="'+uid+'">'
       + '<span>'+ico+' <b>'+esc(it.title)+'</b> <span class="muted">· '+it.kind+' · '+when+'</span></span></label>';
-    var extra = "";
+    var quick = allDay ? ""
+      : '<button type="button" class="btn sm" data-rem-snooze="15" data-rem-uid="'+uid+'">+15 Min</button>'
+      + '<button type="button" class="btn sm" data-rem-snooze="30" data-rem-uid="'+uid+'">+30 Min</button>'
+      + '<button type="button" class="btn sm" data-rem-snooze="60" data-rem-uid="'+uid+'">+60 Min</button>';
+    var extra = '<div class="rm-when"><span class="rm-lbl">Verschieben</span>'+quick
+      + '<button type="button" class="btn sm" data-rem-snooze="tomorrow" data-rem-uid="'+uid+'">Morgen</button></div>';
     var ev = it.kind==="Termin" ? S.events.find(function(x){ return "ev:"+x.id===it.uid; }) : null;
     if(ev){
       var dt = ev.date+"T"+(ev.allDay?REMIND_ALLDAY_TIME:(ev.start||REMIND_ALLDAY_TIME));
-      extra = '<div class="rm-when"><span class="rm-lbl">Neue Startzeit</span>'
-        + '<input type="datetime-local" data-rem-dt="'+esc(it.uid)+'" value="'+esc(dt)+'">'
-        + '<button type="button" class="btn sm" data-rem-move="'+esc(it.uid)+'">Verschieben</button>'
-        + '<button type="button" class="btn sm ghost" data-rem-today="'+esc(it.uid)+'">+1 Std</button></div>';
+      extra += '<div class="rm-when"><span class="rm-lbl">Genaue Zeit</span>'
+        + '<input type="datetime-local" data-rem-dt="'+uid+'" value="'+esc(dt)+'">'
+        + '<button type="button" class="btn sm ghost" data-rem-move="'+uid+'">Übernehmen</button></div>';
     }
     return '<div class="rm-item">'+head+extra+'</div>';
   }).join("");
   openModal("remindModal");
-}
-function localDT(d){
-  return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
 }
 var __remindBody=document.getElementById("remindBody");
 if(__remindBody){
@@ -3323,10 +3365,14 @@ if(__remindBody){
     var item=c.closest(".rm-item"); if(item) item.classList.toggle("done", on);
   });
   __remindBody.addEventListener("click", function(ev){
-    var td=ev.target.closest && ev.target.closest("[data-rem-today]");
-    if(td){
-      var inp=__remindBody.querySelector('[data-rem-dt="'+td.getAttribute("data-rem-today")+'"]');
-      if(inp) inp.value = localDT(new Date(Date.now()+3600000));
+    var sn=ev.target.closest && ev.target.closest("[data-rem-snooze]");
+    if(sn){
+      var suid=sn.getAttribute("data-rem-uid"), smode=sn.getAttribute("data-rem-snooze");
+      if(moveReminderItem(suid, smode)){
+        var knd = suid.indexOf("ev:")===0 ? "Termin" : "Aufgabe";
+        var it0=sn.closest(".rm-item"); if(it0) it0.classList.add("done");
+        toast(knd + (smode==="tomorrow" ? " auf morgen verschoben." : " um "+smode+" Min verschoben."));
+      }
       return;
     }
     var mv=ev.target.closest && ev.target.closest("[data-rem-move]");
