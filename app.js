@@ -1651,37 +1651,43 @@ function reschedKeepDur(s, e){
   return 60;
 }
 function applyResched(dateIso, timeStr){
+  /* timeStr === "keep": Datum ändern, aber Von/Bis-Zeit beibehalten. */
+  var keep = (timeStr === "keep");
   if(reschedTarget === "ev"){
-    var allDay = !timeStr;
+    var allDay = keep ? document.getElementById("evAllDay").checked : !timeStr;
     document.getElementById("evDate").value = dateIso;
     document.getElementById("evEndDate").value = "";
     var daysEl = document.getElementById("evDays"); if(daysEl) daysEl.value = 1;
     document.getElementById("evAllDay").checked = allDay;
-    if(allDay){
-      document.getElementById("evStart").value = "";
-      document.getElementById("evEnd").value = "";
-    }else{
-      var st = document.getElementById("evStart").value;
-      var en = document.getElementById("evEnd").value;
-      document.getElementById("evStart").value = timeStr;
-      document.getElementById("evEnd").value = reschedEndHM(timeStr, reschedKeepDur(st, en));
+    if(!keep){
+      if(allDay){
+        document.getElementById("evStart").value = "";
+        document.getElementById("evEnd").value = "";
+      }else{
+        var st = document.getElementById("evStart").value;
+        var en = document.getElementById("evEnd").value;
+        document.getElementById("evStart").value = timeStr;
+        document.getElementById("evEnd").value = reschedEndHM(timeStr, reschedKeepDur(st, en));
+      }
     }
     document.getElementById("evDur").value = "";
     toggleTimeFields();
     updateSpan();
   }else if(reschedTarget === "td"){
-    var allDay2 = !timeStr;
+    var allDay2 = keep ? document.getElementById("tdAllDay").checked : !timeStr;
     document.getElementById("tdStart").value = dateIso;
     document.getElementById("tdEnd").value = "";
     document.getElementById("tdAllDay").checked = allDay2;
-    if(allDay2){
-      document.getElementById("tdStartTime").value = "";
-      document.getElementById("tdEndTime").value = "";
-    }else{
-      var st2 = document.getElementById("tdStartTime").value;
-      var en2 = document.getElementById("tdEndTime").value;
-      document.getElementById("tdStartTime").value = timeStr;
-      document.getElementById("tdEndTime").value = reschedEndHM(timeStr, reschedKeepDur(st2, en2));
+    if(!keep){
+      if(allDay2){
+        document.getElementById("tdStartTime").value = "";
+        document.getElementById("tdEndTime").value = "";
+      }else{
+        var st2 = document.getElementById("tdStartTime").value;
+        var en2 = document.getElementById("tdEndTime").value;
+        document.getElementById("tdStartTime").value = timeStr;
+        document.getElementById("tdEndTime").value = reschedEndHM(timeStr, reschedKeepDur(st2, en2));
+      }
     }
     document.getElementById("tdDur").value = "";
     toggleTdTimeFields();
@@ -1719,19 +1725,23 @@ function openReschedInfo(kind, id){
 }
 function applyReschedInfo(dateIso, timeStr){
   var rc = reschedCommit; if(!rc) return;
+  /* timeStr === "keep": Datum ändern, Von/Bis-Zeit (bzw. Ganztägig) beibehalten. */
+  var keep = (timeStr === "keep");
   if(rc.kind === "ev"){
     var e = S.events.find(function(x){ return x.id===rc.id; }); if(!e) return;
     var dur = 60;
     if(!e.allDay && e.start && e.end){ var d=hmToMin(e.end)-hmToMin(e.start); if(d<=0) d+=1440; if(d>0&&d<=1440) dur=d; }
     e.date = dateIso; e.endDate = "";
-    if(timeStr){ e.allDay = false; e.start = timeStr; e.end = reschedEndHM(timeStr, dur); }
+    if(keep){ /* e.allDay / e.start / e.end unverändert */ }
+    else if(timeStr){ e.allDay = false; e.start = timeStr; e.end = reschedEndHM(timeStr, dur); }
     else { e.allDay = true; e.start = ""; e.end = ""; }
   }else{
     var t = S.todos.find(function(x){ return x.id===rc.id; }); if(!t) return;
     var dur2 = 60;
     if(!t.allDay && t.startTime && t.endTime){ var d2=hmToMin(t.endTime)-hmToMin(t.startTime); if(d2<=0) d2+=1440; if(d2>0&&d2<=1440) dur2=d2; }
     t.startDate = dateIso; t.endDate = "";
-    if(timeStr){ t.allDay = false; t.startTime = timeStr; t.endTime = reschedEndHM(timeStr, dur2); }
+    if(keep){ /* t.allDay / t.startTime / t.endTime unverändert */ }
+    else if(timeStr){ t.allDay = false; t.startTime = timeStr; t.endTime = reschedEndHM(timeStr, dur2); }
     else { t.allDay = true; t.startTime = ""; t.endTime = ""; }
   }
   reschedCommit = null;
@@ -1755,8 +1765,8 @@ if(__rl) __rl.addEventListener("click", function(e){
   var t = today(), tm = addDays(t, 1), nm = nextMonday();
   var map = {
     "t-allday":[iso(t),""],  "t-time":[iso(t),"17:00"],
-    "m-allday":[iso(tm),""], "m-time":[iso(tm),"10:00"],
-    "w-allday":[iso(nm),""], "w-time":[iso(nm),"10:00"]
+    "m-allday":[iso(tm),"keep"], "m-time":[iso(tm),"10:00"],
+    "w-allday":[iso(nm),"keep"], "w-time":[iso(nm),"10:00"]
   };
   var v = map[k]; if(!v) return;
   commitResched(v[0], v[1]);

@@ -1,3 +1,4 @@
+v1.5.45 (14.10.2026): „Neu planen“ – bei „Morgen“ und „Nächste Woche“ bleibt jetzt die ursprüngliche Von/Bis-Zeit erhalten (nur das Datum ändert sich); ganztägige Einträge bleiben ganztägig. Anleitung entsprechend aktualisiert
 v1.5.44 (14.10.2026): Fußzeile über die volle Fensterbreite – Link „Bedienungsanleitung“ ganz unten links, Versionsnummer ganz unten rechts
 v1.5.43 (14.10.2026): Bedienungsanleitung als PDF (Bedienungsanleitung.pdf, 16 Kapitel) + Link „Bedienungsanleitung“ unten links in der Fußzeile
 v1.5.42 (14.10.2026): Anzeige-Dialog — das Symbol „Neu planen“ sitzt jetzt rechts in der Zeile „Uhrzeit“ (statt oben im Kopf) – bei Terminen und Aufgaben
