@@ -852,8 +852,10 @@ body.cal-day #view-cal .cal-side .side-top{display:none}
 /* ---------- Footer ---------- */
 .footer{
   max-width:1400px;margin:0 auto;padding:0 20px 30px;
-  display:flex;justify-content:center;align-items:center;
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
   color:var(--muted);font-size:12px;
 }
 .foot-ver{opacity:.8}
+.foot-link{color:var(--muted);text-decoration:none;opacity:.85;border-bottom:1px dashed transparent;transition:.14s}
+.foot-link:hover{color:var(--accent);border-bottom-color:var(--accent);opacity:1}
 

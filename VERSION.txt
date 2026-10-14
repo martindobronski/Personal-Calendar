@@ -1,3 +1,4 @@
+v1.5.43 (14.10.2026): Bedienungsanleitung als PDF (Bedienungsanleitung.pdf, 16 Kapitel) + Link „Bedienungsanleitung“ unten links in der Fußzeile
 v1.5.42 (14.10.2026): Anzeige-Dialog — das Symbol „Neu planen“ sitzt jetzt rechts in der Zeile „Uhrzeit“ (statt oben im Kopf) – bei Terminen und Aufgaben
 v1.5.41 (14.10.2026): Anzeige-Dialog (Einzelklick auf Termin/Aufgabe) — das Symbol „Neu planen“ ist jetzt ebenfalls vorhanden. Hier wirkt die Auswahl sofort: Datum/Uhrzeit werden direkt am Eintrag gespeichert und die Ansicht aktualisiert (bei Routinen ausgeblendet, da ohne Datum)
 v1.5.40 (14.10.2026): Termin & Aufgabe — im Bearbeiten-Dialog gibt es jetzt ein Symbol „Neu planen“ (im Kopf des Dialogs). Es öffnet einen kleinen Dialog mit Schnellauswahl: „Heute im Laufe des Tages“, „17:00“, „Morgen“, „Do, 10:00“, „Nächste Woche“, „Mo, 10:00“ und „Benutzerdefiniert“. Die Auswahl trägt Datum/Uhrzeit in den offenen Bearbeiten-Dialog ein (mit „Speichern“ übernehmen)

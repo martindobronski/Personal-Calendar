@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bedienungsanleitung – Familienkalender</title>
+<style>
+  :root{
+    --ink:#1f2733; --muted:#61708a; --line:#d7dee9; --soft:#f2f5fa;
+    --accent:#c2761a; --accent-soft:#fdf3e0; --code:#eef2f8; --codeink:#3a465c;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{
+    margin:0;background:#fff;color:var(--ink);
+    font:15px/1.62 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .page{max-width:820px;margin:0 auto;padding:36px 40px 60px}
+  @page{size:A4;margin:16mm 15mm}
+  @media print{
+    .page{max-width:none;padding:0}
+    h2,h3{break-after:avoid}
+    .box,table,li{break-inside:avoid}
+    a{color:inherit;text-decoration:none}
+  }
+
+  .cover{border-bottom:3px solid var(--accent);padding-bottom:22px;margin-bottom:8px}
+  .cover .kicker{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+  .cover h1{font-size:33px;line-height:1.15;margin:8px 0 10px}
+  .cover .lead{font-size:16px;color:var(--muted);margin:0}
+  .cover .meta{margin-top:14px;font-size:12.5px;color:var(--muted)}
+
+  h2{font-size:20px;margin:34px 0 10px;padding-top:6px;border-top:1px solid var(--line)}
+  h2 .n{display:inline-block;min-width:1.7em;color:var(--accent)}
+  h3{font-size:15.5px;margin:18px 0 6px}
+  p{margin:8px 0}
+  ul,ol{margin:8px 0;padding-left:22px}
+  li{margin:4px 0}
+  strong{color:#141b26}
+  a{color:var(--accent)}
+  code,.kbd{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    background:var(--code);color:var(--codeink);border-radius:6px;padding:1px 6px;font-size:12.5px;
+    border:1px solid #dde4ee;white-space:nowrap;
+  }
+  .kbd{background:#fff;border:1px solid #c3ccdb;box-shadow:0 1px 0 #c3ccdb}
+
+  .box{
+    background:var(--soft);border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:10px;padding:12px 16px;margin:14px 0;
+  }
+  .box .bt{font-weight:700;font-size:13px;letter-spacing:.02em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+  .box p:first-of-type{margin-top:0}
+  .box p:last-child{margin-bottom:0}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px solid var(--line)}
+  thead th{background:var(--soft);border-bottom:2px solid var(--line);font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+  td:first-child{white-space:nowrap}
+
+  .steps{counter-reset:s;list-style:none;padding-left:0}
+  .steps>li{counter-increment:s;position:relative;padding-left:34px;margin:7px 0}
+  .steps>li::before{
+    content:counter(s);position:absolute;left:0;top:1px;width:22px;height:22px;border-radius:50%;
+    background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;
+  }
+  .toc{columns:2;column-gap:32px;margin:10px 0 4px;font-size:14px}
+  .toc a{display:block;padding:2px 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  .small{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="cover">
+    <div class="kicker">Familienkalender</div>
+    <h1>Bedienungsanleitung</h1>
+    <p class="lead">Alles für den Familienalltag an einem Ort – Kalender, Aufgaben, Routinen, Mahlzeiten, Listen, Punkte und Arbeitszeit. Ohne Konto, ohne Abo.</p>
+    <div class="meta">Version v1.5.43 · Stand 14. Oktober 2026 · Alle Daten bleiben lokal in diesem Browser.</div>
+  </header>
+
+  <nav class="toc">
+    <a href="#s1">1 · Aufbau der Oberfläche</a>
+    <a href="#s2">2 · Profile (Filter)</a>
+    <a href="#s3">3 · Kalender (Monatsansicht)</a>
+    <a href="#s4">4 · Tagesansicht</a>
+    <a href="#s5">5 · Termine anlegen &amp; bearbeiten</a>
+    <a href="#s6">6 · Aufgaben</a>
+    <a href="#s7">7 · Routinen</a>
+    <a href="#s8">8 · Neu planen</a>
+    <a href="#s9">9 · Mahlzeiten</a>
+    <a href="#s10">10 · Listen &amp; Geburtstage</a>
+    <a href="#s11">11 · Punkte &amp; Belohnungen</a>
+    <a href="#s12">12 · Arbeitszeit</a>
+    <a href="#s13">13 · Suche &amp; Erinnerungen</a>
+    <a href="#s14">14 · Einstellungen</a>
+    <a href="#s15">15 · Tastenkürzel</a>
+    <a href="#s16">16 · Datenspeicherung &amp; Backup</a>
+  </nav>
+
+  <h2 id="s1"><span class="n">1</span> Aufbau der Oberfläche</h2>
+  <p>Ganz oben findest du die <strong>Kopfzeile</strong> mit dem Logo (zeigt den heutigen Tag), dem Kalendernamen, den <strong>Profil-Avataren</strong> und einer Uhr mit Datum.</p>
+  <p>Darunter liegen die <strong>Reiter</strong>. Mit einem Klick wechselst du den Bereich:</p>
+  <ul>
+    <li><strong>Kalender</strong> – Monats- und Tagesansicht, Termine &amp; Aufgaben</li>
+    <li><strong>Aufgaben</strong> – alle To-Dos mit Punkten</li>
+    <li><strong>Routinen</strong> – wiederkehrende Tätigkeiten</li>
+    <li><strong>Mahlzeiten</strong> – Wochen-Speiseplan</li>
+    <li><strong>Listen</strong> – Einkaufslisten &amp; Co. sowie Geburtstage</li>
+    <li><strong>Punkte</strong> – Punktestand, Belohnungen, Verlauf</li>
+    <li><strong>Arbeitszeit</strong> – Stechuhr, Soll/Saldo, Verlauf</li>
+    <li><strong>Einstellungen</strong> – Bereiche, Darstellung, Backup</li>
+  </ul>
+  <p>Rechts neben den Reitern sitzt die <strong>Suche</strong> (Lupe). Sie durchsucht Termine, Aufgaben und Routinen.</p>
+
+  <h2 id="s2"><span class="n">2</span> Profile (Filter)</h2>
+  <p>Jedes Familienmitglied ist ein eigener <strong>Bereich</strong> mit eigener Farbe. In der Kopfzeile erscheint dafür ein Avatar mit dem Anfangsbuchstaben.</p>
+  <ul>
+    <li><strong>★ Alle</strong> – zeigt alle Bereiche (Standard).</li>
+    <li><strong>Avatar anklicken</strong> – filtert Kalender, Aufgaben und Routinen auf genau diesen Bereich. Der aktive Avatar ist hervorgehoben.</li>
+    <li><strong>Nochmals ★</strong> – hebt den Filter wieder auf.</li>
+  </ul>
+  <div class="box">
+    <div class="bt">Tipp</div>
+    <p>Bereiche legst du unter <span class="kbd">Einstellungen → Bereiche &amp; Farben</span> an (Name + Farbe). Die Farbe färbt später Termine, Aufgaben und Mahlzeiten-Einträge ein.</p>
+  </div>
+
+  <h2 id="s3"><span class="n">3</span> Kalender (Monatsansicht)</h2>
+  <p>Über <span class="kbd">Monat</span>/<span class="kbd">Tag</span> schaltest du die Ansicht um. Mit <span class="kbd">‹</span> / <span class="kbd">›</span> blätterst du, mit <span class="kbd">Heute</span> springst du zum aktuellen Datum.</p>
+  <h3>In einem Tag</h3>
+  <ul>
+    <li><strong>Einfacher Klick</strong> auf einen Tag – markiert ihn und zeigt rechts die <strong>Agenda</strong> (Tagesliste).</li>
+    <li><strong>Doppelklick</strong> auf einen Tag – öffnet direkt die <strong>Tagesansicht</strong>.</li>
+    <li>In der Zelle siehst du farbige <strong>Chips</strong> (Termine, Aufgaben, Geburtstage). Es werden bis zu drei Stück gezeigt, weitere als <strong>+N</strong>.</li>
+  </ul>
+  <h3>Termin-Chip</h3>
+  <ul>
+    <li><strong>Einfacher Klick</strong> – öffnet den <strong>Anzeige-Dialog</strong> (Infos, Erledigt, Bearbeiten, Löschen, Neu planen).</li>
+    <li><strong>Doppelklick</strong> – öffnet direkt den <strong>Bearbeiten-Dialog</strong>.</li>
+    <li><strong>⧉</strong> – startet das <strong>Kopieren</strong> (siehe unten). Ein Kürzel <span class="kbd">↻</span> bedeutet „wiederholt sich", <span class="kbd">⇥</span> „mehrtägig".</li>
+  </ul>
+  <h3>Termine kopieren</h3>
+  <ol class="steps">
+    <li>Auf einen Termin-Chip das Symbol <strong>⧉</strong> klicken. Oben erscheint die Leiste „Kopieren: …".</li>
+    <li>Einen oder mehrere <strong>Zieltage</strong> anklicken (Mehrfachauswahl möglich). Der Termin wird je Tag als neuer Eintrag angelegt.</li>
+    <li>Mit <strong>Beenden</strong> oder <span class="kbd">Esc</span> den Kopiermodus verlassen.</li>
+  </ol>
+  <h3>Buttons oben</h3>
+  <ul>
+    <li><strong>+ Termin</strong> – legt einen neuen Termin am gewählten Tag an.</li>
+    <li><strong>+ Aufgabe</strong> – legt eine neue Aufgabe an.</li>
+    <li>Läuft die Arbeitszeit, erscheint links ein kleiner <strong>Arbeitszeit-Chip</strong> (springt zur Arbeitszeit).</li>
+    <li><strong>Saldo</strong> – zeigt den heutigen Arbeitszeit-Saldo, außer am Wochenende sowie an Urlaubs-, Frei- und Krankheitstagen.</li>
+  </ul>
+  <p>In der rechten Spalte liegen zusätzlich die Kurzlisten <strong>Aufgaben</strong> und <strong>Routinen</strong> (jeweils filterbar nach Alle / Offen / Erledigt). Ein Klick auf den Titel springt zur jeweiligen Seite.</p>
+
+  <h2 id="s4"><span class="n">4</span> Tagesansicht</h2>
+  <p>Die Tagesansicht zeigt einen einzelnen Tag als Zeitraster. Umschalten über <span class="kbd">Tag</span> bzw. Doppelklick auf einen Tag.</p>
+  <ul>
+    <li><strong>Ganzer Tag</strong> – blendet das Raster von 0 bis 24 Uhr ein (statt des in den Einstellungen festgelegten Zeitraums), um frühe/späte Einträge zu sehen.</li>
+    <li><strong>Ganztägig-Zeile</strong> – oben liegen ganztägige Termine, Aufgaben und Geburtstage.</li>
+    <li><strong>Zeitraster</strong> – zeitgebundene Termine/Aufgaben werden als farbige Blöcke dargestellt (überlappende nebeneinander). Eine rote Linie markiert die aktuelle Uhrzeit.</li>
+    <li><strong>Klick auf eine freie Stelle im Raster</strong> – legt einen neuen Termin genau zu dieser Uhrzeit an (auf 30 Minuten gerundet).</li>
+    <li>Beim Öffnen eines Tages springt die Ansicht zum frühesten Termin; gibt es keinen, beginnt sie um 6:00 Uhr.</li>
+    <li>Aufgaben haben ein Häkchen zum direkten Abhaken. Klick öffnet den Anzeige-Dialog, Doppelklick den Bearbeiten-Dialog.</li>
+  </ul>
+
+  <h2 id="s5"><span class="n">5</span> Termine anlegen &amp; bearbeiten</h2>
+  <p>Der Termin-Dialog öffnet sich über <strong>+ Termin</strong>, per Doppelklick auf einen Tag/Chip oder mit <span class="kbd">N</span>. Felder:</p>
+  <table>
+    <thead><tr><th>Feld</th><th>Bedeutung</th></tr></thead>
+    <tbody>
+      <tr><td>Titel</td><td>Name des Termins (z. B. „Zahnarzt").</td></tr>
+      <tr><td>Datum (Beginn)</td><td>Starttag. Mit <strong>Ende (optional)</strong> wird der Termin mehrtägig.</td></tr>
+      <tr><td>Dauer in Tagen</td><td>Alternative zum Enddatum: Das Ende wird aus Beginn + Dauer berechnet.</td></tr>
+      <tr><td>Bereich / Farbe</td><td>Zugehöriges Familienmitglied bzw. Kategorie.</td></tr>
+      <tr><td>Ganztägig</td><td>Ohne Uhrzeit – erscheint in der Ganztägig-Zeile.</td></tr>
+      <tr><td>Von / Bis</td><td>Uhrzeit (nur wenn nicht ganztägig).</td></tr>
+      <tr><td>Dauer</td><td>Alternative zu „Bis": Endzeit = Von + Dauer (z. B. 1,5 Stunden).</td></tr>
+      <tr><td>Wiederholung</td><td>Einmalig, täglich, wöchentlich, monatlich, vierteljährlich, jährlich.</td></tr>
+      <tr><td>Notiz</td><td>Ort, Details, wer dabei ist.</td></tr>
+    </tbody>
+  </table>
+  <p>Unten links <strong>Löschen</strong>, in der Mitte <strong>Abbrechen</strong>, rechts <strong>Speichern</strong>. Bei einem bestehenden Termin zeigt der Dialog zusätzlich <strong>Erledigt</strong> und oben rechts das Symbol <strong>Neu planen</strong>.</p>
+  <div class="box">
+    <div class="bt">Wiederkehrende Termine</div>
+    <p>Wird ein wiederkehrender Termin abgehakt, gilt nur das <em>aktuelle</em> Vorkommen als erledigt – an den nächsten Tagen erscheint er wieder.</p>
+  </div>
+
+  <h2 id="s6"><span class="n">6</span> Aufgaben</h2>
+  <p>Aufgaben öffnest du über den Reiter <strong>Aufgaben</strong> (Liste mit Suche und Alle/Offen/Erledigt) oder über <strong>+ Aufgabe</strong>. Im Aufgaben-Dialog:</p>
+  <table>
+    <thead><tr><th>Feld</th><th>Bedeutung</th></tr></thead>
+    <tbody>
+      <tr><td>Titel</td><td>Was zu tun ist.</td></tr>
+      <tr><td>Erledigt</td><td>Setzt die Aufgabe ab/an. Beim Abhaken gibt es Punkte.</td></tr>
+      <tr><td>Bereich / Farbe</td><td>Zugehöriges Familienmitglied.</td></tr>
+      <tr><td>Wiederholung</td><td>Einmalig, täglich, wöchentlich, monatlich, vierteljährlich, jährlich.</td></tr>
+      <tr><td>Punkte fürs Abhaken</td><td>Wie viele Punkte das Erledigen einbringt (Standard 1).</td></tr>
+      <tr><td>Beginnt am / Endet am</td><td>Optionaler Zeitraum (Start- und Enddatum).</td></tr>
+      <tr><td>Ganztägig</td><td>Ohne Uhrzeit (Standard).</td></tr>
+      <tr><td>Von / Bis / Dauer</td><td>Uhrzeit bzw. Dauer, wenn nicht ganztägig.</td></tr>
+      <tr><td>Notiz</td><td>Details, wer dran ist usw.</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li><strong>Abhaken</strong> geht direkt in der Liste über das runde Häkchen.</li>
+    <li><strong>Überfällige</strong> Aufgaben sind rot markiert; bei der Gruppe steht die Anzahl überfälliger Einträge in einem roten Zähler.</li>
+    <li><strong>Erledigte</strong> sind durchgestrichen; mit der Filterung „Erledigt" kannst du sie ansehen oder wieder öffnen.</li>
+  </ul>
+
+  <h2 id="s7"><span class="n">7</span> Routinen</h2>
+  <p>Routinen sind regelmäßige Tätigkeiten (z. B. „Zähne putzen", „Müll rausbringen"). Der Unterschied zu Aufgaben: Routinen haben <strong>kein Datum</strong>, nur eine <strong>Wiederholung</strong> und optional eine feste <strong>Uhrzeit</strong>.</p>
+  <ul>
+    <li>Anlegen über den Reiter <strong>Routinen</strong> → <strong>+ Neue Routine</strong>.</li>
+    <li>Felder: Titel, Bereich, Wiederholung, Punkte, optionale Uhrzeit, Notiz.</li>
+    <li>Abhaken zählt für den jeweils heutigen Tag; morgen ist die Routine wieder offen.</li>
+  </ul>
+
+  <h2 id="s8"><span class="n">8</span> Neu planen</h2>
+  <p>Das Symbol <strong>↻ Neu planen</strong> findest du bei bestehenden Terminen und Aufgaben – sowohl im <strong>Bearbeiten-Dialog</strong> (oben rechts) als auch im <strong>Anzeige-Dialog</strong> (rechts in der Zeile „Uhrzeit"). Es öffnet eine Schnellauswahl mit:</p>
+  <ul>
+    <li>Heute im Laufe des Tages (ganztägig)</li>
+    <li>17:00 (heute)</li>
+    <li>Morgen (ganztägig)</li>
+    <li><em>Wochentag</em>, 10:00 (morgen)</li>
+    <li>Nächste Woche (nächster Montag, ganztägig)</li>
+    <li><em>Mo</em>, 10:00 (nächster Montag)</li>
+    <li>Benutzerdefiniert (Datum + optionale Uhrzeit selbst wählen)</li>
+  </ul>
+  <div class="box">
+    <div class="bt">Unterschied</div>
+    <p><strong>Bearbeiten-Dialog:</strong> Die Auswahl trägt Datum/Uhrzeit nur in die Felder ein – sie wird erst mit <strong>Speichern</strong> übernommen (so kannst du vorher noch etwas ändern). <strong>Anzeige-Dialog:</strong> Die Auswahl wirkt sofort und wird direkt gespeichert.</p>
+  </div>
+  <p>Die bestehende Dauer bleibt erhalten; hat der Eintrag keine Dauer, werden 60 Minuten angenommen.</p>
+
+  <h2 id="s9"><span class="n">9</span> Mahlzeiten</h2>
+  <p>Der Reiter <strong>Mahlzeiten</strong> zeigt einen Wochenplan mit den Zeilen <strong>Frühstück</strong>, <strong>Mittagessen</strong> und <strong>Abendessen</strong>.</p>
+  <ol class="steps">
+    <li>Auf eine Zelle klicken.</li>
+    <li>Das Gericht eintragen (z. B. „Lasagne").</li>
+    <li>Optional Zutaten eingeben – eine pro Zeile. Sie werden gespeichert.</li>
+    <li>Mit <strong>Speichern</strong> übernehmen. Eine leere Zelle entfernt den Eintrag wieder.</li>
+  </ol>
+  <p>Mit <span class="kbd">‹</span> / <span class="kbd">›</span> blätterst du Woche für Woche, <strong>Diese Woche</strong> springt zur aktuellen Woche. Der Button <strong>🧺 Einkaufsliste</strong> wechselt direkt zu den Listen.</p>
+
+  <h2 id="s10"><span class="n">10</span> Listen &amp; Geburtstage</h2>
+  <h3>Listen (z. B. Einkaufsliste)</h3>
+  <ul>
+    <li>Mehrere Listen möglich: oben die Reiter, mit <strong>+ Neue Liste</strong> anlegen, über das Bearbeiten-Symbol umbenennen oder löschen.</li>
+    <li><strong>Einträge:</strong> Text eintippen (plus optionale <strong>Menge</strong>, z. B. „2 l"), dann <strong>Hinzufügen</strong> oder <span class="kbd">Enter</span>.</li>
+    <li>Eintrag abhaken, um ihn zu erledigen; mit <strong>Erledigte entfernen</strong> werden alle abgehakten gelöscht.</li>
+    <li>Rechts zeigt die <strong>Fortschritts-Anzeige</strong> den Prozentanteil der erledigten Einträge.</li>
+  </ul>
+  <h3>Geburtstage</h3>
+  <p>Geburtstage liegen unten auf der Listen-Seite in einem eigenen Bereich.</p>
+  <ul>
+    <li>Anlegen über <strong>+ Geburtstag</strong>: Name, Tag, Monat und optional das Jahr (für die Altersanzeige).</li>
+    <li>Die Liste ist <strong>nach Tag und Monat sortiert</strong> (Januar → Dezember). Oben steht der nächste Geburtstag mit Countdown.</li>
+    <li>Geburtstage erscheinen zusätzlich als kleiner Chip im Kalender und in der Ganztägig-Zeile der Tagesansicht.</li>
+    <li><strong>Vorwarnung:</strong> Am Tag vor einem Geburtstag erscheint ein Hinweis „Geburtstag morgen" – und ein dezenter Hinweis bereits im Kalender (heute) sowie in der Tagesansicht.</li>
+  </ul>
+
+  <h2 id="s11"><span class="n">11</span> Punkte &amp; Belohnungen</h2>
+  <p>Fürs Abhaken von Aufgaben und Routinen sammelst du <strong>Punkte</strong> (je Eintrag einstellbar). Der Reiter <strong>Punkte</strong> zeigt:</p>
+  <ul>
+    <li><strong>Punktestand</strong> und einen Fortschrittsbalken zur nächsten Belohnung.</li>
+    <li><strong>Belohnungen</strong> (z. B. „Kinoabend", 30 Punkte). Anlegen über <strong>+ Belohnung</strong>; <strong>Einlösen</strong> zieht die Punkte ab.</li>
+    <li><strong>Verlauf</strong> – die letzten Buchungen (Hinzufügen und Abziehen). Mit <strong>Verlauf zurücksetzen</strong> setzt du Punkte und Verlauf auf null.</li>
+  </ul>
+  <p>Nimmst du ein Häkchen wieder weg, werden die Punkte automatisch zurückgebucht.</p>
+
+  <h2 id="s12"><span class="n">12</span> Arbeitszeit</h2>
+  <p>Die Stechuhr erfasst deine Arbeitszeit pro Tag. Oben siehst du eine große laufende Uhr, darunter die Kennzahlen <strong>Anwesend</strong>, <strong>Pause</strong>, <strong>Arbeitszeit</strong>, <strong>Soll</strong> (7:36 h) und <strong>Saldo</strong>.</p>
+  <ul>
+    <li><strong>Start / Stopp</strong> – beginnt bzw. beendet einen Zeitraum. Eine laufende Zeit wird live mitgezählt.</li>
+    <li><strong>Tag leeren</strong> – entfernt alle Zeiten des heutigen Tages.</li>
+    <li><strong>Heute</strong> – Liste der Komm-/Geht-Zeiten mit Aktionen (Bearbeiten, Löschen).</li>
+    <li><strong>+ Tag hinzufügen</strong> (im Verlauf) – öffnet den Arbeitstag-Dialog.</li>
+  </ul>
+  <h3>Arbeitstag bearbeiten</h3>
+  <p>Pro Tag wählst du einen <strong>Tagestyp</strong>:</p>
+  <ul>
+    <li><strong>Arbeitstag</strong> – normale Zeiten (Soll 7:36 h).</li>
+    <li><strong>Freizeittag</strong> – zählt als −7:36 (Saldo) bei null Arbeitszeit.</li>
+    <li><strong>Urlaubstag</strong> / <strong>Krankheitstag</strong> – Saldo ausgeglichen (0:00).</li>
+  </ul>
+  <p>Zusätzlich lassen sich mehrere <strong>Zeiträume</strong> (Kommt/Geht) pflegen. „Geht" leer lassen, solange die Zeit noch läuft. Die <strong>Pausen</strong> berechnet die App automatisch nach der Länge der Anwesenheit; eine bezahlte Frühstückspause kann in den Einstellungen hinterlegt werden.</p>
+  <p>Der <strong>Verlauf</strong> listet vergangene Tage, filterbar nach Zeitraum (Monatsauswahl) und per Suche (Datum oder „Urlaub"/„Freizeit").</p>
+
+  <h2 id="s13"><span class="n">13</span> Suche &amp; Erinnerungen</h2>
+  <h3>Suche</h3>
+  <p>Mit <span class="kbd">Strg</span>/<span class="kbd">Cmd</span> + <span class="kbd">K</span> oder Klick auf die Lupe öffnest du die Suche. Sie durchsucht <strong>Termine, Aufgaben und Routinen</strong> (Titel, Notiz, Bereich, Datum, Punkte, Status). Das Ergebnis ist eine Liste, aus der du direkt öffnen, bearbeiten, löschen oder kopieren kannst.</p>
+  <h3>Erinnerungen</h3>
+  <p>Die App erinnert automatisch an fällige Einträge, solange die Seite geöffnet ist. Zum Zeitpunkt des Termins (bzw. 08:00 bei ganztägigen Einträgen) erscheint ein Fenster „🔔 Erinnerung". Dort kannst du den Eintrag als erledigt markieren, eine neue Startzeit angeben und mit <strong>Verschieben</strong> neu planen oder per <strong>+1 Std</strong> nach hinten schieben.</p>
+
+  <h2 id="s14"><span class="n">14</span> Einstellungen</h2>
+  <table>
+    <thead><tr><th>Bereich</th><th>Optionen</th></tr></thead>
+    <tbody>
+      <tr><td>Bereiche &amp; Farben</td><td>Neuen Bereich anlegen (Name + Farbe), bestehende bearbeiten/löschen. Jeder Bereich ist ein Familienmitglied.</td></tr>
+      <tr><td>Anwendung</td><td><strong>Kalendername</strong> – ändert den Titel oben in der Kopfzeile.</td></tr>
+      <tr><td>Arbeitszeit</td><td><strong>Bezahlte Frühstückspause (Minuten)</strong> – wird als Arbeitszeit gezählt und nicht abgezogen.</td></tr>
+      <tr><td>Darstellung</td><td><strong>Standard-Farbe</strong> neuer Bereiche, <strong>Wochenbeginn</strong> (Montag/Sonntag), <strong>Tagesansicht-Zeitraum</strong> (z. B. 06:00–22:00), <strong>Mondphase</strong> und <strong>Sternzeichen</strong> ein-/ausblenden.</td></tr>
+      <tr><td>Daten</td><td>Backup/Import und Löschen (siehe Kapitel 16).</td></tr>
+      <tr><td>Tastenkürzel</td><td>Kurzübersicht (siehe Kapitel 15).</td></tr>
+      <tr><td>Speicher</td><td>Zeigt den belegten Speicher im Browser.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="s15"><span class="n">15</span> Tastenkürzel</h2>
+  <table>
+    <thead><tr><th>Kürzel</th><th>Wirkung</th></tr></thead>
+    <tbody>
+      <tr><td><span class="kbd">←</span> / <span class="kbd">→</span></td><td>Im Kalender: vorheriger/nächster Monat (in der Tagesansicht: vorheriger/nächster Tag).</td></tr>
+      <tr><td><span class="kbd">T</span></td><td>Springt zu „Heute".</td></tr>
+      <tr><td><span class="kbd">N</span></td><td>Neuen Termin anlegen.</td></tr>
+      <tr><td><span class="kbd">Esc</span></td><td>Dialog schließen bzw. Kopiermodus/Suche abbrechen.</td></tr>
+      <tr><td><span class="kbd">Strg</span>/<span class="kbd">Cmd</span> + <span class="kbd">K</span></td><td>Suche öffnen/schließen.</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Die Kürzel <span class="kbd">←</span>/<span class="kbd">→</span>, <span class="kbd">T</span> und <span class="kbd">N</span> wirken nur im Kalender und nicht, während ein Eingabefeld aktiv ist.</p>
+
+  <h2 id="s16"><span class="n">16</span> Datenspeicherung &amp; Backup</h2>
+  <p>Alle Daten liegen <strong>ausschließlich lokal</strong> in diesem Browser (<code>localStorage</code>). Es gibt kein Konto, keinen Server und kein Tracking.</p>
+  <div class="box">
+    <div class="bt">Wichtig</div>
+    <p>Wird der Browser-Speicher geleert oder ein anderer Browser/Rechner benutzt, sind die Daten nicht automatisch da. Lege daher regelmäßig ein Backup an.</p>
+  </div>
+  <ul>
+    <li><strong>⬇️ JSON-Backup</strong> – lädt eine vollständige Sicherung aller Daten herunter.</li>
+    <li><strong>⬇️ CSV (Termine)</strong> – exportiert nur die Termine als Tabelle (Semikolon, für Excel).</li>
+    <li><strong>⬆️ Import</strong> – stellt ein zuvor gespeichertes JSON-Backup wieder her.</li>
+    <li><strong>Alles löschen</strong> – setzt die App komplett zurück (nicht rückgängig zu machen).</li>
+  </ul>
+
+  <hr>
+  <p class="small">Familienkalender · Bedienungsanleitung zu Version v1.5.43 · Stand 14. Oktober 2026. Mit ♥ für den Familienalltag.</p>
+
+</div>
+</body>
+</html>
