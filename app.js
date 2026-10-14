@@ -1505,6 +1505,7 @@ function openEvent(id, date, start){
   if(e && !e.allDay && e.start && e.end) evSetDurFromTimes();
   document.getElementById("evNote").value = e ? (e.note||"") : "";
   document.getElementById("evDelete").style.display = e ? "" : "none";
+  document.getElementById("evResched").style.display = e ? "" : "none";
   document.getElementById("evDoneField").style.display = e ? "" : "none";
   document.getElementById("evDone").checked = e ? eventIsDone(e) : false;
   const evRep = document.getElementById("evRepeat");
@@ -1623,6 +1624,119 @@ function deleteEvent(id){
   if(copyEvId===id) setCopyEv(null);
   save(); closeModals(); render(); toast("Termin gelöscht.");
 }
+
+/* =========================================================
+   Neu planen – Schnellverschieben aus dem Bearbeiten-Dialog
+   ========================================================= */
+var reschedTarget = null; // "ev" (Termin) | "td" (Aufgabe)
+
+function reschedDow(d){ return DOW_FULL[d.getDay()].slice(0,2); }
+/* Nächster Montag (ist heute Montag, dann +7 Tage). */
+function nextMonday(){
+  var d = today(), dow = d.getDay();
+  var add = (dow === 1) ? 7 : ((8 - dow) % 7 || 7);
+  return addDays(d, add);
+}
+/* Ende = Start + Dauer, auf 23:59 begrenzt (kein Sprung auf 00:00). */
+function reschedEndHM(startHM, durMin){
+  var m = hmToMin(startHM) + (durMin || 60);
+  if(m > 1439) m = 1439;
+  return dvHM(m);
+}
+/* Vorhandene Dauer (Minuten) aus Von/Bis übernehmen, sonst 60. */
+function reschedKeepDur(s, e){
+  if(s && e){ var d = hmToMin(e) - hmToMin(s); if(d <= 0) d += 1440; if(d > 0 && d <= 1440) return d; }
+  return 60;
+}
+function applyResched(dateIso, timeStr){
+  if(reschedTarget === "ev"){
+    var allDay = !timeStr;
+    document.getElementById("evDate").value = dateIso;
+    document.getElementById("evEndDate").value = "";
+    var daysEl = document.getElementById("evDays"); if(daysEl) daysEl.value = 1;
+    document.getElementById("evAllDay").checked = allDay;
+    if(allDay){
+      document.getElementById("evStart").value = "";
+      document.getElementById("evEnd").value = "";
+    }else{
+      var st = document.getElementById("evStart").value;
+      var en = document.getElementById("evEnd").value;
+      document.getElementById("evStart").value = timeStr;
+      document.getElementById("evEnd").value = reschedEndHM(timeStr, reschedKeepDur(st, en));
+    }
+    document.getElementById("evDur").value = "";
+    toggleTimeFields();
+    updateSpan();
+  }else if(reschedTarget === "td"){
+    var allDay2 = !timeStr;
+    document.getElementById("tdStart").value = dateIso;
+    document.getElementById("tdEnd").value = "";
+    document.getElementById("tdAllDay").checked = allDay2;
+    if(allDay2){
+      document.getElementById("tdStartTime").value = "";
+      document.getElementById("tdEndTime").value = "";
+    }else{
+      var st2 = document.getElementById("tdStartTime").value;
+      var en2 = document.getElementById("tdEndTime").value;
+      document.getElementById("tdStartTime").value = timeStr;
+      document.getElementById("tdEndTime").value = reschedEndHM(timeStr, reschedKeepDur(st2, en2));
+    }
+    document.getElementById("tdDur").value = "";
+    toggleTdTimeFields();
+    updateTdSpan();
+  }
+}
+function openResched(target){
+  reschedTarget = target;
+  var t = today(), tm = addDays(t, 1), nm = nextMonday();
+  var opts = [
+    { k:"t-allday", label:"Heute im Laufe des Tages" },
+    { k:"t-time",   label:"17:00" },
+    { k:"m-allday", label:"Morgen" },
+    { k:"m-time",   label:reschedDow(tm)+", 10:00" },
+    { k:"w-allday", label:"Nächste Woche" },
+    { k:"w-time",   label:reschedDow(nm)+", 10:00" },
+    { k:"custom",   label:"Benutzerdefiniert", custom:true }
+  ];
+  document.getElementById("reschedList").innerHTML = opts.map(function(o){
+    return '<button type="button" class="resched-opt'+(o.custom?" custom":"")+'" data-opt="'+o.k+'">'+esc(o.label)+"</button>";
+  }).join("");
+  document.getElementById("reschedCustom").hidden = true;
+  document.getElementById("reschedDate").value = iso(t);
+  document.getElementById("reschedTime").value = "";
+  openModal("reschedModal");
+}
+function closeResched(){
+  var m = document.getElementById("reschedModal"); if(m) m.classList.remove("open");
+}
+var __rl = document.getElementById("reschedList");
+if(__rl) __rl.addEventListener("click", function(e){
+  var b = e.target.closest("[data-opt]"); if(!b) return;
+  var k = b.dataset.opt;
+  if(k === "custom"){ document.getElementById("reschedCustom").hidden = false; return; }
+  var t = today(), tm = addDays(t, 1), nm = nextMonday();
+  var map = {
+    "t-allday":[iso(t),""],  "t-time":[iso(t),"17:00"],
+    "m-allday":[iso(tm),""], "m-time":[iso(tm),"10:00"],
+    "w-allday":[iso(nm),""], "w-time":[iso(nm),"10:00"]
+  };
+  var v = map[k]; if(!v) return;
+  applyResched(v[0], v[1]);
+  closeResched();
+  toast("Neu geplant – mit „Speichern“ übernehmen.");
+});
+var __ra = document.getElementById("reschedApply");
+if(__ra) __ra.addEventListener("click", function(){
+  var d = document.getElementById("reschedDate").value;
+  if(!d){ toast("Bitte ein Datum wählen."); return; }
+  applyResched(d, document.getElementById("reschedTime").value || "");
+  closeResched();
+  toast("Neu geplant – mit „Speichern“ übernehmen.");
+});
+var __er = document.getElementById("evResched");
+if(__er) __er.addEventListener("click", function(){ openResched("ev"); });
+var __tr = document.getElementById("tdResched");
+if(__tr) __tr.addEventListener("click", function(){ openResched("td"); });
 
 /* =========================================================
    Anzeige-Dialog (Info) – Einzelklick auf Termin/Aufgabe
@@ -1856,6 +1970,7 @@ function openTodo(id, mode){
   else { toggleTdTimeFields(); }
   document.getElementById("tdNote").value = (e && e.note) ? e.note : "";
   document.getElementById("tdDelete").style.display = e ? "" : "none";
+  document.getElementById("tdResched").style.display = editingTodo ? "" : "none";
   openModal("tdModal");
   document.getElementById("tdTitle").focus();
 }
@@ -2627,11 +2742,14 @@ function openModal(id){ document.getElementById(id).classList.add("open"); }
 function closeModals(){ document.querySelectorAll(".overlay").forEach(o=>o.classList.remove("open")); }
 document.querySelectorAll(".overlay").forEach(o=>{
   o.addEventListener("click", e=>{
-    if(e.target===o || e.target.closest("[data-close]")) closeModals();
+    if(e.target===o || e.target.closest("[data-close]")){
+      if(o.id==="reschedModal"){ o.classList.remove("open"); return; }
+      closeModals();
+    }
   });
 });
 document.addEventListener("keydown", e=>{
-  if(e.key==="Escape"){ if(isCalSearchOpen()){ closeCalSearch(); return; } if(copyEvId){ setCopyEv(null); return; } closeModals(); return; }
+  if(e.key==="Escape"){ if(isCalSearchOpen()){ closeCalSearch(); return; } if(copyEvId){ setCopyEv(null); return; } var rm=document.getElementById("reschedModal"); if(rm && rm.classList.contains("open")){ rm.classList.remove("open"); return; } closeModals(); return; }
   const inInput = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
   if(inInput) return;
   if(curView==="cal"){

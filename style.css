@@ -656,6 +656,29 @@ body.cal-day #view-cal .cal-side .side-top{display:none}
 .modal-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
 .modal-actions .left{margin-right:auto}
 
+/* Modal-Kopf mit Aktions-Symbol (z. B. „Neu planen“) */
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.modal-head h3{margin:0}
+.icon-act{
+  flex:none;width:36px;height:36px;padding:0;border-radius:11px;cursor:pointer;transition:.14s;
+  background:#212c44;border:1px solid var(--line);color:var(--muted);display:grid;place-items:center;
+}
+.icon-act:hover{color:var(--accent);border-color:var(--accent);background:#25304a}
+
+/* Dialog „Neu planen“ */
+.resched-modal{width:min(420px,100%)}
+.resched-list{display:flex;flex-direction:column;gap:8px}
+.resched-opt{
+  width:100%;text-align:left;display:flex;align-items:center;gap:10px;cursor:pointer;transition:.14s;
+  background:#212c44;border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+  color:var(--txt);font-size:14.5px;font-weight:600;
+}
+.resched-opt:hover{border-color:var(--accent);background:#25304a}
+.resched-opt.custom{border-style:dashed;color:var(--muted);font-weight:500}
+.resched-opt.custom:hover{color:var(--accent)}
+.resched-custom{margin-top:14px}
+.resched-custom .modal-actions{margin-top:0}
+
 /* ---------- Anzeige-Dialog (Info) ---------- */
 .info-modal{width:min(460px,100%)}
 .info-head{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
