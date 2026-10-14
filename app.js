@@ -860,71 +860,150 @@ function renderDayView(){
   }
 }
 /* =========================================================
-   4-Tage-Ansicht (heute und die nächsten 3 Tage)
+   4-Tage-Ansicht (Google-artig): Zeitachse links + 4 Tagesspalten
    ========================================================= */
-function fourDayHTML(d){
+function fourTZLabel(){
+  try{
+    const off=-new Date().getTimezoneOffset()/60;
+    const sign=off<0?"-":"+", a=Math.abs(off);
+    const hh=Math.floor(a), mm=Math.round((a-hh)*60);
+    return "GMT"+sign+pad(hh)+(mm?":"+pad(mm):"");
+  }catch(e){ return "GMT"; }
+}
+function fourDayCollect(d){
   const key=iso(d);
-  const isToday=sameDay(d,today());
-  const isSel=sameDay(d,selDate);
-  const hol=(holidays(d.getFullYear())[key])||"";
   const evs=eventsOn(key);
-  const tks=tasksOn(key);
-  const bds=birthdaysOn(key);
-  const allDay=[], timed=[];
-  bds.forEach(function(b){
-    const age=bdAgeAt(b, d.getFullYear());
-    allDay.push('<div class="four-item bd" title="Geburtstag: '+esc(b.name)+'">🎂 <span class="four-title">'+esc(b.name||"")
-      +(age!=null?' <span class="four-age">'+age+'</span>':"")+'</span></div>');
+  const eventsAll=evs.filter(function(e){ return e.allDay || evEndKey(e)!==e.date; });
+  const eventsTimed=evs.filter(function(e){ return !e.allDay && evEndKey(e)===e.date; });
+  const tks=tasksOn(key,true);
+  const tasksAll=tks.filter(function(t){ return taskIsAllDay(t) || taskRangeEnd(t)!==taskDate(t); });
+  const tasksTimed=tks.filter(function(t){ return !taskIsAllDay(t) && taskRangeEnd(t)===taskDate(t); });
+  const items=[];
+  eventsTimed.forEach(function(e){
+    const s=e.start?hmToMin(e.start):9*60;
+    let en=e.end?hmToMin(e.end):s+60;
+    if(en<=s) en=s+60;
+    items.push({kind:"ev", ev:e, start:s, end:en});
   });
-  evs.forEach(function(e){
-    const c=cat(e.cat);
-    const span=(e.allDay || evEndKey(e)!==e.date);
-    const done=eventIsDone(e)?" done":"";
-    if(span){
-      allDay.push('<div class="four-item allday'+done+'" data-ev="'+e.id+'" style="--c:'+c.color+'" title="'+esc(e.title)+'">'
-        + '<span class="four-dot"></span><span class="four-title">'+esc(e.title)+'</span><span class="four-tag">ganztägig</span></div>');
-    }else{
-      timed.push({m:hmToMin(e.start), html:'<div class="four-item'+done+'" data-ev="'+e.id+'" style="--c:'+c.color+'" title="'+esc(e.title)+'">'
-        + '<span class="four-dot"></span><span class="four-time">'+esc(e.start||"")+(e.end?"–"+esc(e.end):"")+'</span>'
-        + '<span class="four-title">'+esc(e.title)+'</span></div>'});
-    }
+  tasksTimed.forEach(function(t){
+    const s=hmToMin(taskStartTime(t));
+    const en=taskEndTime(t);
+    let e2=en?hmToMin(en):s+30;
+    if(e2<=s) e2=s+30;
+    items.push({kind:"task", task:t, start:s, end:e2});
   });
-  tks.forEach(function(t){
-    const c=cat(t.cat);
-    const done=taskIsDone(t)?" done":"";
-    if(taskIsAllDay(t)){
-      allDay.push('<div class="four-item allday task'+done+'" data-task-open="'+t.id+'" style="--c:'+c.color+'" title="'+esc(t.title)+'">'
-        + '<span class="four-dot"></span><span class="four-title">'+esc(t.title)+'</span><span class="four-tag">ganztägig</span></div>');
-    }else{
-      timed.push({m:hmToMin(taskStartTime(t)), html:'<div class="four-item task'+done+(isTaskOverdue(t)?" overdue":"")+'" data-task-open="'+t.id+'" style="--c:'+c.color+'" title="'+esc(t.title)+'">'
-        + '<span class="four-dot"></span><span class="four-time">'+esc(taskStartTime(t))+(taskEndTime(t)?"–"+esc(taskEndTime(t)):"")+'</span>'
-        + '<span class="four-title">'+esc(t.title)+'</span></div>'});
-    }
-  });
-  timed.sort(function(a,b){ return a.m-b.m; });
-  const items=allDay.concat(timed.map(function(x){ return x.html; }));
-  return '<div class="four-col'+(isToday?" today":"")+(isSel?" sel":"")+'" data-date="'+key+'">'
-    + '<div class="four-head">'
-    +   '<span class="four-dow">'+esc(DOW_FULL[d.getDay()].slice(0,2))+'</span>'
-    +   '<span class="four-date">'+esc(pad(d.getDate())+"."+pad(d.getMonth()+1)+".")+'</span>'
-    +   (isToday?'<span class="four-today">Heute</span>':"")
-    +   '<button type="button" class="four-add" data-four-new="'+key+'" title="Termin anlegen">+</button>'
-    + '</div>'
-    + (hol?'<div class="four-hol">🎉 '+esc(hol)+'</div>':"")
-    + '<div class="four-list">'+(items.length?items.join(""):'<div class="four-empty">—</div>')+'</div>'
-    + '</div>';
+  layoutDayItems(items);
+  return {key:key, date:d, isToday:sameDay(d,today()), bds:birthdaysOn(key), eventsAll:eventsAll, tasksAll:tasksAll, items:items};
 }
 function renderFourView(){
-  const base=addDays(selDate||today(), 0);
+  const base=addDays(selDate||today(),0);
   const days=[addDays(base,0),addDays(base,1),addDays(base,2),addDays(base,3)];
-  const title=DOW_FULL[days[0].getDay()].slice(0,2)+" "+pad(days[0].getDate())+"."+pad(days[0].getMonth()+1)+"."
-    +" – "+DOW_FULL[days[3].getDay()].slice(0,2)+" "+pad(days[3].getDate())+"."+pad(days[3].getMonth()+1)+".";
+  const dm=function(x){ return pad(x.getDate())+"."+pad(x.getMonth()+1)+"."; };
+  const title=DOW_FULL[days[0].getDay()]+" "+dm(days[0])+" – "+DOW_FULL[days[3].getDay()]+" "+dm(days[3]);
   document.getElementById("calTitle").innerHTML = esc(title)+"<span>4-Tage-Ansicht</span>";
+
+  const PXH=64, PXM=PXH/60, BOTTOM=24;
+  const ds=dayRangeStart(), de=dayRangeEnd();
+  const baseMin=ds*60, totalMin=(de-ds)*60, totalH=(de-ds)*PXH;
+  const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
+  const cols=days.map(fourDayCollect);
+
+  /* Tagesspalten-Kopf */
+  let head='<div class="four-head"><div class="four-tz" title="Zeitzone">'+esc(fourTZLabel())+'</div>';
+  cols.forEach(function(day){
+    head+='<div class="four-dh'+(day.isToday?" today":"")+(sameDay(day.date,selDate)?" sel":"")+'" data-date="'+day.key+'" title="Tagesansicht öffnen">'
+      + '<span class="four-dow">'+esc(DOW_FULL[day.date.getDay()].slice(0,2))+'</span>'
+      + '<span class="four-dnum">'+esc(dm(day.date))+'</span>'
+      + '</div>';
+  });
+  head+='</div>';
+
+  /* Ganztägig-Zeile */
+  let ad='<div class="four-allday"><div class="four-ad-lbl">Ganztägig</div>';
+  cols.forEach(function(day){
+    let chips="";
+    const hol=(holidays(day.date.getFullYear())[day.key])||"";
+    if(hol) chips+='<div class="dv-ad dv-ad-hol" title="'+esc(hol)+'">'+esc(hol)+'</div>';
+    day.bds.forEach(function(b){ chips+=bdBannerHTML(b, day.date.getFullYear()); });
+    day.eventsAll.forEach(function(e){
+      const c=cat(e.cat), repL=eventRepLabel(e);
+      chips+='<div class="dv-ad'+(eventIsDone(e)?" done":"")+'" data-ev="'+e.id+'" style="background:'+c.color+'" title="'+esc(e.title)+'">'
+        + (evDays(e)>1?"⇥ ":"")+(repL?'<span class="rep">↻</span>':"")+esc(e.title)+'</div>';
+    });
+    day.tasksAll.forEach(function(t){
+      const c=cat(t.cat), tDone=taskIsDone(t);
+      chips+='<div class="dv-ad dv-ad-task'+(tDone?" done":"")+'" data-task-open="'+t.id+'" style="background:'+c.color+'" title="'+esc(t.title)+'">'
+        + (tDone?'<span class="mark">✓</span>':'')+esc(t.title)+'</div>';
+    });
+    ad+='<div class="four-ad-col" data-date="'+day.key+'">'+(chips||'<span class="four-ad-empty">–</span>')+'</div>';
+  });
+  ad+='</div>';
+
+  /* Zeitachse */
+  let gut="";
+  for(let h=ds; h<de; h++) gut+='<div class="four-hlbl" style="top:'+((h-ds)*PXH)+'px">'+pad(h)+':00</div>';
+
+  /* Tagesspalten */
+  let colHtml="";
+  cols.forEach(function(day){
+    colHtml+='<div class="four-col'+(day.isToday?" today":"")+'" data-date="'+day.key+'" data-base="'+baseMin+'">';
+    day.items.forEach(function(it){
+      const top=(it.start-baseMin)*PXM;
+      const hgt=Math.max((it.end-it.start)*PXM,24);
+      const short=hgt<40;
+      const past=(day.isToday && it.end<=nowMin)?" past":"";
+      const w=100/(it.lanes||1), left=it.lane*w;
+      const st="top:"+top+"px;height:"+hgt+"px;left:calc("+left+"% + 3px);width:calc("+w+"% - 5px)";
+      if(it.kind==="ev"){
+        const c=cat(it.ev.cat), repL=eventRepLabel(it.ev), done=eventIsDone(it.ev);
+        colHtml+='<div class="dv-ev'+(done?" done":"")+(short?" dv-ev-short":"")+past+'" data-ev="'+it.ev.id+'" style="'+st+';--c:'+c.color+'" title="'+esc(it.ev.title)+'">'
+          + '<div class="dv-ev-t">'+esc(it.ev.start||"")+(it.ev.end?"–"+esc(it.ev.end):"")+'</div>'
+          + '<div class="dv-ev-n">'+(repL?'<span class="rep" title="Wiederholt sich">↻</span>':"")+esc(it.ev.title)+'</div>'
+          + '</div>';
+      }else{
+        const t=it.task, c=cat(t.cat);
+        const tStart=taskStartTime(t), tEnd=taskEndTime(t);
+        const tDone=taskIsDone(t), tOver=!tDone && isTaskOverdue(t);
+        colHtml+='<div class="dv-ev dv-task'+(tDone?" done":"")+(tOver?" overdue":"")+(short?" dv-ev-short":"")+past+'" data-task-open="'+t.id+'" style="'+st+';--c:'+c.color+'" title="'+esc("Aufgabe: "+t.title)+'">'
+          + '<button type="button" class="task-toggle task-check'+(tDone?" on":"")+'" data-task-toggle-id="'+t.id+'" title="'+(tDone?"Wieder öffnen":"Erledigt abhaken")+'">'+(tDone?"✓":"")+'</button>'
+          + '<span class="dv-ev-t">'+esc(tStart)+(tEnd?"–"+esc(tEnd):"")+'</span>'
+          + '<span class="dv-ev-n">'+esc(t.title)+'</span>'
+          + '</div>';
+      }
+    });
+    if(day.isToday && nowMin>=baseMin && nowMin<=baseMin+totalMin){
+      const y=(nowMin-baseMin)*PXM;
+      colHtml+='<div class="four-past" style="height:'+Math.min(Math.max(y,0),totalH)+'px"></div>'
+        + '<div class="four-now" style="top:'+y+'px" title="Jetzt"></div>';
+    }
+    colHtml+='</div>';
+  });
+
   const grid=document.getElementById("fourGrid");
-  if(grid) grid.innerHTML = days.map(fourDayHTML).join("");
+  if(grid){
+    grid.innerHTML = head + ad
+      + '<div class="four-scroll"><div class="four-body" style="height:'+(totalH+BOTTOM)+'px;--fkh:'+PXH+'px">'
+      +   '<div class="four-gut">'+gut+'</div>'
+      +   '<div class="four-cols">'+colHtml+'</div>'
+      + '</div></div>';
+  }
   renderLegend();
   try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
   try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
+
+  /* Scrollen: zu „jetzt" bzw. zum ersten Eintrag */
+  const sc=document.querySelector("#fourWrap .four-scroll");
+  if(sc){
+    const maxScroll=(sc.scrollHeight||0)-(sc.clientHeight||0);
+    let target;
+    if(cols.some(function(d){ return d.isToday; })) target=(nowMin-baseMin)*PXM-(sc.clientHeight||560)/3;
+    else{
+      let firstMin=null;
+      cols.forEach(function(d){ d.items.forEach(function(it){ if(firstMin===null||it.start<firstMin) firstMin=it.start; }); });
+      target=(firstMin===null) ? (6*60-baseMin)*PXM : (firstMin-baseMin)*PXM-16;
+    }
+    sc.scrollTop=Math.max(0, Math.min(target, maxScroll));
+  }
 }
 /* =========================================================
    Drag & Resize (Termine + Aufgaben)
@@ -1508,20 +1587,26 @@ var __dv=document.getElementById("dayView"); if(__dv){
 var __fg=document.getElementById("fourGrid"); if(__fg){
   __fg.addEventListener("click", function(e){
     if(window.__dvDrag) return;
-    const plus=e.target.closest("[data-four-new]");
-    if(plus){ openEvent(null, plus.getAttribute("data-four-new")); return; }
+    const chk=e.target.closest(".task-toggle");
+    if(chk){
+      const id=chk.getAttribute("data-task-toggle-id");
+      const idx=id?S.todos.findIndex(function(x){return x&&x.id===id;}):-1;
+      if(idx>=0){ setTaskDone(S.todos[idx], !taskIsDone(S.todos[idx])); e.stopPropagation(); save(); renderCalendar(); renderTasks(); updateBadges(); return; }
+    }
     const tOpen=e.target.closest("[data-task-open]");
     if(tOpen){ openInfo("task", tOpen.dataset.taskOpen); return; }
     const evBtn=e.target.closest("[data-ev]");
     if(evBtn){ openInfo("ev", evBtn.dataset.ev); return; }
+    const dh=e.target.closest(".four-dh");
+    if(dh){ selDate=parseISO(dh.dataset.date); setCalMode("day"); return; }
     const col=e.target.closest(".four-col");
     if(col){
-      selDate=parseISO(col.dataset.date);
-      __fg.querySelectorAll(".four-col.sel").forEach(function(x){ x.classList.remove("sel"); });
-      col.classList.add("sel");
-      renderAgenda();
-      try{ if(typeof renderCalSide==="function") renderCalSide(); }catch(e){}
-      try{ if(typeof updateWorkLive==="function") updateWorkLive(); }catch(e){}
+      const rect=col.getBoundingClientRect();
+      const base=Number(col.dataset.base)||0;
+      let min=Math.round((((e.clientY-rect.top)/DV_PXM)+base)/30)*30;
+      if(isNaN(min)) return;
+      min=Math.max(0,Math.min(min,1440-30));
+      openEvent(null, col.dataset.date, dvHM(min));
     }
   });
   __fg.addEventListener("dblclick", function(e){
@@ -1529,9 +1614,8 @@ var __fg=document.getElementById("fourGrid"); if(__fg){
     if(tOpen){ closeModals(); const tk=S.todos.find(function(x){return x.id===tOpen.dataset.taskOpen;}); if(tk) openTodo(tk.id,"task"); return; }
     const evBtn=e.target.closest("[data-ev]");
     if(evBtn){ closeModals(); openEvent(evBtn.dataset.ev); return; }
-    if(e.target.closest("[data-four-new]")) return;
-    const col=e.target.closest(".four-col");
-    if(col){ selDate=parseISO(col.dataset.date); setCalMode("day"); }
+    const dh=e.target.closest(".four-dh");
+    if(dh){ selDate=parseISO(dh.dataset.date); setCalMode("day"); }
   });
 }
 document.getElementById("btnPrev").onclick = ()=>{
