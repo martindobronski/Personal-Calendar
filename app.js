@@ -1626,9 +1626,10 @@ function deleteEvent(id){
 }
 
 /* =========================================================
-   Neu planen – Schnellverschieben aus dem Bearbeiten-Dialog
+   Neu planen – Schnellverschieben (Bearbeiten- & Anzeige-Dialog)
    ========================================================= */
-var reschedTarget = null; // "ev" (Termin) | "td" (Aufgabe)
+var reschedTarget = null; // "ev" (Termin) | "td" (Aufgabe) – Bearbeiten-Dialog: Felder füllen
+var reschedCommit = null; // {kind:"ev"|"task", id} – Anzeige-Dialog: direkt setzen und speichern
 
 function reschedDow(d){ return DOW_FULL[d.getDay()].slice(0,2); }
 /* Nächster Montag (ist heute Montag, dann +7 Tage). */
@@ -1686,8 +1687,7 @@ function applyResched(dateIso, timeStr){
     updateTdSpan();
   }
 }
-function openResched(target){
-  reschedTarget = target;
+function buildReschedList(){
   var t = today(), tm = addDays(t, 1), nm = nextMonday();
   var opts = [
     { k:"t-allday", label:"Heute im Laufe des Tages" },
@@ -1704,7 +1704,44 @@ function openResched(target){
   document.getElementById("reschedCustom").hidden = true;
   document.getElementById("reschedDate").value = iso(t);
   document.getElementById("reschedTime").value = "";
+}
+function openResched(target){
+  reschedTarget = target; reschedCommit = null;
+  buildReschedList();
   openModal("reschedModal");
+}
+/* Aus dem Anzeige-Dialog: Datum/Uhrzeit sofort am Eintrag setzen und speichern. */
+function openReschedInfo(kind, id){
+  reschedTarget = null; reschedCommit = { kind:(kind==="ev"?"ev":"task"), id:id };
+  buildReschedList();
+  openModal("reschedModal");
+}
+function applyReschedInfo(dateIso, timeStr){
+  var rc = reschedCommit; if(!rc) return;
+  if(rc.kind === "ev"){
+    var e = S.events.find(function(x){ return x.id===rc.id; }); if(!e) return;
+    var dur = 60;
+    if(!e.allDay && e.start && e.end){ var d=hmToMin(e.end)-hmToMin(e.start); if(d<=0) d+=1440; if(d>0&&d<=1440) dur=d; }
+    e.date = dateIso; e.endDate = "";
+    if(timeStr){ e.allDay = false; e.start = timeStr; e.end = reschedEndHM(timeStr, dur); }
+    else { e.allDay = true; e.start = ""; e.end = ""; }
+  }else{
+    var t = S.todos.find(function(x){ return x.id===rc.id; }); if(!t) return;
+    var dur2 = 60;
+    if(!t.allDay && t.startTime && t.endTime){ var d2=hmToMin(t.endTime)-hmToMin(t.startTime); if(d2<=0) d2+=1440; if(d2>0&&d2<=1440) dur2=d2; }
+    t.startDate = dateIso; t.endDate = "";
+    if(timeStr){ t.allDay = false; t.startTime = timeStr; t.endTime = reschedEndHM(timeStr, dur2); }
+    else { t.allDay = true; t.startTime = ""; t.endTime = ""; }
+  }
+  reschedCommit = null;
+  save(); closeModals(); render();
+  toast("Neu geplant.");
+}
+function commitResched(dateIso, timeStr){
+  if(reschedCommit){ applyReschedInfo(dateIso, timeStr); return; }
+  applyResched(dateIso, timeStr);
+  closeResched();
+  toast("Neu geplant – mit „Speichern“ übernehmen.");
 }
 function closeResched(){
   var m = document.getElementById("reschedModal"); if(m) m.classList.remove("open");
@@ -1721,22 +1758,20 @@ if(__rl) __rl.addEventListener("click", function(e){
     "w-allday":[iso(nm),""], "w-time":[iso(nm),"10:00"]
   };
   var v = map[k]; if(!v) return;
-  applyResched(v[0], v[1]);
-  closeResched();
-  toast("Neu geplant – mit „Speichern“ übernehmen.");
+  commitResched(v[0], v[1]);
 });
 var __ra = document.getElementById("reschedApply");
 if(__ra) __ra.addEventListener("click", function(){
   var d = document.getElementById("reschedDate").value;
   if(!d){ toast("Bitte ein Datum wählen."); return; }
-  applyResched(d, document.getElementById("reschedTime").value || "");
-  closeResched();
-  toast("Neu geplant – mit „Speichern“ übernehmen.");
+  commitResched(d, document.getElementById("reschedTime").value || "");
 });
 var __er = document.getElementById("evResched");
 if(__er) __er.addEventListener("click", function(){ openResched("ev"); });
 var __tr = document.getElementById("tdResched");
 if(__tr) __tr.addEventListener("click", function(){ openResched("td"); });
+var __ir = document.getElementById("infoResched");
+if(__ir) __ir.addEventListener("click", function(){ if(infoRef) openReschedInfo(infoRef.kind, infoRef.id); });
 
 /* =========================================================
    Anzeige-Dialog (Info) – Einzelklick auf Termin/Aufgabe
@@ -1800,6 +1835,7 @@ function openInfo(kind, id){
     body += infoRow("Notiz", infoNote(obj.note));
   }
   document.getElementById("infoBody").innerHTML = body;
+  document.getElementById("infoResched").style.display = (kind==="routine") ? "none" : "";
 
   const doneNow = (kind==="ev") ? eventIsDone(obj) : (kind==="routine") ? routineIsDone(obj) : taskIsDone(obj);
   document.getElementById("infoDone").checked = doneNow;

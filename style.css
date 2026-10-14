@@ -682,6 +682,7 @@ body.cal-day #view-cal .cal-side .side-top{display:none}
 /* ---------- Anzeige-Dialog (Info) ---------- */
 .info-modal{width:min(460px,100%)}
 .info-head{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.info-head-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .info-head h3{margin:0;font-size:20px;line-height:1.25}
 .info-cat{align-self:flex-start;font-size:11.5px;font-weight:700;color:#0c1220;padding:3px 10px;border-radius:999px;background:#64748b}
 .info-body{display:flex;flex-direction:column;gap:9px}
