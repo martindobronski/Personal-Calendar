@@ -2211,9 +2211,61 @@ function openInfo(kind, id){
 
   const doneNow = (kind==="ev") ? eventIsDone(obj) : (kind==="routine") ? routineIsDone(obj) : taskIsDone(obj);
   document.getElementById("infoDone").checked = doneNow;
-  document.getElementById("infoDoneAt").textContent = (doneNow && obj.completedAt) ? fmtCompletedAt(obj.completedAt) : "";
+  infoDoneRefresh();
   openModal("infoModal");
 }
+/* Erledigt-Zeile im Anzeige-Dialog: Zeitpunkt anzeigen, Stift zum Korrigieren ein-/ausblenden. */
+function infoDoneRefresh(){
+  const obj = infoRef && infoRef.obj;
+  const on = !!document.getElementById("infoDone").checked;
+  const atEl = document.getElementById("infoDoneAt");
+  const btn = document.getElementById("infoDoneEdit");
+  const box = document.getElementById("infoDoneEditBox");
+  if(box) box.hidden = true;
+  if(atEl){
+    atEl.hidden = false;
+    atEl.textContent = (on && obj && obj.completedAt) ? fmtCompletedAt(obj.completedAt) : "";
+  }
+  /* Zeitpunkt auch nachtragen lassen, wenn ein alter Eintrag ohne completedAt erledigt ist */
+  if(btn) btn.hidden = !(on && obj);
+}
+/* Stift → kleine Zeile mit Datum/Uhrzeit zum Korrigieren einblenden. */
+function infoDoneEditOpen(){
+  const obj = infoRef && infoRef.obj;
+  if(!obj) return;
+  let base = obj.completedAt ? new Date(obj.completedAt) : new Date();
+  if(isNaN(base.getTime())) base = new Date();
+  document.getElementById("infoDoneDate").value = iso(base);
+  document.getElementById("infoDoneTime").value = pad(base.getHours())+":"+pad(base.getMinutes());
+  document.getElementById("infoDoneEditBox").hidden = false;
+  document.getElementById("infoDoneAt").hidden = true;
+  document.getElementById("infoDoneEdit").hidden = true;
+  const dEl = document.getElementById("infoDoneDate");
+  if(dEl && dEl.focus){ try{ dEl.focus(); }catch(e){} }
+}
+document.getElementById("infoDoneEdit").onclick = infoDoneEditOpen;
+document.getElementById("infoDoneCancel").onclick = function(){ infoDoneRefresh(); };
+document.getElementById("infoDoneSave").onclick = function(){
+  const obj = infoRef && infoRef.obj;
+  if(!obj) return;
+  const dv = document.getElementById("infoDoneDate").value;
+  const tv = document.getElementById("infoDoneTime").value || "00:00";
+  if(!dv){ toast("Bitte ein Datum angeben."); return; }
+  const p = dv.split("-"), tp = tv.split(":");
+  const dt = new Date(Number(p[0]), Number(p[1])-1, Number(p[2]), Number(tp[0])||0, Number(tp[1])||0, 0, 0);
+  if(isNaN(dt.getTime())){ toast("Bitte ein gültiges Datum angeben."); return; }
+  obj.completedAt = dt.toISOString();
+  /* Bei wiederkehrenden Einträgen auch den Tag des letzten Erledigens nachziehen */
+  if((obj.repeat && obj.repeat!=="none") || (obj.freq && obj.freq!=="none")) obj.lastDone = dv;
+  try{ save(); }catch(e){}
+  try{ render(); }catch(e){}
+  /* Erledigt-Status kann sich durch das Korrigieren des Datums ändern (z. B. wiederkehrende Einträge) */
+  const ref = infoRef, rObj = ref.obj;
+  const nowDone = (ref.kind==="ev") ? eventIsDone(rObj) : (ref.kind==="routine") ? routineIsDone(rObj) : taskIsDone(rObj);
+  document.getElementById("infoDone").checked = nowDone;
+  infoDoneRefresh();
+  toast("Erledigt-Zeitpunkt geändert: "+fmtCompletedAt(rObj.completedAt));
+};
 document.getElementById("infoDone").onchange = function(){
   if(!infoRef || !infoRef.obj) return;
   const on = this.checked;
@@ -2227,7 +2279,7 @@ document.getElementById("infoDone").onchange = function(){
     setTaskDone(obj, on);
     save(); render();
   }
-  document.getElementById("infoDoneAt").textContent = (on && obj.completedAt) ? fmtCompletedAt(obj.completedAt) : "";
+  infoDoneRefresh();
 };
 document.getElementById("infoEdit").onclick = function(){
   if(!infoRef || !infoRef.obj) return;
@@ -3633,7 +3685,8 @@ function toggleEventDone(id, done){
   var e = S.events.find(function(x){ return x.id===id; });
   if(!e) return;
   if(!e.repeat || e.repeat==="none"){
-    if(done) e.done = true; else delete e.done;
+    if(done){ e.done = true; e.completedAt = new Date().toISOString(); }
+    else { delete e.done; delete e.completedAt; }
   } else if(!done){
     e.lastDone = null; delete e.completedAt;
   } else {
