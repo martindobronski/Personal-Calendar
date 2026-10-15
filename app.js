@@ -2412,7 +2412,8 @@ function openTodo(id, mode){
   var doneAtEl=document.getElementById("tdDoneAt");
   if(doneAtEl) doneAtEl.textContent = (e && taskIsDone(e) && e.completedAt) ? fmtCompletedAt(e.completedAt) : "";
   document.getElementById("tdTime").value = (e && e.time && e.time!=="any") ? e.time : "";
-  document.getElementById("tdStart").value = (e && e.startDate) ? e.startDate : "";
+  /* Neue Aufgaben beginnen am heutigen Tag; Routinen und bestehende Einträge bleiben unverändert. */
+  document.getElementById("tdStart").value = (e && e.startDate) ? e.startDate : ((e || isR) ? "" : iso(today()));
   document.getElementById("tdEnd").value = (e && e.endDate) ? e.endDate : "";
   const tdAllDay = e ? (e.allDay !== false) : false;
   document.getElementById("tdAllDay").checked = tdAllDay;
