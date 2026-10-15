@@ -1854,8 +1854,9 @@ function openEvent(id, date, start){
   document.getElementById("evStart").value = e && e.start ? e.start : (start || "09:00");
   document.getElementById("evEnd").value = e && e.end ? e.end
     : (start ? dvHM(Math.min(hmToMin(start)+30, 1439)) : "09:30");
-  document.getElementById("evDur").value = "";
-  document.getElementById("evDurUnit").value = "60";
+  /* Neue Termine: Dauer mit 30 Minuten vorbelegen (Bestehende: aus Von/Bis berechnen) */
+  document.getElementById("evDur").value = e ? "" : "30";
+  document.getElementById("evDurUnit").value = e ? "60" : "1";
   if(e && !e.allDay && e.start && e.end) evSetDurFromTimes();
   document.getElementById("evNote").value = e ? (e.note||"") : "";
   document.getElementById("evDelete").style.display = e ? "" : "none";
