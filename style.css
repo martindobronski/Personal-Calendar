@@ -992,3 +992,150 @@ body.cal-day #view-cal .cal-side .side-top{display:none}
 .foot-link{color:var(--muted);text-decoration:none;opacity:.85;border-bottom:1px dashed transparent;transition:.14s}
 .foot-link:hover{color:var(--accent);border-bottom-color:var(--accent);opacity:1}
 
+/* =========================================================
+   Handy / schmale Bildschirme (z. B. Samsung S24: 412 × 915 CSS-px)
+   Ziele: kein horizontales Scrollen der Seite, kompaktere Kopfzeile,
+   größere Tippflächen (Finger statt Maus), dichtere Raster.
+   ========================================================= */
+@media (max-width:640px){
+  /* --- Grundraster: schmalere Ränder, damit die Karten mehr Platz haben --- */
+  main{padding:12px 10px 40px}
+  .card{padding:14px;border-radius:14px}
+  .view>.flex.gap{flex-wrap:wrap}
+  .view h2{font-size:17px}
+
+  /* --- Kopfzeile kompakter (war auf dem Handy bis ~157 px hoch) --- */
+  .topbar-main{padding:10px 12px;gap:10px}
+  .brand{font-size:15.5px;gap:8px}
+  .brand .logo{width:30px;height:30px;font-size:15px;border-radius:9px}
+  .brand small{display:none}
+  .chip{padding:6px 10px;font-size:12px;gap:6px}
+  .chip .big{font-size:15px}
+  /* Uhrzeit/Datum-Chip weg – die Systemleiste zeigt ihn; dadurch passen
+     Marke + Profil-Kreise (bei einer typischen Familie 5–6 Stück) in eine Zeile */
+  .topbar-main>.astro{display:none}
+  .avatar{width:28px;height:28px;font-size:12px}
+  .profiles{gap:5px}
+  .tabrow{padding:0 12px 8px;gap:10px}
+  .tab{padding:10px var(--tabres) 10px 13px;font-size:13.5px}
+  .tab.active::after{left:13px}
+
+  /* --- Kalender-Kopf: umbrechen statt die Seite breiter machen ---
+         (früher trieben Kopfzeile + Tagesansicht die Karte auf ~390 px Breite,
+          was auf 393/360/320-px-Geräten zu Querscrollen führte) --- */
+  .cal-head{display:block;gap:8px;margin-bottom:10px}
+  .cal-title{font-size:19px;margin-bottom:8px}
+  .cal-title span{font-size:12.5px}
+  .cal-nav{display:flex;flex-wrap:wrap;min-width:0;gap:6px;justify-content:flex-start}
+  .cal-nav #btnNewEvent{margin-left:auto}
+  .navgroup{gap:4px;margin-left:0}
+  .calselect{padding:9px 24px 9px 9px;font-size:12px}
+  .cal-saldo{font-size:12px}
+  .work-live{padding:5px 9px;font-size:12px}
+
+  /* --- Monatsraster: dichter, damit die 7 Spalten ohne Querscrollen passen --- */
+  .dow{gap:3px;margin-bottom:5px}
+  .dow div{font-size:10px;padding:4px 0;letter-spacing:.03em}
+  .cal-grid{gap:3px}
+  .day{min-height:84px;padding:4px;border-radius:10px;gap:3px}
+  .day-head{gap:3px}
+  .daynum{width:19px;height:19px;font-size:11.5px}
+  .daynum,.day .plus{flex:none}
+  .day .plus{opacity:1;width:17px;height:17px;font-size:12.5px;border-radius:6px}
+  .holiday{font-size:9.5px;max-height:22px}
+  .ev{font-size:10.5px;padding:2px 5px;gap:4px;border-radius:6px}
+  .ev .t{font-size:9.5px}
+  .more{font-size:9.5px;padding-left:2px}
+  .astro{font-size:10.5px;gap:5px}
+
+  /* --- 4-Tage-/Tagessicht: schmalere Zeitleiste, kleinere Spaltenköpfe --- */
+  #fourGrid{--fkgut:30px}
+  .four-dh{padding:6px 2px;gap:3px}
+  .four-dh .four-dow{font-size:9.5px;letter-spacing:.02em}
+  .four-dh .four-dnum{font-size:11px}
+  .four-tz{font-size:9px;padding:0 4px 5px 0}
+  .four-ad-lbl{font-size:8.5px;padding:3px 4px 3px 0}
+  .four-ad-col{padding:3px}
+  .four-hlbl{font-size:9.5px;right:5px}
+  .four-scroll,.dv-scroll{max-height:62vh}
+  .four-col .dv-ev{font-size:10.5px;padding:2px 4px}
+  .dv-ad{font-size:11.5px;padding:2px 7px}
+  .dayview{gap:8px}
+  /* Ganztägig-Zeile: Beschriftung über die Chips statt 76 px breite Spalte */
+  .dv-allday{flex-direction:column;align-items:stretch;gap:5px;min-width:0}
+  .dv-allday-lbl{flex:0 0 auto;padding-top:0;font-size:10px}
+  .dv-allday-items{gap:5px}
+  #dayView,.dayview,.dv-scroll{min-width:0}
+
+  /* --- Mahlzeiten: weniger Querscrollen bei gleicher Lesbarkeit --- */
+  .meals-table{min-width:660px;border-spacing:4px}
+  .meals-table th{font-size:11px;padding:3px 4px}
+  .meal-cell{padding:6px 7px;min-height:50px;font-size:12.5px;border-radius:9px}
+  .meal-cell b{font-size:9.5px;letter-spacing:.05em}
+
+  /* --- Tippflächen (Finger): mind. ~40 px Kantenlänge --- */
+  .btn{min-height:42px;padding:10px 13px}
+  .btn.sm{min-height:36px;padding:7px 11px}
+  .btn.icon{min-height:40px}
+  .segbtn{min-height:36px;padding:8px 12px}
+  .seg.mini .segbtn{min-height:34px}
+  .linkbtn{padding:10px 8px}
+  .check{width:30px;height:30px}
+  .ag-item.task .task-check{width:28px;height:28px;font-size:14px}
+  .list-tab-edit{min-width:34px;min-height:34px}
+  .dv-fullbtn{padding:10px 14px}
+  .footer .foot-link{display:inline-block;padding:7px 5px}
+  .wk-rowdel{width:42px;height:42px}
+  .modal input:not([type=checkbox]):not([type=radio]),.modal select,.modal textarea{min-height:44px}
+  /* Trefferfläche vergrößern, ohne das Element sichtbar zu vergrößern
+     (Monats-„+“, Profilkreise, Aufgaben-Häkchen in der Zeitleiste) */
+  .avatar,.day .plus,.dv-task .task-check,.check{position:relative}
+  .avatar::before,.day .plus::before,.dv-task .task-check::before,.check::before{
+    content:"";position:absolute;inset:-6px;
+  }
+  .searchwrap input{min-height:40px}
+  input[type=date],input[type=time]{min-height:40px}
+
+  /* --- Dialoge: mehr Breite, Buttons brechen um --- */
+  .overlay{padding:8px}
+  .modal{padding:16px;border-radius:16px;max-height:94vh}
+  .modal h3{font-size:17.5px;margin-bottom:14px}
+  .modal-actions{flex-wrap:wrap;gap:8px}
+  .modal-actions .btn{flex:1 1 auto;justify-content:center;min-width:110px}
+  .modal-actions .left{margin-right:0}
+  .dlg-modal .modal-head{padding:15px 16px 0;margin-bottom:12px}
+  .dlg-body{padding:0 16px 4px}
+  .dlg-foot{padding:10px 16px 14px}
+  .dlg-catwrap{width:130px}
+  .dlg-dtlbl{width:42px;font-size:11px}
+  .dlg-dtrow{gap:6px}
+  .dlg-chip{padding:8px 12px}
+  .field2{grid-template-columns:1fr;gap:10px}
+
+  /* --- Arbeitszeit --- */
+  .work-hero{padding:14px;gap:12px}
+  .work-hero-main{min-width:0;flex:1 1 100%}
+  .work-now{font-size:40px}
+  .work-stats{grid-template-columns:repeat(2,1fr);flex:1 1 100%}
+  .work-stat .ws-val{font-size:18px}
+
+  /* --- Fußzeile --- */
+  .footer{flex-direction:column;gap:6px;text-align:center;padding:0 12px 24px}
+}
+
+/* Sehr schmale Geräte bzw. große Systemschrift */
+@media (max-width:400px){
+  .topbar-main{gap:8px}
+  .tab{padding-right:22px;font-size:12.5px}
+  .brand{font-size:14.5px}
+  .brand .logo{width:26px;height:26px;font-size:14px}
+  .avatar{width:24px;height:24px;font-size:11px}
+  .profiles{gap:4px}
+  .day{min-height:88px;padding:3px}
+  .day-head{flex-wrap:wrap;gap:1px}
+  .daynum{width:18px;height:18px;font-size:11px}
+  .day .plus{width:16px;height:16px;font-size:12px;margin-left:auto}
+  .ev{font-size:10px}
+  .meals-table{min-width:600px}
+}
+
