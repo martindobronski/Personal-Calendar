@@ -1841,100 +1841,165 @@ function fillCatSelect(sel, selected){
 function openEvent(id, date, start){
   editingEvent = id ? S.events.find(e=>e.id===id) : null;
   const e = editingEvent;
-  document.getElementById("evModalTitle").textContent = e ? "Termin bearbeiten" : "Neuer Termin";
-  document.getElementById("evTitle").value = e ? e.title : "";
-  document.getElementById("evDate").value = e ? e.date : (date || iso(selDate));
-  document.getElementById("evEndDate").value = e && e.endDate ? e.endDate : "";
-  const daysEl = document.getElementById("evDays");
-  if(daysEl) daysEl.value = e && e.endDate
-    ? (Math.round((parseISO(e.endDate) - parseISO(e.date)) / 86400000) + 1)
-    : 1;
-  fillCatSelect(document.getElementById("evCat"), e ? e.cat : (S.categories[0]||{}).id);
-  document.getElementById("evAllDay").checked = e ? !!e.allDay : false;
-  document.getElementById("evStart").value = e && e.start ? e.start : (start || "09:00");
-  document.getElementById("evEnd").value = e && e.end ? e.end
+  const g = x => document.getElementById(x);
+  g("evModalTitle").textContent = e ? "Termin bearbeiten" : "Neuer Termin";
+  g("evTitle").value = e ? e.title : "";
+  const firstDate = e ? e.date : (date || iso(selDate));
+  g("evDate").value = firstDate;
+  /* Neuer Termin: Ende steht am selben Tag; bestehende Termine bleiben wie gespeichert. */
+  g("evEndDate").value = e ? (e.endDate || "") : firstDate;
+  evFillCat(e ? e.cat : (S.categories[0]||{}).id);
+  g("evAllDay").checked = e ? !!e.allDay : false;
+  g("evStart").value = e && e.start ? e.start : (start || "09:00");
+  g("evEnd").value = e && e.end ? e.end
     : (start ? dvHM(Math.min(hmToMin(start)+30, 1439)) : "09:30");
-  /* Neue Termine: Dauer mit 30 Minuten vorbelegen (Bestehende: aus Von/Bis berechnen) */
-  document.getElementById("evDur").value = e ? "" : "30";
-  document.getElementById("evDurUnit").value = e ? "60" : "1";
-  if(e && !e.allDay && e.start && e.end) evSetDurFromTimes();
-  document.getElementById("evNote").value = e ? (e.note||"") : "";
-  document.getElementById("evDelete").style.display = e ? "" : "none";
-  document.getElementById("evResched").style.display = e ? "" : "none";
-  document.getElementById("evDoneField").style.display = e ? "" : "none";
-  document.getElementById("evDone").checked = e ? eventIsDone(e) : false;
-  const evRep = document.getElementById("evRepeat");
+  g("evNote").value = e ? (e.note||"") : "";
+  g("evDelete").style.display = e ? "" : "none";
+  g("evResched").style.display = e ? "" : "none";
+  g("evDoneField").style.display = e ? "" : "none";
+  g("evDone").checked = e ? eventIsDone(e) : false;
+  const evRep = g("evRepeat");
   if(evRep) evRep.value = e ? (e.repeat || "none") : "none";
-  toggleTimeFields();
+  evAllDaySync();
   updateSpan();
+  evRepeatSync();
+  evDurRefresh();
   openModal("evModal");
-  document.getElementById("evTitle").focus();
+  g("evTitle").focus();
 }
+/* Anzahl Tage zwischen zwei ISO-Datumsangaben. */
+function evDayDiff(a, b){ return Math.round((parseISO(b) - parseISO(a)) / 86400000); }
+/* Dauer (Minuten) des aktuellen Termins – allDay: Tage * 1440. */
+function evCurDur(){
+  const sd = document.getElementById("evDate").value;
+  if(!sd) return null;
+  const edEl = document.getElementById("evEndDate");
+  const ed = (edEl.value && edEl.value >= sd) ? edEl.value : sd;
+  if(document.getElementById("evAllDay").checked){
+    const days = evDayDiff(sd, ed) + 1;
+    return days > 0 ? days * 1440 : null;
+  }
+  const st = document.getElementById("evStart").value;
+  const en = document.getElementById("evEnd").value;
+  if(!st || !en) return null;
+  const mins = evDayDiff(sd, ed) * 1440 + (hmToMin(en) - hmToMin(st));
+  return mins > 0 ? mins : null;
+}
+var evLastDur = null; /* zuletzt angezeigte Dauer in Minuten */
+function evDurText(mins){
+  if(mins == null) return "";
+  const d = Math.floor(mins / 1440), rest = mins % 1440;
+  const h = Math.floor(rest / 60), m = rest % 60;
+  const parts = [];
+  if(d) parts.push(d === 1 ? "1 Tag" : d + " Tage");
+  if(h) parts.push(h + " Std");
+  if(m) parts.push(m + " Min");
+  return parts.length ? parts.join(" ") : "0 Min";
+}
+/* Hilfetext neben „Ende“ und Chip-Markierung nachziehen. */
+function evDurRefresh(){
+  const mins = evCurDur();
+  evLastDur = mins;
+  const hint = document.getElementById("evDurHint");
+  if(hint) hint.textContent = (mins == null) ? "" : ("Dauer: " + evDurText(mins));
+  const allDay = document.getElementById("evAllDay").checked;
+  document.querySelectorAll("#evChips .ev-chip").forEach(function(b){
+    const v = b.getAttribute("data-ev-dur");
+    let on = false;
+    if(v === "allday") on = allDay;
+    else if(!allDay && mins != null) on = (Number(v) === mins);
+    b.classList.toggle("active", on);
+  });
+}
+/* Ende = Beginn + Dauer. */
+function evSetEndFromDur(mins){
+  const sd = document.getElementById("evDate").value;
+  if(!sd || !mins) return;
+  const edEl = document.getElementById("evEndDate");
+  if(document.getElementById("evAllDay").checked){
+    const days = Math.max(1, Math.round(mins / 1440));
+    edEl.value = iso(addDays(parseISO(sd), days - 1));
+  }else{
+    const st = document.getElementById("evStart").value || "09:00";
+    const total = hmToMin(st) + mins;
+    document.getElementById("evEnd").value = dvHM(total % 1440);
+    edEl.value = iso(addDays(parseISO(sd), Math.floor(total / 1440)));
+  }
+  updateSpan();
+  evDurRefresh();
+}
+/* Bisherige Dauer, sonst 30 Minuten. */
+function evKeepDur(){ return (evLastDur && evLastDur > 0) ? evLastDur : 30; }
+/* Ganztägig: Uhrzeiten ein-/ausblenden (animiert), Ende absichern. */
+function evAllDaySync(){
+  const ad = document.getElementById("evAllDay").checked;
+  const blk = document.getElementById("evDtBlock");
+  if(blk) blk.classList.toggle("allday", ad);
+  if(!ad){
+    const st = document.getElementById("evStart"), en = document.getElementById("evEnd");
+    if(st && !st.value) st.value = "09:00";
+    if(en && !en.value && st) en.value = dvHM(Math.min(hmToMin(st.value) + 30, 1439));
+  }else{
+    const sd = document.getElementById("evDate").value;
+    const ed = document.getElementById("evEndDate");
+    if(sd && ed.value && ed.value < sd) ed.value = sd;
+  }
+  evDurRefresh();
+}
+/* Erklärtext nur bei wiederkehrenden Terminen. */
+function evRepeatSync(){
+  const sel = document.getElementById("evRepeat"), note = document.getElementById("evRepeatNote");
+  if(sel && note) note.hidden = (sel.value === "none");
+}
+/* Kategorie füllen + Farbpunkt im Dropdown. */
+function evFillCat(selected){
+  const sel = document.getElementById("evCat");
+  if(!sel) return;
+  fillCatSelect(sel, selected);
+  evCatDot();
+}
+function evCatDot(){
+  const sel = document.getElementById("evCat"), dot = document.getElementById("evCatDot");
+  if(!sel || !dot) return;
+  const c = (S.categories || []).find(x => x.id === sel.value);
+  dot.style.background = c ? c.color : "transparent";
+}
+/* Dauer-Chip anwenden. */
+function evChipApply(v){
+  const ad = document.getElementById("evAllDay");
+  if(v === "allday"){ ad.checked = true; evAllDaySync(); return; }
+  ad.checked = false;
+  evAllDaySync();
+  const st = document.getElementById("evStart");
+  if(!st.value) st.value = "09:00";
+  evSetEndFromDur(Number(v) || 30);
+}
+
 function updateSpan(){
   const s = document.getElementById("evDate").value;
-  const e = document.getElementById("evEndDate").value;
   const endEl = document.getElementById("evEndDate");
   if(s) endEl.min = s;
-  let n = 1;
-  if(s && e && e > s) n = Math.round((parseISO(e) - parseISO(s)) / 86400000) + 1;
-  const daysEl = document.getElementById("evDays");
-  if(daysEl) daysEl.value = n;
 }
+/* Beginn ändern → Ende zieht mit der bisherigen Dauer nach. */
+function evMoveEndWithStart(){ evSetEndFromDur(evKeepDur()); }
 document.getElementById("evDate").onchange = ()=>{
-  const s = document.getElementById("evDate").value;
-  const e = document.getElementById("evEndDate");
-  if(s && e.value && e.value < s) e.value = s;
+  evMoveEndWithStart();
   updateSpan();
+  evDurRefresh();
 };
-document.getElementById("evEndDate").onchange = updateSpan;
-document.getElementById("evDays").onchange = ()=>{
-  const s = document.getElementById("evDate").value;
-  if(!s) return;
-  let n = parseInt(document.getElementById("evDays").value) || 1;
-  if(n < 1) n = 1;
-  if(n > 366) n = 366;
-  document.getElementById("evDays").value = n;
-  document.getElementById("evEndDate").value = iso(addDays(parseISO(s), n - 1));
-  updateSpan();
-};
-function toggleTimeFields(){
-  const ad = document.getElementById("evAllDay").checked;
-  document.getElementById("evTimeFields").style.display = ad ? "none" : "grid";
-  document.getElementById("evDurField").style.display = ad ? "none" : "";
-}
-document.getElementById("evAllDay").onchange = toggleTimeFields;
-function evDurMinutes(){
-  const d=parseFloat(document.getElementById("evDur").value||"0")||0;
-  const u=parseInt(document.getElementById("evDurUnit").value||"60",10)||60;
-  return Math.round(d*u);
-}
-function evSetDurFromTimes(){
-  const s=document.getElementById("evStart").value;
-  const e=document.getElementById("evEnd").value;
-  if(!s||!e) return;
-  let diff=hmToMin(e)-hmToMin(s);
-  if(diff<0) diff+=1440;
-  const u=parseInt(document.getElementById("evDurUnit").value||"60",10)||60;
-  const val=diff/u;
-  document.getElementById("evDur").value=(val%1===0)?val:(Math.round(val*100)/100);
-}
-function evSetEndFromDur(){
-  const s=document.getElementById("evStart").value;
-  const mins=evDurMinutes();
-  if(!s||!mins) return;
-  const total=hmToMin(s)+mins;
-  document.getElementById("evEnd").value=dvHM(total%1440);
-  const roll=Math.floor(total/1440);
-  const sd=document.getElementById("evDate").value;
-  if(roll>0 && sd){ const ed=document.getElementById("evEndDate"); if(!ed.value){ ed.value=iso(addDays(parseISO(sd), roll)); updateSpan(); } }
-}
-document.getElementById("evStart").onchange=()=>{
-  if(parseFloat(document.getElementById("evDur").value||"0")) evSetEndFromDur();
-  else evSetDurFromTimes();
-};
-document.getElementById("evEnd").onchange=evSetDurFromTimes;
-document.getElementById("evDur").onchange=evSetEndFromDur;
-document.getElementById("evDurUnit").onchange=evSetEndFromDur;
+document.getElementById("evEndDate").onchange = ()=>{ updateSpan(); evDurRefresh(); };
+document.getElementById("evStart").onchange = evMoveEndWithStart;
+document.getElementById("evEnd").onchange = evDurRefresh;
+document.getElementById("evAllDay").onchange = evAllDaySync;
+document.getElementById("evRepeat").onchange = evRepeatSync;
+document.getElementById("evCat").onchange = evCatDot;
+(function(){
+  const box = document.getElementById("evChips");
+  if(box) box.addEventListener("click", ev=>{
+    const b = ev.target.closest("[data-ev-dur]");
+    if(b) evChipApply(b.getAttribute("data-ev-dur"));
+  });
+})();
 
 document.getElementById("evSave").onclick = ()=>{
   const title = document.getElementById("evTitle").value.trim();
@@ -2010,8 +2075,7 @@ function applyResched(dateIso, timeStr){
   if(reschedTarget === "ev"){
     var allDay = keep ? document.getElementById("evAllDay").checked : !timeStr;
     document.getElementById("evDate").value = dateIso;
-    document.getElementById("evEndDate").value = "";
-    var daysEl = document.getElementById("evDays"); if(daysEl) daysEl.value = 1;
+    document.getElementById("evEndDate").value = dateIso;
     document.getElementById("evAllDay").checked = allDay;
     if(!keep){
       if(allDay){
@@ -2024,9 +2088,9 @@ function applyResched(dateIso, timeStr){
         document.getElementById("evEnd").value = reschedEndHM(timeStr, reschedKeepDur(st, en));
       }
     }
-    document.getElementById("evDur").value = "";
-    toggleTimeFields();
+    evAllDaySync();
     updateSpan();
+    evDurRefresh();
   }else if(reschedTarget === "td"){
     var allDay2 = keep ? document.getElementById("tdAllDay").checked : !timeStr;
     document.getElementById("tdStart").value = dateIso;
