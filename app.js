@@ -315,6 +315,9 @@ function setView(v){
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active", b.dataset.view===v));
   document.querySelectorAll(".view").forEach(s=>s.classList.toggle("active", s.id==="view-"+v));
   render();
+  /* Gespeicherte Breite der Kalender-Seitenspalte erst anwenden, wenn der Kalender
+     sichtbar ist – im versteckten Zustand wäre die gemessene Breite 0. */
+  if(v==="cal"){ try{ applyCalSideW(); }catch(e){} }
 }
 var __el=document.getElementById("tabs"); if(__el)__el.addEventListener("click", e=>{
   const b = e.target.closest(".tab"); if(b) setView(b.dataset.view);
@@ -4478,6 +4481,112 @@ function renderRoutines(){
     }
   });
 })();
+/* =========================================================
+   Kalender: Breite der rechten Spalte (Agenda/Aufgaben/Routinen) per Maus anpassen
+   Der Wert liegt in S.settings.calSideW (Pixel, 0 = Standard 1.7fr/1fr) und wird
+   mitgespeichert. Nur ab 981 px Fensterbreite (zweispaltiges Layout) sichtbar.
+   ========================================================= */
+var CAL_SPLIT = { minSide:240, maxSide:900, minMain:400, gap:16 };
+function calSplitGrid(){ return document.querySelector("#view-cal .grid2-cal"); }
+function calSplitMax(grid){
+  /* Größtmögliche Breite der Seitenspalte: nicht breiter als maxSide und der
+     Kalender links muss mindestens minMain breit bleiben. */
+  var gw = grid ? grid.clientWidth : 0;
+  var max = Math.min(CAL_SPLIT.maxSide, (gw - CAL_SPLIT.gap) - CAL_SPLIT.minMain);
+  return Math.max(CAL_SPLIT.minSide, Math.floor(max));
+}
+function applyCalSideW(){
+  try{
+    var g = calSplitGrid(); if(!g) return;
+    var saved = Number(S && S.settings && S.settings.calSideW) || 0;
+    var h = document.getElementById("calSplit");
+    if(saved <= 0){
+      /* Standard: wieder das ursprüngliche Verhältnis 1.7fr/1fr */
+      g.classList.remove("has-sidew");
+      try{ g.style.removeProperty("--cal-side-w"); }catch(e){}
+      var sEl = document.querySelector("#view-cal .cal-side");
+      if(h && sEl) h.setAttribute("aria-valuenow", String(Math.round(sEl.getBoundingClientRect().width)));
+      return;
+    }
+    var w = saved, gw = g.clientWidth;
+    if(gw > 0) w = Math.min(Math.max(saved, CAL_SPLIT.minSide), calSplitMax(g));
+    w = Math.round(w);
+    g.style.setProperty("--cal-side-w", w + "px");
+    g.classList.add("has-sidew");
+    if(h) h.setAttribute("aria-valuenow", String(w));
+  }catch(e){}
+}
+function setCalSideW(px, persist){
+  try{
+    if(!S.settings) S.settings = {};
+    S.settings.calSideW = Math.max(0, Math.round(Number(px) || 0));
+    if(persist){ try{ save(); }catch(e){} }
+    applyCalSideW();
+  }catch(e){}
+}
+function initCalSplit(){
+  var h = document.getElementById("calSplit");
+  if(!h || h.__calSplitWired) return;
+  h.__calSplitWired = true;
+  var drag = null;
+  function onMove(e){
+    if(!drag) return;
+    if(e.pointerId != null && drag.id != null && e.pointerId !== drag.id) return;
+    var g = calSplitGrid(); if(!g) return;
+    var w = drag.w - (e.clientX - drag.x);            /* nach links ziehen = Spalte breiter */
+    w = Math.min(Math.max(w, CAL_SPLIT.minSide), calSplitMax(g));
+    w = Math.round(w);
+    g.style.setProperty("--cal-side-w", w + "px");
+    g.classList.add("has-sidew");
+    drag.cur = w;
+    h.setAttribute("aria-valuenow", String(w));
+    try{ e.preventDefault(); }catch(_){}
+  }
+  function onEnd(){
+    if(!drag) return;
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onEnd);
+    window.removeEventListener("pointercancel", onEnd);
+    var w = drag.cur;
+    if(w == null){
+      var side = document.querySelector("#view-cal .cal-side");
+      w = side ? side.getBoundingClientRect().width : 0;
+    }
+    drag = null;
+    h.classList.remove("active");
+    document.body.classList.remove("cal-resizing");
+    setCalSideW(w, true);
+  }
+  h.addEventListener("pointerdown", function(e){
+    if(e.button != null && e.button !== 0) return;
+    var side = document.querySelector("#view-cal .cal-side"); if(!side) return;
+    drag = { x:e.clientX, w:side.getBoundingClientRect().width, cur:null, id:e.pointerId };
+    h.classList.add("active");
+    document.body.classList.add("cal-resizing");
+    try{ h.setPointerCapture(e.pointerId); }catch(_){}
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onEnd);
+    window.addEventListener("pointercancel", onEnd);
+    /* Absichtlich kein h.focus(): mit der Maus ziehen soll die Tastatur-Kürzel
+       ←/→ (Tag/Monat blättern) nicht umlenken. Fokus kommt nur per Tab. */
+    try{ e.preventDefault(); }catch(_){}
+  });
+  h.addEventListener("keydown", function(e){
+    var side = document.querySelector("#view-cal .cal-side"); if(!side) return;
+    var g = calSplitGrid(); if(!g) return;
+    var cur = side.getBoundingClientRect().width, step = e.shiftKey ? 64 : 16, next = null;
+    if(e.key === "ArrowLeft") next = cur + step;          /* Pfeil links = Spalte breiter */
+    else if(e.key === "ArrowRight") next = cur - step;
+    else if(e.key === "Home") next = CAL_SPLIT.minSide;
+    else if(e.key === "End") next = calSplitMax(g);
+    else return;
+    next = Math.min(Math.max(next, CAL_SPLIT.minSide), calSplitMax(g));
+    setCalSideW(next, true);
+    try{ e.preventDefault(); e.stopPropagation(); }catch(_){}
+  });
+  h.addEventListener("dblclick", function(){ setCalSideW(0, true); });
+  applyCalSideW();
+}
 /* Blendet das Listenende sanft aus, solange darunter noch weitere Einträge folgen. */
 function updateScrollHints(){
   try{
@@ -4655,3 +4764,7 @@ document.addEventListener("scroll", function(e){
   if(t && t.classList && t.classList.contains("list")) updateScrollHints();
 }, true);
 window.addEventListener("resize", function(){ updateScrollHints(); });
+/* Kalender: Trennlinie zum Anpassen der rechten Spaltenbreite verdrahten und
+   gespeicherte Breite anwenden (auch nach Fensteränderungen neu begrenzen). */
+try{ initCalSplit(); }catch(e){}
+window.addEventListener("resize", function(){ applyCalSideW(); });

@@ -122,6 +122,26 @@ h2.sec{font-size:15px;text-transform:uppercase;letter-spacing:.12em;color:var(--
 .cal-side .side-panel{flex:1 1 0;min-height:190px;display:flex;flex-direction:column;min-width:0}
 .cal-side .side-panel:nth-child(2){flex:3 1 0}
 .cal-side .side-panel:nth-child(3){flex:2 1 0}
+/* ---------- Kalender: Breite der rechten Spalte (Agenda/Aufgaben/Routinen) per Maus anpassen ---------- */
+.cal-split{display:none}
+@media(min-width:981px){
+  #view-cal .grid2-cal.has-sidew{grid-template-columns:minmax(0,1fr) var(--cal-side-w,340px)}
+  #view-cal .cal-side{position:relative}
+  .cal-split{
+    display:block;position:absolute;left:-15px;top:0;bottom:0;width:15px;z-index:6;
+    cursor:ew-resize;touch-action:none;-webkit-tap-highlight-color:transparent;
+  }
+  .cal-split::before{
+    content:"";position:absolute;left:50%;top:calc(50% - 24px);width:4px;height:48px;margin-left:-2px;
+    border-radius:4px;background:var(--line);transition:background .14s,height .14s,top .14s;
+  }
+  .cal-split:hover::before,.cal-split:focus-visible::before,.cal-split.active::before{
+    background:var(--accent);height:68px;top:calc(50% - 34px);
+  }
+  .cal-split:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:8px}
+  body.cal-resizing{cursor:ew-resize}
+  body.cal-resizing *{cursor:ew-resize!important;user-select:none!important}
+}
 .cal-side .panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .cal-side .panel-title{font-size:17px;font-weight:700;min-width:0;display:inline-flex;align-items:center;gap:7px}
 .panel-badge{
