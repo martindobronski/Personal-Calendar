@@ -2707,7 +2707,9 @@ function renderMeals(){
     + "<span>KW "+isoWeek(ws)+"</span>";
 
   const todayKey = iso(today());
-  let head = "<tr><th></th>";
+  /* Keine Zeilenbeschriftung links – die Mahlzeit steht als kleine Überschrift
+     in jeder Zelle, die sieben Tagespalten bekommen so die ganze Breite. */
+  let head = "<tr>";
   for(let i=0;i<7;i++){
     const d = addDays(ws,i);
     const wend = d.getDay()===0 || d.getDay()===6;
@@ -2720,7 +2722,7 @@ function renderMeals(){
 
   let body = "";
   MEALS.forEach(([k,label])=>{
-    body += "<tr><th>"+label+"</th>";
+    body += "<tr>";
     for(let i=0;i<7;i++){
       const key = iso(addDays(ws,i));
       const isToday = key === todayKey;
