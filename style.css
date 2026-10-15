@@ -670,7 +670,10 @@ body.cal-day #view-cal .cal-side .side-top{display:none}
 .meals-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:6px;min-width:800px}
 .meals-table th{font-size:12px;color:var(--muted);text-align:left;padding:4px 6px;font-weight:700}
 .meals-table th.wkend{color:#fca5a5}
+.meals-table th.today{color:var(--accent);background:rgba(245,165,36,.13);border-radius:8px}
 .meals-table td{padding:0}
+.meals-table td.today .meal-cell{border-color:rgba(245,165,36,.55);background:rgba(245,165,36,.06)}
+.meals-table td.today .meal-cell.empty-cell{color:#c8a15e}
 .meal-cell{
   background:#141c2e;border:1px solid var(--line);border-radius:11px;padding:8px;
   min-height:56px;width:100%;text-align:left;font-size:13.5px;line-height:1.35;

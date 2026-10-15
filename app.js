@@ -2565,11 +2565,15 @@ function renderMeals(){
     ws.getDate()+". "+MONTHS[ws.getMonth()]+" – "+we.getDate()+". "+MONTHS[we.getMonth()]+" "+we.getFullYear()
     + "<span>KW "+isoWeek(ws)+"</span>";
 
+  const todayKey = iso(today());
   let head = "<tr><th></th>";
   for(let i=0;i<7;i++){
     const d = addDays(ws,i);
     const wend = d.getDay()===0 || d.getDay()===6;
-    head += '<th class="'+(wend?"wkend":"")+'">'+DOW_FULL[d.getDay()].slice(0,2)+". "+d.getDate()+"."+pad(d.getMonth()+1)+"</th>";
+    const isToday = iso(d) === todayKey;
+    const cls = (isToday ? "today" : "") + (wend ? (isToday ? " wkend" : "wkend") : "");
+    head += '<th'+(cls?' class="'+cls+'"':"")+(isToday?' title="Heute"':"")+'>'
+          + DOW_FULL[d.getDay()].slice(0,2)+". "+d.getDate()+"."+pad(d.getMonth()+1)+"</th>";
   }
   head += "</tr>";
 
@@ -2578,9 +2582,10 @@ function renderMeals(){
     body += "<tr><th>"+label+"</th>";
     for(let i=0;i<7;i++){
       const key = iso(addDays(ws,i));
+      const isToday = key === todayKey;
       const m = (S.meals[key]||{})[k];
       const val = m ? m.text : "";
-      body += '<td><button class="meal-cell'+(val?"":" empty-cell")+'" data-meal="'+key+"|"+k+'">'
+      body += '<td'+(isToday?' class="today"':"")+'><button class="meal-cell'+(val?"":" empty-cell")+'" data-meal="'+key+"|"+k+'">'
             + "<b>"+label+"</b>"+(val ? esc(val) : "eintragen…")+"</button></td>";
     }
     body += "</tr>";
