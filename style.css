@@ -728,19 +728,22 @@ body.cal-day #view-cal .cal-side .side-top{display:none}
 }
 .icon-act:hover{color:var(--accent);border-color:var(--accent);background:#25304a}
 
-/* ---------- Termin-Dialog (kompakt, Google-artig) ---------- */
-.ev-modal{width:min(600px,100%);padding:0;display:flex;flex-direction:column;max-height:min(92vh,780px);overflow:hidden}
-.ev-modal .modal-head{padding:20px 22px 0;margin-bottom:14px;flex:none}
-.ev-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 22px 6px}
-.ev-foot{flex:none;padding:12px 22px 16px;border-top:1px solid var(--line);background:#161f33}
-.ev-foot .modal-actions{margin-top:0}
+/* ---------- Dialoge Termin / Aufgabe (kompakt, Google-artig) ---------- */
+.dlg-modal{width:min(600px,100%);padding:0;display:flex;flex-direction:column;max-height:min(92vh,780px);overflow:hidden}
+.dlg-modal .modal-head{padding:20px 22px 0;margin-bottom:14px;flex:none}
+.dlg-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 22px 6px}
+.dlg-body .field2{margin-bottom:14px}
+.dlg-body .field2 .field{margin-bottom:0}
+.dlg-body .note{margin:0 0 14px}
+.dlg-foot{flex:none;padding:12px 22px 16px;border-top:1px solid var(--line);background:#161f33}
+.dlg-foot .modal-actions{margin-top:0}
 
 /* Zeile 1: Titel + Bereich */
-.ev-top{display:flex;gap:10px;align-items:stretch;margin-bottom:12px}
-.ev-top input[type=text]{flex:1 1 auto;min-width:0}
-.ev-catwrap{position:relative;flex:0 0 auto;width:190px}
-.ev-catwrap select{padding-left:33px}
-.ev-catdot{
+.dlg-top{display:flex;gap:10px;align-items:stretch;margin-bottom:12px}
+.dlg-top input[type=text]{flex:1 1 auto;min-width:0}
+.dlg-catwrap{position:relative;flex:0 0 auto;width:190px}
+.dlg-catwrap select{padding-left:33px}
+.dlg-catdot{
   position:absolute;left:12px;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:50%;
   background:#5b6b8e;pointer-events:none;box-shadow:0 0 0 2px rgba(255,255,255,.06);
 }
@@ -762,27 +765,27 @@ body.cal-day #view-cal .cal-side .side-top{display:none}
 .switchtxt{font-size:13.5px;font-weight:600}
 
 /* Beginn / Ende als Block */
-.ev-dt{margin-bottom:16px}
-.ev-dtrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.ev-dtlbl{flex:none;width:52px;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.03em}
-.ev-dtrow input[type=date]{flex:1.4;min-width:0}
-.ev-dtrow input[type=time]{min-width:0}
-.ev-time{flex:1;min-width:0;max-width:190px;display:flex;overflow:hidden;transition:max-width .2s ease,opacity .16s ease,margin .2s ease}
-.ev-time input{width:100%}
-.ev-dt.allday .ev-time{max-width:0;opacity:0;margin-left:-8px;pointer-events:none}
-.ev-hint{flex:none;font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap}
+.dlg-dt{margin-bottom:16px}
+.dlg-dtrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.dlg-dtlbl{flex:none;width:52px;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.03em}
+.dlg-dtrow input[type=date]{flex:1.4;min-width:0}
+.dlg-dtrow input[type=time]{min-width:0}
+.dlg-time{flex:1;min-width:0;max-width:190px;display:flex;overflow:hidden;transition:max-width .2s ease,opacity .16s ease,margin .2s ease}
+.dlg-time input{width:100%}
+.dlg-dt.allday .dlg-time{max-width:0;opacity:0;margin-left:-8px;pointer-events:none}
+.dlg-hint{flex:none;font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap}
 
 /* Dauer-Chips */
-.ev-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
-.ev-chip{
+.dlg-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.dlg-chip{
   background:#121a2b;border:1px solid var(--line);border-radius:999px;padding:6px 12px;
   font-size:12.5px;font-weight:600;color:var(--muted);transition:.14s;
 }
-.ev-chip:hover{color:var(--txt);border-color:#3d4d73}
-.ev-chip.active{background:rgba(245,165,36,.16);border-color:var(--accent);color:var(--accent)}
+.dlg-chip:hover{color:var(--txt);border-color:#3d4d73}
+.dlg-chip.active{background:rgba(245,165,36,.16);border-color:var(--accent);color:var(--accent)}
 @media (max-width:560px){
-  .ev-catwrap{width:150px}
-  .ev-dtlbl{width:44px}
+  .dlg-catwrap{width:150px}
+  .dlg-dtlbl{width:44px}
   .switchrow{margin-bottom:12px}
 }
 

@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0">
 <title>Familienkalender – Ordnung im Alltag ohne Abo</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%3Cdefs%3E%3ClinearGradient%20id%3D%22a%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23f5a524%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23f43f5e%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%0A%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2215%22%20fill%3D%22url%28%23a%29%22%2F%3E%0A%3Crect%20x%3D%2221%22%20y%3D%229%22%20width%3D%225%22%20height%3D%2213%22%20rx%3D%222.5%22%20fill%3D%22%23fff%22%2F%3E%0A%3Crect%20x%3D%2238%22%20y%3D%229%22%20width%3D%225%22%20height%3D%2213%22%20rx%3D%222.5%22%20fill%3D%22%23fff%22%2F%3E%0A%3Cpath%20d%3D%22M13%2022a6%206%200%200%201%206-6h26a6%206%200%200%201%206%206v4H13z%22%20fill%3D%22%23101827%22%2F%3E%0A%3Crect%20x%3D%2213%22%20y%3D%2224%22%20width%3D%2238%22%20height%3D%2226%22%20rx%3D%226%22%20fill%3D%22%23fff%22%2F%3E%0A%3Crect%20x%3D%2213%22%20y%3D%2244%22%20width%3D%2238%22%20height%3D%226%22%20fill%3D%22%23fff%22%2F%3E%0A%3Cg%20fill%3D%22%23c3cede%22%3E%3Ccircle%20cx%3D%2222%22%20cy%3D%2234%22%20r%3D%223%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2234%22%20r%3D%223%22%2F%3E%3Ccircle%20cx%3D%2242%22%20cy%3D%2234%22%20r%3D%223%22%2F%3E%3Ccircle%20cx%3D%2222%22%20cy%3D%2243%22%20r%3D%223%22%2F%3E%3Ccircle%20cx%3D%2242%22%20cy%3D%2243%22%20r%3D%223%22%2F%3E%3C%2Fg%3E%0A%3Ccircle%20cx%3D%2232%22%20cy%3D%2243%22%20r%3D%225%22%20fill%3D%22%23f43f5e%22%2F%3E%0A%3C%2Fsvg%3E">
-<link rel="stylesheet" href="style.css?v=1.5.57">
+<link rel="stylesheet" href="style.css?v=1.5.58">
 </head>
 <body>
 
@@ -405,22 +405,22 @@
 
 <footer class="footer">
   <a class="foot-link" href="Bedienungsanleitung.pdf" target="_blank" rel="noopener">Bedienungsanleitung</a>
-  <span class="foot-ver">v1.5.57 (15.10.2026)</span>
+  <span class="foot-ver">v1.5.58 (15.10.2026)</span>
 </footer>
 
 <!-- ======================= MODAL: TERMIN ======================= -->
 <div class="overlay" id="evModal">
-  <div class="modal ev-modal" role="dialog" aria-modal="true">
+  <div class="modal dlg-modal" role="dialog" aria-modal="true">
     <div class="modal-head">
       <h3 id="evModalTitle">Neuer Termin</h3>
       <button type="button" class="icon-act" id="evResched" title="Neu planen" aria-label="Termin neu planen" style="display:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 8 16 8"/><path d="M12 7.5V12l3 1.8"/></svg></button>
     </div>
-    <div class="ev-body">
+    <div class="dlg-body">
       <!-- Titel + Bereich in einer Zeile; der Farbpunkt zeigt die Kategorie. -->
-      <div class="ev-top">
+      <div class="dlg-top">
         <input type="text" id="evTitle" placeholder="z. B. Zahnarzt, Training, Kino">
-        <span class="ev-catwrap">
-          <span class="ev-catdot" id="evCatDot" aria-hidden="true"></span>
+        <span class="dlg-catwrap">
+          <span class="dlg-catdot" id="evCatDot" aria-hidden="true"></span>
           <select id="evCat" aria-label="Bereich / Farbe"></select>
         </span>
       </div>
@@ -431,24 +431,24 @@
         <span class="switchtxt">Ganztägig</span>
       </label>
 
-      <div class="ev-dt" id="evDtBlock">
-        <div class="ev-dtrow">
-          <span class="ev-dtlbl">Beginn</span>
+      <div class="dlg-dt" id="evDtBlock">
+        <div class="dlg-dtrow">
+          <span class="dlg-dtlbl">Beginn</span>
           <input type="date" id="evDate" aria-label="Beginn (Datum)">
-          <span class="ev-time"><input type="time" id="evStart" aria-label="Beginn (Uhrzeit)"></span>
+          <span class="dlg-time"><input type="time" id="evStart" aria-label="Beginn (Uhrzeit)"></span>
         </div>
-        <div class="ev-dtrow">
-          <span class="ev-dtlbl">Ende</span>
+        <div class="dlg-dtrow">
+          <span class="dlg-dtlbl">Ende</span>
           <input type="date" id="evEndDate" aria-label="Ende (Datum)">
-          <span class="ev-time"><input type="time" id="evEnd" aria-label="Ende (Uhrzeit)"></span>
-          <span class="ev-hint" id="evDurHint"></span>
+          <span class="dlg-time"><input type="time" id="evEnd" aria-label="Ende (Uhrzeit)"></span>
+          <span class="dlg-hint" id="evDurHint"></span>
         </div>
-        <div class="ev-chips" id="evChips" role="group" aria-label="Dauer">
-          <button type="button" class="ev-chip" data-ev-dur="15">15 Min</button>
-          <button type="button" class="ev-chip" data-ev-dur="30">30 Min</button>
-          <button type="button" class="ev-chip" data-ev-dur="60">1 Std</button>
-          <button type="button" class="ev-chip" data-ev-dur="120">2 Std</button>
-          <button type="button" class="ev-chip" data-ev-dur="allday">Ganztägig</button>
+        <div class="dlg-chips" id="evChips" role="group" aria-label="Dauer">
+          <button type="button" class="dlg-chip" data-ev-dur="15">15 Min</button>
+          <button type="button" class="dlg-chip" data-ev-dur="30">30 Min</button>
+          <button type="button" class="dlg-chip" data-ev-dur="60">1 Std</button>
+          <button type="button" class="dlg-chip" data-ev-dur="120">2 Std</button>
+          <button type="button" class="dlg-chip" data-ev-dur="allday">Ganztägig</button>
         </div>
       </div>
 
@@ -474,7 +474,7 @@
         <textarea id="evNote" rows="3" placeholder="Ort, Details, wer dabei ist."></textarea>
       </div>
     </div>
-    <div class="ev-foot">
+    <div class="dlg-foot">
       <div class="modal-actions">
         <button class="btn danger left" id="evDelete" style="display:none">Löschen</button>
         <button class="btn" data-close>Abbrechen</button>
@@ -486,89 +486,89 @@
 
 <!-- ======================= MODAL: TASK / ROUTINE ======================= -->
 <div class="overlay" id="tdModal">
-  <div class="modal" role="dialog" aria-modal="true">
+  <div class="modal dlg-modal" role="dialog" aria-modal="true">
     <div class="modal-head">
       <h3 id="tdModalTitle">Neuer Eintrag</h3>
       <button type="button" class="icon-act" id="tdResched" title="Neu planen" aria-label="Aufgabe neu planen" style="display:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 8 16 8"/><path d="M12 7.5V12l3 1.8"/></svg></button>
     </div>
-    <div class="field">
-      <label class="fl">Titel</label>
-      <input type="text" id="tdTitle" placeholder="z. B. Müll rausbringen, Zähne putzen, Paket abholen">
-    </div>
-    <div class="field" id="tdDoneField">
-      <label class="fl"><input type="checkbox" id="tdDone" style="width:auto;margin-right:7px">Erledigt <span id="tdDoneAt" class="muted" style="font-weight:400;margin-left:6px"></span></label>
-    </div>
-    <div class="field2">
-      <div class="field">
-        <label class="fl">Bereich / Farbe</label>
-        <select id="tdCat"></select>
+    <div class="dlg-body">
+      <!-- Titel + Bereich in einer Zeile; der Farbpunkt zeigt die Kategorie. -->
+      <div class="dlg-top">
+        <input type="text" id="tdTitle" placeholder="z. B. Müll rausbringen, Zähne putzen, Paket abholen">
+        <span class="dlg-catwrap">
+          <span class="dlg-catdot" id="tdCatDot" aria-hidden="true"></span>
+          <select id="tdCat" aria-label="Bereich / Farbe"></select>
+        </span>
       </div>
-      <div class="field">
-        <label class="fl">Wiederholung</label>
-        <select id="tdRepeat">
-          <option value="none">Einmalig</option>
-          <option value="daily">Täglich</option>
-          <option value="weekly">Wöchentlich</option>
-          <option value="monthly">Monatlich</option>
-          <option value="quarterly">Vierteljährlich</option>
-          <option value="yearly">Jährlich</option>
-        </select>
-      </div>
-    </div>
-    <div class="field2">
-      <div class="field">
-        <label class="fl">Punkte fürs Abhaken</label>
-        <input type="number" id="tdPoints" min="0" max="100" value="1">
-      </div>
+
+      <!-- Routinen haben kein Datum, nur eine optionale Uhrzeit. -->
       <div class="field" id="tdRoutineTimeField" style="display:none">
-        <label class="fl">Uhrzeit (optional)</label>
+        <label class="fl" for="tdTime">Uhrzeit <span class="muted">(optional)</span></label>
         <input type="time" id="tdTime">
       </div>
-    </div>
-    <div class="field2" id="tdSpanFields">
-      <div class="field">
-        <label class="fl">Beginnt am <span class="muted">(optional)</span></label>
-        <input type="date" id="tdStart">
+
+      <!-- Ganztägig-Schalter (nur Aufgaben) -->
+      <label class="switchrow" for="tdAllDay" id="tdAllDayRow">
+        <input type="checkbox" id="tdAllDay">
+        <span class="switch" aria-hidden="true"></span>
+        <span class="switchtxt">Ganztägig</span>
+      </label>
+
+      <div class="dlg-dt" id="tdDtBlock">
+        <div class="dlg-dtrow">
+          <span class="dlg-dtlbl">Beginn</span>
+          <input type="date" id="tdStart" aria-label="Beginn (Datum)">
+          <span class="dlg-time"><input type="time" id="tdStartTime" aria-label="Beginn (Uhrzeit)"></span>
+        </div>
+        <div class="dlg-dtrow">
+          <span class="dlg-dtlbl">Ende</span>
+          <input type="date" id="tdEnd" aria-label="Ende (Datum)">
+          <span class="dlg-time"><input type="time" id="tdEndTime" aria-label="Ende (Uhrzeit)"></span>
+          <span class="dlg-hint" id="tdDurHint"></span>
+        </div>
+        <div class="dlg-chips" id="tdChips" role="group" aria-label="Dauer">
+          <button type="button" class="dlg-chip" data-td-dur="15">15 Min</button>
+          <button type="button" class="dlg-chip" data-td-dur="30">30 Min</button>
+          <button type="button" class="dlg-chip" data-td-dur="60">1 Std</button>
+          <button type="button" class="dlg-chip" data-td-dur="120">2 Std</button>
+          <button type="button" class="dlg-chip" data-td-dur="allday">Ganztägig</button>
+        </div>
       </div>
-      <div class="field">
-        <label class="fl">Endet am <span class="muted">(optional)</span></label>
-        <input type="date" id="tdEnd">
+
+      <div class="field" id="tdDoneField">
+        <label class="fl"><input type="checkbox" id="tdDone" style="width:auto;margin-right:7px">Erledigt <span id="tdDoneAt" class="muted" style="font-weight:400;margin-left:6px"></span></label>
       </div>
-    </div>
-    <div class="field" id="tdAllDayField">
-      <label class="fl"><input type="checkbox" id="tdAllDay" checked style="width:auto;margin-right:7px">Ganztägig</label>
-    </div>
-    <div class="field2" id="tdTimeFields">
-      <div class="field">
-        <label class="fl">Von</label>
-        <input type="time" id="tdStartTime">
-      </div>
-      <div class="field">
-        <label class="fl">Bis</label>
-        <input type="time" id="tdEndTime">
-      </div>
-    </div>
-    <div class="field2" id="tdDurFields">
-      <div class="field">
-        <label class="fl">Dauer <span class="muted">(alternativ zu Bis)</span></label>
-        <div class="due-wrap">
-          <input type="number" id="tdDur" min="0" step="any" placeholder="z. B. 1.5">
-          <select id="tdDurUnit">
-            <option value="60">Stunden</option>
-            <option value="1">Minuten</option>
+
+      <div class="field2">
+        <div class="field">
+          <label class="fl" for="tdPoints">Punkte fürs Abhaken</label>
+          <input type="number" id="tdPoints" min="0" max="100" value="1">
+        </div>
+        <div class="field">
+          <label class="fl" for="tdRepeat">Wiederholung</label>
+          <select id="tdRepeat">
+            <option value="none">Einmalig</option>
+            <option value="daily">Täglich</option>
+            <option value="weekly">Wöchentlich</option>
+            <option value="monthly">Monatlich</option>
+            <option value="quarterly">Vierteljährlich</option>
+            <option value="yearly">Jährlich</option>
           </select>
         </div>
-        <p class="note">Die Bis-Zeit wird aus Von + Dauer berechnet.</p>
+      </div>
+      <p class="note" id="tdRepeatNote" hidden>Die Aufgabe erscheint im Kalender an jedem Vorkommen ab dem Startdatum.</p>
+
+      <div class="field">
+        <label class="fl" for="tdNote">Notiz</label>
+        <textarea id="tdNote" rows="3" placeholder="Details, wann genau, wer dran …"></textarea>
       </div>
     </div>
-    <div class="field">
-      <label class="fl">Notiz</label>
-      <textarea id="tdNote" rows="3" placeholder="Details, wann genau, wer dran …"></textarea>
-    </div>
-    <div class="modal-actions">
-      <button class="btn danger left" id="tdDelete">Löschen</button>
-      <button class="btn" data-close>Abbrechen</button>
-      <button class="btn primary" id="tdSave">Speichern</button>
+    <div class="dlg-foot">
+      <div class="modal-actions">
+        <button class="btn danger left" id="tdDelete" style="display:none">Löschen</button>
+        <button class="btn" data-close>Abbrechen</button>
+        <button class="btn primary" id="tdSave">Speichern</button>
+      </div>
     </div>
   </div>
 </div>
@@ -760,6 +760,6 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="app.js?v=1.5.57"></script>
+<script src="app.js?v=1.5.58"></script>
 </body>
 </html>

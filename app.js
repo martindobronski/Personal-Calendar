@@ -1903,7 +1903,7 @@ function evDurRefresh(){
   const hint = document.getElementById("evDurHint");
   if(hint) hint.textContent = (mins == null) ? "" : ("Dauer: " + evDurText(mins));
   const allDay = document.getElementById("evAllDay").checked;
-  document.querySelectorAll("#evChips .ev-chip").forEach(function(b){
+  document.querySelectorAll("#evChips .dlg-chip").forEach(function(b){
     const v = b.getAttribute("data-ev-dur");
     let on = false;
     if(v === "allday") on = allDay;
@@ -2107,9 +2107,9 @@ function applyResched(dateIso, timeStr){
         document.getElementById("tdEndTime").value = reschedEndHM(timeStr, reschedKeepDur(st2, en2));
       }
     }
-    document.getElementById("tdDur").value = "";
-    toggleTdTimeFields();
+    tdAllDaySync();
     updateTdSpan();
+    tdDurRefresh();
   }
 }
 function buildReschedList(){
@@ -2465,40 +2465,127 @@ function openTodo(id, mode){
   }
   const e = editingTodo || editingRoutine;
   const isR = tdMode==="routine";
-  document.getElementById("tdModalTitle").textContent = e
+  const g = x => document.getElementById(x);
+  g("tdModalTitle").textContent = e
     ? (isR ? "Routine bearbeiten" : "Aufgabe bearbeiten")
     : (isR ? "Neue Routine" : "Neue Aufgabe");
-  document.getElementById("tdTitle").value = e ? (e.title || e.name || "") : "";
-  fillCatSelect(document.getElementById("tdCat"), e ? e.cat : (activeProfile || (S.categories[0]||{}).id));
-  document.getElementById("tdRepeat").value = e ? (e.repeat || e.freq || "none") : (isR ? "daily" : "none");
-  document.getElementById("tdPoints").value = e ? (e.points ?? 1) : 1;
-  document.getElementById("tdDone").checked = e ? taskIsDone(e) : false;
-  document.getElementById("tdDoneField").style.display = isR ? "none" : "";
-  var doneAtEl=document.getElementById("tdDoneAt");
+  g("tdTitle").value = e ? (e.title || e.name || "") : "";
+  tdFillCat(e ? e.cat : (activeProfile || (S.categories[0]||{}).id));
+  g("tdRepeat").value = e ? (e.repeat || e.freq || "none") : (isR ? "daily" : "none");
+  g("tdPoints").value = e ? (e.points ?? 1) : 1;
+  g("tdDone").checked = e ? taskIsDone(e) : false;
+  g("tdDoneField").style.display = isR ? "none" : "";
+  var doneAtEl=g("tdDoneAt");
   if(doneAtEl) doneAtEl.textContent = (e && taskIsDone(e) && e.completedAt) ? fmtCompletedAt(e.completedAt) : "";
-  document.getElementById("tdTime").value = (e && e.time && e.time!=="any") ? e.time : "";
+  g("tdTime").value = (e && e.time && e.time!=="any") ? e.time : "";
   /* Neue Aufgaben beginnen am heutigen Tag; Routinen und bestehende Einträge bleiben unverändert. */
-  document.getElementById("tdStart").value = (e && e.startDate) ? e.startDate : ((e || isR) ? "" : iso(today()));
-  document.getElementById("tdEnd").value = (e && e.endDate) ? e.endDate : "";
-  const tdAllDay = e ? (e.allDay !== false) : false;
-  document.getElementById("tdAllDay").checked = tdAllDay;
-  const newTask = !e && !isR;
-  document.getElementById("tdStartTime").value = (e && e.startTime) ? e.startTime : "";
-  document.getElementById("tdEndTime").value = (e && e.endTime) ? e.endTime : "";
-  document.getElementById("tdDur").value = newTask ? "30" : "";
-  document.getElementById("tdDurUnit").value = newTask ? "1" : "60";
-  if(!tdAllDay && e && e.startTime && e.endTime) setDurFromTimes();
+  g("tdStart").value = (e && e.startDate) ? e.startDate : ((e || isR) ? "" : iso(today()));
+  g("tdEnd").value = (e && e.endDate) ? e.endDate : "";
+  g("tdAllDay").checked = e ? (e.allDay !== false) : false;
+  g("tdStartTime").value = (e && e.startTime) ? e.startTime : "";
+  g("tdEndTime").value = (e && e.endTime) ? e.endTime : "";
+  g("tdNote").value = (e && e.note) ? e.note : "";
+  g("tdDelete").style.display = e ? "" : "none";
+  g("tdResched").style.display = editingTodo ? "" : "none";
+  tdLastDur = 30;            /* neue Aufgabe: 30 Minuten wie gehabt */
+  tdModeSync();
+  tdAllDaySync();
   updateTdSpan();
-  document.getElementById("tdRoutineTimeField").style.display = isR ? "" : "none";
-  document.getElementById("tdSpanFields").style.display = isR ? "none" : "";
-  document.getElementById("tdAllDayField").style.display = isR ? "none" : "";
-  if(isR){ document.getElementById("tdTimeFields").style.display="none"; document.getElementById("tdDurFields").style.display="none"; }
-  else { toggleTdTimeFields(); }
-  document.getElementById("tdNote").value = (e && e.note) ? e.note : "";
-  document.getElementById("tdDelete").style.display = e ? "" : "none";
-  document.getElementById("tdResched").style.display = editingTodo ? "" : "none";
+  tdRepeatSync();
+  tdDurRefresh();
   openModal("tdModal");
-  document.getElementById("tdTitle").focus();
+  g("tdTitle").focus();
+}
+/* Routinen haben keine Datums-/Zeitblöcke, nur eine optionale Uhrzeit. */
+function tdModeSync(){
+  const isR = tdMode === "routine";
+  document.getElementById("tdRoutineTimeField").style.display = isR ? "" : "none";
+  document.getElementById("tdAllDayRow").style.display = isR ? "none" : "";
+  document.getElementById("tdDtBlock").style.display = isR ? "none" : "";
+}
+/* Erklärtext nur bei wiederkehrenden Aufgaben. */
+function tdRepeatSync(){
+  const sel = document.getElementById("tdRepeat"), note = document.getElementById("tdRepeatNote");
+  if(sel && note) note.hidden = (tdMode === "routine" || sel.value === "none");
+}
+/* Kategorie füllen + Farbpunkt im Dropdown. */
+function tdFillCat(selected){
+  const sel = document.getElementById("tdCat");
+  if(!sel) return;
+  fillCatSelect(sel, selected);
+  tdCatDot();
+}
+function tdCatDot(){
+  const sel = document.getElementById("tdCat"), dot = document.getElementById("tdCatDot");
+  if(!sel || !dot) return;
+  const c = (S.categories || []).find(x => x.id === sel.value);
+  dot.style.background = c ? c.color : "transparent";
+}
+/* Dauer (Minuten) der aktuellen Aufgabe – allDay: Tage * 1440. */
+function tdCurDur(){
+  const sd = document.getElementById("tdStart").value;
+  const edEl = document.getElementById("tdEnd");
+  const ad = document.getElementById("tdAllDay").checked;
+  if(ad){
+    if(!sd) return null;
+    const ed = (edEl.value && edEl.value >= sd) ? edEl.value : sd;
+    const days = evDayDiff(sd, ed) + 1;
+    return days > 0 ? days * 1440 : null;
+  }
+  const st = document.getElementById("tdStartTime").value;
+  const en = document.getElementById("tdEndTime").value;
+  if(!st || !en) return null;
+  let mins = hmToMin(en) - hmToMin(st);
+  if(mins < 0) mins += 1440;
+  if(mins === 0) return null;
+  if(sd && edEl.value && edEl.value > sd) mins += evDayDiff(sd, edEl.value) * 1440;
+  return mins;
+}
+var tdLastDur = 30; /* zuletzt geltende Dauer in Minuten */
+/* Hilfetext neben „Ende“ und Chip-Markierung nachziehen. */
+function tdDurRefresh(){
+  const ad = document.getElementById("tdAllDay").checked;
+  const mins = tdCurDur();
+  if(mins != null) tdLastDur = mins;
+  /* Ohne gewählte Uhrzeit (typisch: neue Aufgabe) bleibt die noch offene Dauer stehen. */
+  const disp = (mins != null) ? mins : ((!ad && tdLastDur) ? tdLastDur : null);
+  const hint = document.getElementById("tdDurHint");
+  if(hint) hint.textContent = (disp == null) ? "" : ("Dauer: " + evDurText(disp));
+  document.querySelectorAll("#tdChips .dlg-chip").forEach(function(b){
+    const v = b.getAttribute("data-td-dur");
+    let on = false;
+    if(v === "allday") on = ad;
+    else if(!ad && disp != null) on = (Number(v) === disp);
+    b.classList.toggle("active", on);
+  });
+}
+/* Ende = Beginn + Dauer. */
+function tdSetEndFromDur(mins){
+  if(!mins) return;
+  const st = document.getElementById("tdStartTime");
+  if(!st.value) st.value = "09:00";
+  const total = hmToMin(st.value) + mins;
+  document.getElementById("tdEndTime").value = dvHM(total % 1440);
+  const roll = Math.floor(total / 1440);
+  const sd = document.getElementById("tdStart").value;
+  if(roll > 0 && sd) document.getElementById("tdEnd").value = iso(addDays(parseISO(sd), roll));
+  updateTdSpan();
+}
+/* Ganztägig: Uhrzeiten ein-/ausblenden (animiert). */
+function tdAllDaySync(){
+  const ad = document.getElementById("tdAllDay").checked;
+  const blk = document.getElementById("tdDtBlock");
+  if(blk) blk.classList.toggle("allday", ad);
+  tdDurRefresh();
+}
+/* Dauer-Chip anwenden. */
+function tdChipApply(v){
+  const ad = document.getElementById("tdAllDay");
+  if(v === "allday"){ ad.checked = true; tdAllDaySync(); return; }
+  ad.checked = false;
+  tdAllDaySync();
+  tdSetEndFromDur(Number(v) || 30);
+  tdDurRefresh();
 }
 function setTaskDone(t, done){
   const pts = t.points || 1;
@@ -2576,46 +2663,36 @@ document.getElementById("tdStart").onchange = ()=>{
   const e=document.getElementById("tdEnd");
   if(s && e.value && e.value < s) e.value=s;
   updateTdSpan();
+  tdDurRefresh();
 };
-document.getElementById("tdEnd").onchange = updateTdSpan;
-function toggleTdTimeFields(){
-  const allDay=document.getElementById("tdAllDay").checked;
-  document.getElementById("tdTimeFields").style.display = allDay ? "none" : "grid";
-  document.getElementById("tdDurFields").style.display = allDay ? "none" : "grid";
-}
-document.getElementById("tdAllDay").onchange = toggleTdTimeFields;
-function tdDurMinutes(){
-  const d=parseFloat(document.getElementById("tdDur").value||"0")||0;
-  const u=parseInt(document.getElementById("tdDurUnit").value||"60",10)||60;
-  return Math.round(d*u);
-}
-function setDurFromTimes(){
-  const s=document.getElementById("tdStartTime").value;
-  const e=document.getElementById("tdEndTime").value;
-  if(!s||!e) return;
-  let diff=hmToMin(e)-hmToMin(s);
-  if(diff<0) diff+=1440;
-  const u=parseInt(document.getElementById("tdDurUnit").value||"60",10)||60;
-  const val=diff/u;
-  document.getElementById("tdDur").value=(val%1===0)?val:(Math.round(val*100)/100);
-}
-function setEndFromDur(){
-  const s=document.getElementById("tdStartTime").value;
-  const mins=tdDurMinutes();
-  if(!s||!mins) return;
-  const total=hmToMin(s)+mins;
-  document.getElementById("tdEndTime").value=dvHM(total%1440);
-  const roll=Math.floor(total/1440);
-  const sd=document.getElementById("tdStart").value;
-  if(roll>0 && sd) document.getElementById("tdEnd").value=iso(addDays(parseISO(sd), roll));
-}
-document.getElementById("tdStartTime").onchange=()=>{
-  if(parseFloat(document.getElementById("tdDur").value||"0")) setEndFromDur();
-  else setDurFromTimes();
+document.getElementById("tdEnd").onchange = ()=>{
+  updateTdSpan();
+  tdDurRefresh();
 };
-document.getElementById("tdEndTime").onchange=setDurFromTimes;
-document.getElementById("tdDur").onchange=setEndFromDur;
-document.getElementById("tdDurUnit").onchange=setEndFromDur;
+document.getElementById("tdAllDay").onchange = function(){
+  /* Schalter aus: wie beim Termin 09:00/09:30 als Ausgangspunkt, damit das Ende
+     immer direkt abgeleitet werden kann. Schalter an: Zeiten werden beiseite geschoben. */
+  if(!this.checked){
+    const st=document.getElementById("tdStartTime"), en=document.getElementById("tdEndTime");
+    if(!st.value) st.value="09:00";
+    if(!en.value) en.value=dvHM(Math.min(hmToMin(st.value)+30, 1439));
+  }
+  tdAllDaySync();
+};
+document.getElementById("tdRepeat").onchange = tdRepeatSync;
+document.getElementById("tdCat").onchange = tdCatDot;
+document.getElementById("tdStartTime").onchange = ()=>{
+  if(!document.getElementById("tdAllDay").checked) tdSetEndFromDur(tdLastDur || 30);
+  tdDurRefresh();
+};
+document.getElementById("tdEndTime").onchange = tdDurRefresh;
+(function(){
+  const box = document.getElementById("tdChips");
+  if(box) box.addEventListener("click", ev=>{
+    const b = ev.target.closest("[data-td-dur]");
+    if(b) tdChipApply(b.getAttribute("data-td-dur"));
+  });
+})();
 
 /* =========================================================
    Mahlzeiten
