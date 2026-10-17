@@ -3441,8 +3441,19 @@ document.getElementById("btnWipe").onclick = ()=>{
 function openModal(id){ document.getElementById(id).classList.add("open"); }
 function closeModals(){ document.querySelectorAll(".overlay").forEach(o=>o.classList.remove("open")); }
 document.querySelectorAll(".overlay").forEach(o=>{
+  /* Merken, ob der Mausklick WIRKLICH auf dem Hintergrund begonnen hat.
+     Sonst schließt der Dialog beim Textmarkieren (gedrückt im Eingabefeld,
+     losgelassen auf dem Hintergrund) – das click-Event landet dann auf dem
+     gemeinsamen Vorfahren, also der overlay-Fläche. */
+  var __downOnBackdrop=false;
+  o.addEventListener("pointerdown", function(e){ __downOnBackdrop = (e.target===o); });
   o.addEventListener("click", e=>{
-    if(e.target===o || e.target.closest("[data-close]")){
+    if(e.target.closest("[data-close]")){
+      if(o.id==="reschedModal"){ o.classList.remove("open"); return; }
+      closeModals();
+      return;
+    }
+    if(e.target===o && __downOnBackdrop){
       if(o.id==="reschedModal"){ o.classList.remove("open"); return; }
       closeModals();
     }
