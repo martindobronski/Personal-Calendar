@@ -80,9 +80,11 @@ function migrateCategoryColors(){
   }catch(e){}
 }
 function save(){
-  localStorage.setItem(KEY, JSON.stringify(S));
+  const json = JSON.stringify(S);
+  localStorage.setItem(KEY, json);
   const el = document.getElementById("storageInfo");
-  if(el) el.textContent = "Belegt " + (new Blob([JSON.stringify(S)]).size/1024).toFixed(1) + " KB im localStorage.";
+  if(el) el.textContent = "Belegt " + (new Blob([json]).size/1024).toFixed(1) + " KB im localStorage.";
+  try{ cloudNoteLocalChange(json); }catch(e){}
 }
 function setSegActive(id,val){
   var seg=document.getElementById(id); if(!seg) return;
@@ -3427,7 +3429,8 @@ document.getElementById("fileImport").onchange = e=>{
   e.target.value = "";
 };
 document.getElementById("btnWipe").onclick = ()=>{
-  if(!confirm("Wirklich alle Daten löschen? Das lässt sich nicht rückgängig machen.")) return;
+  var extra = (typeof cloud !== "undefined" && cloud && cloud.user) ? " Auch die Cloud-Daten werden damit überschrieben." : "";
+  if(!confirm("Wirklich alle Daten löschen?" + extra + " Das lässt sich nicht rückgängig machen.")) return;
   localStorage.removeItem(KEY);
   S = defaults();
   S.lists = [{id:uid(), name:"Einkaufsliste", items:[]}];
@@ -4779,3 +4782,358 @@ window.addEventListener("resize", function(){ updateScrollHints(); });
    gespeicherte Breite anwenden (auch nach Fensteränderungen neu begrenzen). */
 try{ initCalSplit(); }catch(e){}
 window.addEventListener("resize", function(){ applyCalSideW(); });
+
+/* =========================================================
+   Cloud-Sync (Supabase) – der ganze Kalender als ein JSON-Blob
+   ---------------------------------------------------------
+   • localStorage bleibt die Hauptquelle: offline läuft alles weiter.
+   • index.html meldet den Supabase-Client über das Event
+     „supabase-ready“ (oder window.sbClient ist schon da).
+   • Nach der Anmeldung (E-Mail-Link) wird die Zeile
+     kalender_state gelesen: Die Seite mit dem neueren
+     Zeitstempel gewinnt (Last-Write-Wins).
+   • Jede Änderung wird danach mit 1,2 s Verzögerung hochgeladen.
+   • Zeitstempel liegen in einem eigenen localStorage-Key, damit
+     sie den synchronisierten Zustand selbst nicht verändern.
+   ========================================================= */
+var CLOUD_META_KEY = KEY + ".cloud";
+var cloud = {
+  client: null, user: null, ready: false, configured: false,
+  snapshot: null,          // JSON des zuletzt erkannten Zustands
+  /* Zeitstempel in einem eigenen Key (nicht im synchronisierten Zustand):
+     changedAt = wann sich die lokalen Daten zuletzt änderten,
+     remoteAt  = der neueste Cloud-Stand, den dieses Gerät kennt,
+     dirty     = lokale Änderung, die noch nicht in der Cloud liegt,
+     sig       = Fingerabdruck des Zustands, der zuletzt in der Cloud lag. */
+  meta: { changedAt: 0, remoteAt: 0, dirty: false, sig: 0 },
+  pulledFor: null,
+  signedInBefore: false,
+  pushTimer: null, retryTimer: null, pushing: false, pushQueued: false,
+  pulling: false, applying: false
+};
+
+function cloudLoadMeta(){
+  try{
+    var raw = localStorage.getItem(CLOUD_META_KEY);
+    var m = raw ? JSON.parse(raw) : null;
+    if(m && typeof m === "object"){
+      cloud.meta.changedAt = Number(m.changedAt) || 0;
+      cloud.meta.remoteAt = Number(m.remoteAt) || 0;
+      cloud.meta.dirty = !!m.dirty;
+      cloud.meta.sig = Number(m.sig) || 0;
+    }
+  }catch(e){}
+}
+function cloudSaveMeta(){
+  try{ localStorage.setItem(CLOUD_META_KEY, JSON.stringify(cloud.meta)); }catch(e){}
+}
+function cloudStatus(msg){
+  var el = document.getElementById("sbStatus");
+  if(el) el.textContent = msg;
+}
+function cloudRenderAuth(){
+  try{
+    var anon = document.getElementById("sbAnonRow");
+    var authed = document.getElementById("sbAuthedRow");
+    var who = document.getElementById("sbWho");
+    if(anon) anon.style.display = cloud.user ? "none" : (cloud.configured ? "" : "none");
+    if(authed) authed.style.display = cloud.user ? "" : "none";
+    if(who && cloud.user) who.textContent = "Angemeldet: " + (cloud.user.email || cloud.user.id);
+  }catch(e){}
+}
+
+/* Kleiner Fingerabdruck über den Zustand: erlaubt es, schon beim ersten
+   save() einer Sitzung zu erkennen, ob sich seit dem letzten Cloud-Stand
+   etwas geändert hat – auch wenn die Änderung noch vor dem Laden des
+   Supabase-Clients passiert ist. */
+function cloudHash(s){
+  var h = 5381;
+  for(var i = 0; i < s.length; i++){ h = ((h << 5) + h + s.charCodeAt(i)) | 0; }
+  return h;
+}
+
+/* Von save() aufgerufen: erkennt, ob sich am Zustand wirklich etwas geändert hat. */
+function cloudNoteLocalChange(json){
+  if(typeof cloud === "undefined" || !cloud) return;
+  if(cloud.snapshot === null){
+    cloud.snapshot = json;      // erster Aufruf einer Sitzung: nur merken
+    cloudLoadMeta();
+    if(cloud.meta.sig && cloud.meta.sig !== cloudHash(json)){
+      cloud.meta.changedAt = Date.now();
+      cloud.meta.dirty = true;  // geändert, bevor der Client bereitstand
+      cloudSaveMeta();
+      cloudQueuePush();
+    }
+    return;
+  }
+  if(cloud.applying){ cloud.snapshot = json; cloud.meta.sig = cloudHash(json); return; }
+  if(json === cloud.snapshot) return;
+  cloud.snapshot = json;
+  cloud.meta.changedAt = Date.now();
+  cloud.meta.dirty = true;
+  cloudSaveMeta();
+  cloudQueuePush();
+}
+
+function cloudQueuePush(){
+  if(!cloud.client || !cloud.user) return;
+  if(cloud.pushTimer) clearTimeout(cloud.pushTimer);
+  cloud.pushTimer = setTimeout(function(){ cloud.pushTimer = null; cloudPush(); }, 1200);
+}
+
+function cloudPush(){
+  if(!cloud.client || !cloud.user || cloud.pulling || cloud.applying) return Promise.resolve();
+  if(cloud.pushing){ cloud.pushQueued = true; return Promise.resolve(); }
+  cloud.pushing = true;
+  cloudStatus("Synchronisiere …");
+  var payload;
+  try{ payload = JSON.parse(cloud.snapshot || JSON.stringify(S)); }
+  catch(e){ payload = S; }
+  var stamp = new Date(cloud.meta.changedAt || Date.now()).toISOString();
+  return cloud.client.from("kalender_state")
+    .upsert({ user_id: cloud.user.id, data: payload, updated_at: stamp }, { onConflict: "user_id" })
+    .select("updated_at")
+    .then(function(res){
+      cloud.pushing = false;
+      if(res && res.error){
+        cloud.pushQueued = false;
+        var msg = String(res.error.message || res.error);
+        var offline = res.error.code === "FETCH_ERROR" || /fetch|network|Failed to fetch|Internet/i.test(msg);
+        cloudStatus(offline
+          ? "Cloud gerade nicht erreichbar – die Änderungen werden später nachgeholt."
+          : "Sync pausiert (" + msg + ") – wird beim nächsten Öffnen erneut versucht.");
+        if(offline) cloudRetryLater();
+        return;
+      }
+      var row = res && res.data && res.data[0];
+      cloud.meta.remoteAt = row ? (Date.parse(row.updated_at) || Date.now()) : Date.now();
+      cloud.meta.dirty = false;
+      cloud.meta.sig = cloudHash(cloud.snapshot || JSON.stringify(S));
+      cloudSaveMeta();
+      cloudStatus("Synchronisiert · " + new Date().toLocaleTimeString());
+      if(cloud.pushQueued){ cloud.pushQueued = false; cloudPush(); }
+    })
+    .catch(function(){
+      cloud.pushing = false;
+      cloud.pushQueued = false;
+      cloudStatus("Cloud gerade nicht erreichbar – die Änderungen werden später nachgeholt.");
+      cloudRetryLater();
+    });
+}
+
+/* Bei Netzwerkproblemen in 20 s automatisch noch einmal versuchen,
+   solange es noch etwas zu hochzugeben gibt. */
+function cloudRetryLater(){
+  if(cloud.retryTimer) clearTimeout(cloud.retryTimer);
+  cloud.retryTimer = setTimeout(function(){
+    cloud.retryTimer = null;
+    if(cloud.client && cloud.user && cloud.meta.dirty && !cloud.pushing) cloudPush();
+  }, 20000);
+}
+
+function cloudApplyRemote(data, remoteAt){
+  if(!data || typeof data !== "object" || !Array.isArray(data.categories)){
+    cloudStatus("Cloud-Daten konnten nicht gelesen werden.");
+    return;
+  }
+  cloud.applying = true;
+  try{
+    S = Object.assign(defaults(), data);
+    if(!S.lists || !S.lists.length) S.lists = [{id:uid(), name:"Einkaufsliste", items:[]}];
+    if(!S.settings) S.settings = defaults().settings;
+    if(!Array.isArray(S.birthdays)) S.birthdays = [];
+    curList = null;
+    /* Zeitstempel: unser Kopfstand entspricht jetzt der Cloud. changedAt wird
+       auf die lokale Uhr gesetzt, damit ein späterer Vergleich mit der Serverzeit
+       nicht durch Uhrenabweichung zufällig die Cloud bevorzugt. */
+    cloud.meta.changedAt = Date.now();
+    cloud.meta.remoteAt = remoteAt;
+    cloud.meta.dirty = false;
+    save();
+    if(typeof render === "function") render();
+  }catch(e){}
+  cloud.applying = false;
+  cloudSaveMeta();
+}
+
+function cloudPull(force){
+  if(!cloud.client || !cloud.user || cloud.pulling) return Promise.resolve();
+  cloud.pulling = true;
+  cloudStatus("Cloud-Daten werden gelesen …");
+  return cloud.client.from("kalender_state")
+    .select("data,updated_at")
+    .eq("user_id", cloud.user.id)
+    .maybeSingle()
+    .then(function(res){
+      cloud.pulling = false;
+      if(res && res.error){ cloudStatus("Cloud-Fehler: " + res.error.message); return; }
+      var row = res ? res.data : null;
+      if(!row){
+        cloudStatus("Noch keine Cloud-Daten – die lokalen Daten werden hochgeladen.");
+        cloudPush();
+        return;
+      }
+      var remoteAt = Date.parse(row.updated_at) || 0;
+      /* Die Cloud ist nur dann „neu“, wenn sie sich seit dem letzten Kontakt
+         wirklich bewegt hat (remoteAt) – dann gewinnt sie, außer wir haben
+         hier lokal später geändert (dirty + changedAt): dann hochladen. */
+      var remoteMoved = remoteAt > cloud.meta.remoteAt + 2000;
+      var localNewer = cloud.meta.dirty && (cloud.meta.changedAt + 2000 > remoteAt);
+      if(remoteMoved && !localNewer){
+        cloudApplyRemote(row.data, remoteAt);
+        cloudStatus("Aus der Cloud geladen (" + new Date(remoteAt).toLocaleString() + ").");
+        if(force) toast("Cloud-Daten geladen.");
+      }else if(cloud.meta.dirty){
+        cloudStatus(localNewer ? "Lokale Daten sind neuer – werden in die Cloud geschrieben." : "Lokale Änderungen werden in die Cloud geschrieben.");
+        cloudPush();
+      }else{
+        cloud.meta.remoteAt = Math.max(cloud.meta.remoteAt, remoteAt);
+        cloudSaveMeta();
+        cloudStatus("Synchronisiert · " + new Date(cloud.meta.remoteAt).toLocaleTimeString());
+      }
+    })
+    .catch(function(){
+      cloud.pulling = false;
+      cloudStatus("Cloud nicht erreichbar – die Daten bleiben lokal gespeichert.");
+    });
+}
+
+function cloudSetUser(u, wantPull){
+  var id = u ? u.id : null;
+  var changed = id !== (cloud.user ? cloud.user.id : null);
+  cloud.user = u;
+  cloudRenderAuth();
+  if(!id){
+    cloud.pulledFor = null;
+    cloudStatus(cloud.signedInBefore
+      ? "Nicht angemeldet – Cloud-Sync pausiert, die Daten bleiben lokal."
+      : "Nicht angemeldet – E-Mail eingeben, um den Sync zu starten.");
+    return;
+  }
+  cloud.signedInBefore = true;
+  if((changed || wantPull) && cloud.pulledFor !== id){
+    cloud.pulledFor = id;
+    cloudPull(true);
+  }
+}
+
+function cloudInit(){
+  if(cloud.ready) return;
+  cloud.ready = true;
+  cloudLoadMeta();
+  cloud.snapshot = JSON.stringify(S);
+  var cfg = window.SUPABASE_CONFIG || {};
+  cloud.configured = !!(cfg.url && cfg.anonKey && window.sbClient);
+  if(!cloud.configured){
+    if(cfg.url && cfg.anonKey && !window.sbClient){
+      cloudStatus("Supabase-Client konnte nicht geladen werden – Internetverbindung prüfen und Seite neu laden.");
+    }else{
+      cloudStatus("Cloud-Sync nicht eingerichtet: In der Datei supabase.config.js Projekt-URL und anon-Key eintragen (siehe SUPABASE.md).");
+    }
+    cloudRenderAuth();
+    return;
+  }
+  cloud.client = window.sbClient;
+  cloudReportUrlError();
+
+  cloud.client.auth.getSession().then(function(res){
+    var s = res && res.data && res.data.session;
+    cloudSetUser(s ? s.user : null, true);
+  }).catch(function(){});
+
+  cloud.client.auth.onAuthStateChange(function(event, session){
+    cloudSetUser(session ? session.user : null, event === "SIGNED_IN");
+  });
+
+  cloudRenderAuth();
+  if(!cloud.user) cloudStatus("Nicht angemeldet – E-Mail eingeben, um den Sync zu starten.");
+}
+
+/* Nach dem Klick auf den Anmeldelink: Fehler aus der URL sichtbar machen,
+   z. B. abgelaufener Link oder nicht erlaubte Redirect-Adresse. */
+function cloudReportUrlError(){
+  try{
+    var q = new URLSearchParams(String(location.search || "").replace(/^\?/, ""));
+    var h = new URLSearchParams(String(location.hash || "").replace(/^#/, ""));
+    var code = q.get("error_code") || h.get("error_code");
+    var desc = q.get("error_description") || h.get("error_description");
+    if(!code && !desc) return false;
+    cloudStatus("Anmeldung fehlgeschlagen: " + (desc || code) + " – bitte einen neuen Anmeldelink anfordern.");
+    if(window.history && window.history.replaceState){
+      window.history.replaceState(null, "", location.pathname);
+    }
+    return true;
+  }catch(e){ return false; }
+}
+
+/* --- Anmeldung über E-Mail-Link (Magic Link) --- */
+function cloudBindAuthUI(){
+  var inp = document.getElementById("sbEmail");
+  var btn = document.getElementById("btnSbLogin");
+  var out = document.getElementById("btnSbLogout");
+  function send(){
+    if(!cloud.client) return;
+    var email = ((inp && inp.value) || "").trim();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+      cloudStatus("Bitte eine gültige E-Mail-Adresse eingeben.");
+      if(inp) inp.focus();
+      return;
+    }
+    cloudStatus("Anmeldelink wird gesendet …");
+    var opts = {};
+    if(location.protocol === "http:" || location.protocol === "https:"){
+      opts.emailRedirectTo = location.origin + location.pathname;
+    }
+    cloud.client.auth.signInWithOtp({ email: email, options: opts }).then(function(res){
+      if(res && res.error){ cloudStatus("Fehler: " + res.error.message); return; }
+      cloudStatus("Anmeldelink gesendet an " + email + " – E-Mail öffnen und Link antippen.");
+      toast("Anmeldelink gesendet – bitte E-Mail prüfen.");
+    }).catch(function(){
+      cloudStatus("Anmeldelink konnte nicht gesendet werden – später erneut versuchen.");
+    });
+  }
+  if(btn) btn.onclick = send;
+  if(inp) inp.addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); send(); } });
+  if(out) out.onclick = function(){
+    var p = cloud.client ? cloud.client.auth.signOut().catch(function(){}) : Promise.resolve();
+    cloudSetUser(null, false);
+    var bye = function(){ cloudStatus("Abgemeldet. Die Daten bleiben lokal im Browser."); };
+    bye();
+    Promise.resolve(p).then(bye).catch(bye);
+  };
+}
+
+/* --- Start --- */
+cloudLoadMeta();
+cloudBindAuthUI();
+window.addEventListener("supabase-ready", cloudInit);
+if(window.__supabaseReady) cloudInit();
+else setTimeout(function(){ if(!cloud.ready) cloudInit(); }, 12000); // CDN hat nie geantwortet
+window.addEventListener("online", function(){
+  if(cloud.client && cloud.user && cloud.meta.dirty) cloudPush();
+});
+window.addEventListener("pagehide", function(){
+  if(cloud.client && cloud.user && cloud.pushTimer){ clearTimeout(cloud.pushTimer); cloud.pushTimer = null; cloudPush(); }
+});
+
+/* Automatisch nachziehen, wenn der Tab wieder sichtbar wird oder der Fokus
+   zurückkommt – z. B. nachdem am Handy ein Eintrag ergänzt wurde.
+   Bewusst nur bei diesen Gelegenheiten (kein Dauer-Polling): so kostet der
+   Sync keinen Akku und stört nie beim Bearbeiten. */
+var cloudLastAutoPull = 0;
+function cloudAutoPull(){
+  if(!cloud.client || !cloud.user) return;
+  if(document.hidden) return;
+  /* Nicht, wenn gerade selbst etwas passiert oder ein Dialog offen ist –
+     sonst würde die Ansicht mitten im Bearbeiten umgebaut. */
+  if(cloud.pulling || cloud.pushing || cloud.applying || cloud.pushTimer) return;
+  try{ if(document.querySelector(".overlay.open")) return; }catch(e){}
+  var now = Date.now();
+  if(now - cloudLastAutoPull < 10000) return;
+  cloudLastAutoPull = now;
+  cloudPull(false);
+}
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState === "visible") cloudAutoPull();
+});
+window.addEventListener("focus", cloudAutoPull);
